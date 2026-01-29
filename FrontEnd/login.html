@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Login</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="assets/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="assets/css/stylesheet.css" />
+    <link rel="stylesheet" href="assets/css/all.css" />
+    <link rel="stylesheet" href="assets/css/sweetalert2.css" />
+    <link rel="stylesheet" href="assets/css/borderless.css" />
+    <link rel="stylesheet" href="assets/css/owl.carousel.min.css" />
+    <link rel="stylesheet" href="assets/css/owl.theme.default.min.css" />
+    <link rel="stylesheet" href="assets/css/jquery.bxslider.min.css" />
+    <script src="assets/js/jquery-3.5.1.min.js"></script>
+    <script src="assets/js/popper.min.js"></script>
+    <script src="assets/js/fontawesome.min.js"></script>
+    <script src="assets/js/bootstrap.min.js"></script>
+    <script src="assets/js/sweetalert2.all.js"></script>
+    <script src="assets/js/jquery.cookie.js"></script>
+    <script src="assets/js/owl.carousel.min.js"></script>
+    <script src="assets/js/jquery.bxslider.min.js"></script>
+    <script src="assets/js/login.js"></script>
+  </head>
+  <body onload="load_user()">
+    <div class="login-container">
+      <div class="loginform shadow rounded p-4 mt-5 col-12">
+        <div
+          class="logo mt-3 row justify-content-center"
+          width="100%"
+          height="100%">
+          <img src="assets/img/ecomLogo.jpg" alt="Logo" class="img-fluid" />
+        </div>
+        <d  iv class="row justify-content-center">
+          <div class="col-md-6">
+            <h2 class="text-center">Login</h2>
+            <form id="loginForm" action="#" method="POST" enctype="multipart/form-data">
+              <div class="form-group mb-3">
+                <label for="username" class="form-label">Username</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="username"
+                  name="username"
+                  required />
+              </div>
+              <div class="form-group mb-3">
+                <label for="password" class="form-label">Password</label>
+                <input
+                  type="password"
+                  class="form-control"
+                  id="password"
+                  name="password"
+                  required />
+              </div>
+              <div class="mb-3 d-flex justify-content-center">
+                <button
+                  type="submit"
+                  id="login"
+                  class="btn btn-dark w-50 rounded-pill">
+                  Login
+                </button>
+              </div>
+              <div class="text-center">
+                <a href="forgot.html" class="text-decoration-none"
+                  >Forgot Password</a
+                >
+              </div>
+              <div class="mb-3 text-center">
+                Don't have an account?
+                <a href="register.html" class="text-decoration-none"
+                  >Register Here</a
+                >
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
+      id="wait"
+      style="
+        display: none;
+        width: 69px;
+        height: 89px;
+        border: 1px solid black;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        padding: 2px;
+      ">
+      <img
+        src="assets/img/demo_wait.gif"
+        width="64"
+        height="64" /><br />Loading..
+    </div>
+  </body>
+</html>

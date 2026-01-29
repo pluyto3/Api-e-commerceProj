@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Shop</title>
+    <link rel="stylesheet" href="assets/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="assets/css/stylesheet.css" />
+    <link rel="stylesheet" href="assets/css/all.css" />
+    <link rel="stylesheet" href="assets/css/sweetalert2.css" />
+    <link rel="stylesheet" href="assets/css/borderless.css" />
+    <script src="assets/js/jquery.min.js"></script>
+    <script src="assets/js/popper.min.js"></script>
+    <script src="assets/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/js/sweetalert2.all.js"></script>
+    <script src="assets/js/jquery.cookie.js"></script>
+  </head>
+  <body>
+    <!--Navbar-->
+    <nav class="navbar navbar-expand-lg bg-dark navbar-dark fixed-top py-3">
+      <div class="container-fluid">
+        <!-- Brand -->
+        <a class="navbar-brand d-flex align-items-center" href="dashboard.html">
+          <img src="assets/img/ecomLogo.jpg" alt="" style="height: 40px" />
+        </a>
+        <!-- Toggler/collapsibe Button -->
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-toggle="collapse"
+          data-target="#collapsibleNavbar"
+          aria-controls="collapsibleNavbar"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <!-- Navbar links -->
+        <div
+          class="collapse navbar-collapse navbar-buttons"
+          id="collapsibleNavbar"
+        >
+          <ul class="navbar-nav mr-auto">
+            <li class="nav-item">
+              <a class="nav-link" href="index.html">Home</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="shop.html">Shop</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="contact.html" style="width: 100px"
+                >Contact Us</a
+              >
+            </li>
+            <li class="nav-item d-lg-none">
+              <a class="nav-link" href="#"
+                ><i class="fa fa-shopping-cart white-icon"></i
+              ></a>
+            </li>
+          </ul>
+          <!-- Search bar (responsive) -->
+          <form
+            class="form-inline my-2 my-lg-0 mx-lg-2 w-100 w-lg-auto search-form"
+          >
+            <input
+              id="searchInput"
+              class="form-control mr-sm-2"
+              type="search"
+              placeholder="Search products..."
+              aria-label="Search"
+            />
+            <button class="btn btn-outline-success my-2 my-sm-0" type="submit">
+              Search
+            </button>
+          </form>
+          <ul class="navbar-nav ml-lg-3">
+            <li class="nav-item d-none d-lg-block">
+              <a class="nav-link" href="cart.html"
+                ><i class="fa fa-shopping-cart white-icon"></i
+              ></a>
+            </li>
+            <!-- Dropdown -->
+            <li class="nav-item dropdown">
+              <a
+                class="nav-link dropdown-toggle"
+                href="#"
+                id="navbardrop"
+                data-toggle="dropdown"
+                aria-haspopup="true"
+                aria-expanded="false"
+              >
+                <span id="username">Username</span>
+              </a>
+              <div
+                class="dropdown-menu dropdown-menu-right"
+                aria-labelledby="navbardrop"
+              >
+                <a class="dropdown-item" href="account.html">Profile</a>
+                <a id="logout" class="dropdown-item" href="#">Logout</a>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <main>
+      <!--Featured-->
+      <section id="featured" class="my-5 pb-5">
+        <div class="container text-center mt-5 pt-5">
+          <h3>Our Products</h3>
+          <hr />
+          <p>Here you can check out our products</p>
+        </div>
+        <div class="row mx-auto container">
+          <div
+            onclick="window.location.href='single-product.html';"
+            class="product text-center col-lg-3 col-md-4 col-sm-12"
+          >
+            <img src="assets/img/featured1.jpg" class="img-fluid mb-3" />
+            <div class="star">
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+            </div>
+            <h5 class="p-name">Sports Shoes</h5>
+            <h4 class="p-price">$199.8</h4>
+            <button class="buy-btn">Buy Now</button>
+          </div>
+
+          <div class="product text-center col-lg-3 col-md-4 col-sm-12">
+            <img src="assets/img/featured2.jpg" class="img-fluid mb-3" />
+            <div class="star">
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+            </div>
+            <h5 class="p-name">Sports Shoes</h5>
+            <h4 class="p-price">$199.8</h4>
+            <button class="buy-btn">Buy Now</button>
+          </div>
+
+          <div class="product text-center col-lg-3 col-md-4 col-sm-12">
+            <img src="assets/img/featured3.jpg" class="img-fluid mb-3" />
+            <div class="star">
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+            </div>
+            <h5 class="p-name">Sports Shoes</h5>
+            <h4 class="p-price">$199.8</h4>
+            <button class="buy-btn">Buy Now</button>
+          </div>
+
+          <div class="product text-center col-lg-3 col-md-4 col-sm-12">
+            <img src="assets/img/featured4.jpg" class="img-fluid mb-3" />
+            <div class="star">
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+            </div>
+            <h5 class="p-name">Sports Shoes</h5>
+            <h4 class="p-price">$199.8</h4>
+            <button class="buy-btn">Buy Now</button>
+          </div>
+          <div class="product text-center col-lg-3 col-md-4 col-sm-12">
+            <img src="assets/img/display1.jpg" class="img-fluid mb-3" />
+            <div class="star">
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+            </div>
+            <h5 class="p-name">Sports Shoes</h5>
+            <h4 class="p-price">$199.8</h4>
+            <button class="buy-btn">Buy Now</button>
+          </div>
+
+          <div class="product text-center col-lg-3 col-md-4 col-sm-12">
+            <img src="assets/img/display2.jpg" class="img-fluid mb-3" />
+            <div class="star">
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+            </div>
+            <h5 class="p-name">Sports Shoes</h5>
+            <h4 class="p-price">$199.8</h4>
+            <button class="buy-btn">Buy Now</button>
+          </div>
+
+          <div class="product text-center col-lg-3 col-md-4 col-sm-12">
+            <img src="assets/img/display3.jpeg" class="img-fluid mb-3" />
+            <div class="star">
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+            </div>
+            <h5 class="p-name">Sports Shoes</h5>
+            <h4 class="p-price">$199.8</h4>
+            <button class="buy-btn">Buy Now</button>
+          </div>
+
+          <div class="product text-center col-lg-3 col-md-4 col-sm-12">
+            <img src="assets/img/featured1.jpg" class="img-fluid mb-3" />
+            <div class="star">
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+            </div>
+            <h5 class="p-name">Sports Shoes</h5>
+            <h4 class="p-price">$199.8</h4>
+            <button class="buy-btn">Buy Now</button>
+          </div>
+
+          <div class="product text-center col-lg-3 col-md-4 col-sm-12">
+            <img src="assets/img/clothes1.jpg" class="img-fluid mb-3" />
+            <div class="star">
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+            </div>
+            <h5 class="p-name">Sports Shoes</h5>
+            <h4 class="p-price">$199.8</h4>
+            <button class="buy-btn">Buy Now</button>
+          </div>
+
+          <div class="product text-center col-lg-3 col-md-4 col-sm-12">
+            <img src="assets/img/clothes2.jpg" class="img-fluid mb-3" />
+            <div class="star">
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+            </div>
+            <h5 class="p-name">Sports Shoes</h5>
+            <h4 class="p-price">$199.8</h4>
+            <button class="buy-btn">Buy Now</button>
+          </div>
+
+          <div class="product text-center col-lg-3 col-md-4 col-sm-12">
+            <img src="assets/img/clothes3.jpg" class="img-fluid mb-3" />
+            <div class="star">
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+            </div>
+            <h5 class="p-name">Sports Shoes</h5>
+            <h4 class="p-price">$199.8</h4>
+            <button class="buy-btn">Buy Now</button>
+          </div>
+
+          <div class="product text-center col-lg-3 col-md-4 col-sm-12">
+            <img src="assets/img/clothes4.jpg" class="img-fluid mb-3" />
+            <div class="star">
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+            </div>
+            <h5 class="p-name">Sports Shoes</h5>
+            <h4 class="p-price">$199.8</h4>
+            <button class="buy-btn">Buy Now</button>
+          </div>
+
+          <div class="product text-center col-lg-3 col-md-4 col-sm-12">
+            <img src="assets/img/watch1.jpg" class="img-fluid mb-3" />
+            <div class="star">
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+            </div>
+            <h5 class="p-name">Sports Shoes</h5>
+            <h4 class="p-price">$199.8</h4>
+            <button class="buy-btn">Buy Now</button>
+          </div>
+
+          <div class="product text-center col-lg-3 col-md-4 col-sm-12">
+            <img src="assets/img/watch2.jpg" class="img-fluid mb-3" />
+            <div class="star">
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+            </div>
+            <h5 class="p-name">Sports Shoes</h5>
+            <h4 class="p-price">$199.8</h4>
+            <button class="buy-btn">Buy Now</button>
+          </div>
+
+          <div class="product text-center col-lg-3 col-md-4 col-sm-12">
+            <img src="assets/img/watch3.jpeg" class="img-fluid mb-3" />
+            <div class="star">
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+            </div>
+            <h5 class="p-name">Sports Shoes</h5>
+            <h4 class="p-price">$199.8</h4>
+            <button class="buy-btn">Buy Now</button>
+          </div>
+
+          <div class="product text-center col-lg-3 col-md-4 col-sm-12">
+            <img src="assets/img/watch4.jpeg" class="img-fluid mb-3" />
+            <div class="star">
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+              <i class="fa fa-star" aria-hidden="true"></i>
+            </div>
+            <h5 class="p-name">Sports Shoes</h5>
+            <h4 class="p-price">$199.8</h4>
+            <button class="buy-btn">Buy Now</button>
+          </div>
+
+          <nav aria-label="Page navigation example">
+            <ul class="pagination mt-5">
+              <li class="page-item">
+                <a href="#" class="page-link">Previous</a>
+              </li>
+              <li class="page-item"><a href="#" class="page-link">1</a></li>
+              <li class="page-item"><a href="#" class="page-link">2</a></li>
+              <li class="page-item"><a href="#" class="page-link">3</a></li>
+              <li class="page-item"><a href="#" class="page-link">Next</a></li>
+            </ul>
+          </nav>
+        </div>
+      </section>
+    </main>
+
+    <!--Footer-->
+    <footer>
+      <div class="social-share">
+        <ul>
+          <li><i class="fab fa-facebook"></i></li>
+          <li><i class="fab fa-twitter"></i></li>
+          <li><i class="fab fa-instagram-square"></i></li>
+          <li><i class="fab fa-pinterest"></i></li>
+          <li><i class="fab fa-youtube"></i></li>
+        </ul>
+      </div>
+      <div class="general-info">
+        <div class="help">
+          <h3>Help</h3>
+          <ul>
+            <li>Frequently Ask Questions</li>
+            <li>Delivered Information</li>
+            <li>Arrange a Return</li>
+            <li>Product Recall</li>
+            <li>Customer Services</li>
+          </ul>
+        </div>
+        <div class="store-location">
+          <h3>Our Locations</h3>
+          <ul>
+            <li>Tangub</li>
+            <li>Ozamis</li>
+            <li>Pagadian</li>
+            <li>Tubod</li>
+            <li>Mukas</li>
+          </ul>
+        </div>
+        `
+        <div class="legal">
+          <h3>Privacy</h3>
+          <ul>
+            <li>Cookies & Privacy Policy</li>
+            <li>Terms & Conditions</li>
+          </ul>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

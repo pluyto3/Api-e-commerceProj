@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Orders</title>
+    <link rel="stylesheet" href="assets/css/all.min.css" />
+    <link rel="stylesheet" href="assets/css/bootstrap.min.css" />
+
+    <!-- Additional CSS Files -->
+    <link rel="stylesheet" href="assets/css/sweetalert2.css" />
+    <link rel="stylesheet" href="assets/css/borderless.css" />
+    <link rel="stylesheet" href="assets/css/owl.carousel.min.css" />
+    <link rel="stylesheet" href="assets/css/owl.theme.default.min.css" />
+    <link rel="stylesheet" href="assets/css/jquery.bxslider.min.css" />
+    <link rel="stylesheet" href="assets/css/datatables.min.css" />
+    <link rel="stylesheet" href="assets/css/stylesheet.css" />
+
+    <!-- jQuery -->
+    <script src="assets/js/jquery-3.5.1.min.js"></script>
+
+    <!-- jQuery Cookie Plugin -->
+    <script src="assets/js/jquery.cookie.min.js"></script>
+
+    <!-- DataTables -->
+    <script src="assets/js/datatables.min.js"></script>
+
+    <!-- Bootstrap JS + Others -->
+    <script src="assets/js/popper.min.js"></script>
+    <script src="assets/js/bootstrap.min.js"></script>
+    <script src="assets/js/fontawesome.min.js"></script>
+    <script src="assets/js/sweetalert2.all.js"></script>
+    <script src="assets/js/owl.carousel.min.js"></script>
+    <script src="assets/js/jquery.bxslider.min.js"></script>
+    <script src="assets/js/jquery.cookie.min.js"></script>
+
+    <!-- 3. Your Custom Script LAST -->
+    <script src="assets/js/orderDetails.js"></script>
+  </head>
+
+  <body onload="load_user()">
+    <!--Navbar-->
+    <nav class="navbar navbar-expand-lg bg-dark navbar-dark sticky-top">
+      <div class="container-fluid">
+        <!-- Brand -->
+        <a class="navbar-brand d-flex align-items-center" href="index.html">
+          <img src="assets/img/ecomLogo.jpg" alt="" style="height: 40px" />
+        </a>
+        <div class="toggle-btns">
+          <!-- Menu Button -->
+          <i class="fas fa-bars text-white menu-btn"></i>
+          <!-- Close Button -->
+          <i
+            class="fas fa-arrow-right text-white close-btn"
+            style="display: none"></i>
+          <!-- Toggler/collapsibe Button -->
+        </div>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-toggle="collapse"
+          data-target="#collapsibleNavbar"
+          aria-controls="collapsibleNavbar"
+          aria-expanded="false"
+          aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <!-- Navbar links -->
+        <div
+          class="collapse navbar-collapse navbar-buttons"
+          id="collapsibleNavbar">
+          <ul class="navbar-nav mr-auto">
+            <li class="nav-item">
+              <a class="nav-link" href="index.html" style="margin-left: 29px"
+                >Home</a
+              >
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="shop.html">Shop</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="contact.html" style="width: 100px"
+                >Contact Us</a
+              >
+            </li>
+            <li class="nav-item d-lg-none">
+              <a class="nav-link" href="#"
+                ><i class="fa fa-shopping-cart white-icon"></i
+              ></a>
+            </li>
+          </ul>
+          <!-- Search bar (responsive) -->
+          <!-- <form class="form-inline my-2 my-lg-0 mx-lg-2 w-100 w-lg-auto search-form">
+              <input id="searchInput" class="form-control mr-sm-2" type="search" placeholder="Search products..." aria-label="Search">
+              <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
+            </form> -->
+
+          <ul class="navbar-nav ml-lg-3 d-flex align-items-center">
+            <!-- Cart Icon -->
+            <li class="nav-item mr-3">
+              <a
+                class="nav-link position-relative d-flex align-items-center"
+                href="cart.html">
+                <i class="fa fa-shopping-cart white-icon fa-lg"></i>
+                <span
+                  id="cart-count"
+                  class="badge bg-danger rounded-pill position-absolute">
+                  0
+                </span>
+              </a>
+            </li>
+
+            <!-- User Dropdown -->
+            <li class="nav-item dropdown">
+              <a
+                class="nav-link dropdown-toggle d-flex align-items-center"
+                href="#"
+                id="navbardrop"
+                data-toggle="dropdown"
+                aria-haspopup="true"
+                aria-expanded="false">
+                <!-- Profile Image -->
+                <img
+                  id="navbarProfileImage"
+                  src=""
+                  alt="Profile"
+                  class="rounded-circle mr-2"
+                  style="
+                    width: 35px;
+                    height: 35px;
+                    object-fit: cover;
+                    display: none;
+                  " />
+
+                <!-- Username -->
+                <span
+                  id="displayUsername"
+                  class="text-white font-weight-bold"></span>
+              </a>
+
+              <!-- Dropdown Menu -->
+              <div
+                class="dropdown-menu dropdown-menu-right"
+                aria-labelledby="navbardrop">
+                <a class="dropdown-item" href="account.html">
+                  <i class="fa fa-user user-icon" aria-hidden="true"></i>
+                  Profile
+                </a>
+                <a class="dropdown-item" href="account.html">
+                  <i
+                    class="fab fa-first-order user-orders"
+                    aria-hidden="true"></i>
+                  Your Orders
+                </a>
+                <a class="dropdown-item" href="product.html" id="productUi">
+                  <i class="fab fa-product-hunt" aria-hidden="true"></i> Your
+                  Products
+                </a>
+                <a
+                  class="dropdown-item"
+                  href="admindashboard.html"
+                  id="adminDashboard"
+                  style="display: none">
+                  <i class="fas fa-home"></i> Dashboard
+                </a>
+                <hr class="user-menu" />
+                <span class="dropdown-item-text text-muted small"
+                  >If new user please Register.</span
+                >
+                <a
+                  id="register"
+                  href="register.html"
+                  class="dropdown-item text-center"
+                  >Register</a
+                >
+                <a
+                  id="login"
+                  href="login.html"
+                  class="dropdown-item text-center"
+                  >Login</a
+                >
+                <a id="logout" class="dropdown-item text-center" href="#"
+                  >Logout</a
+                >
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="wrapper">
+      <!-- Sidebar -->
+      <section class="sidebar">
+        <ul class="nav-bar">
+          <li>
+            <a href="admin-dashboard.html"
+              ><i class="fas fa-tachometer-alt"></i>
+              <span class="text-link"> Dashboard</span></a
+            >
+          </li>
+          <li>
+            <a href="account.html"
+              ><i class="fas fa-id-badge"></i>
+              <span class="text-link"> Profile</span></a
+            >
+          </li>
+          <li>
+            <a href="address.html"
+              ><i class="fas fa-address-card"></i>
+              <span class="text-link"> Address</span></a
+            >
+          </li>
+          <li>
+            <a href="manageAccounts.html"
+              ><i class="fas fa-images"></i>
+              <span class="text-link"> Accounts</span></a
+            >
+          </li>
+          <li>
+            <a href="brand.html"
+              ><i class="fas fa-dolly-flatbed"></i>
+              <span class="text-link"> Brand</span></a
+            >
+          </li>
+          <li>
+            <a href="category.html"
+              ><i class="fas fa-dolly"></i>
+              <span class="text-link"> Category</span></a
+            >
+          </li>
+          <li>
+            <a href="product.html"
+              ><i class="fas fa-shopping-basket"></i>
+              <span class="text-link"> Products</span></a
+            >
+          </li>
+          <li>
+            <a href="orderDetails.html"
+              ><i class="fas fa-truck"></i>
+              <span class="text-link"> Orders</span></a
+            >
+          </li>
+        </ul>
+      </section>
+
+      <section class="working-panel">
+        <div class="container-fluid">
+          <h1 class="display-4 mb-3">Order Management</h1>
+          <hr class="admin-hr" />
+
+          <!-- Search Bar -->
+          <div class="d-flex align-items-center mb-3">
+            <input
+              type="text"
+              class="form-control"
+              placeholder="Search your orders…" />
+          </div>
+
+          <!-- Order Management Section -->
+          <!-- Tabs -->
+          <div class="d-flex justify-content-between border-bottom mb-3 pb-2">
+            <button class="btn order-tab-btn active" data-status="All">
+              All
+            </button>
+            <button class="btn order-tab-btn" data-status="Unpaid">
+              Unpaid
+            </button>
+            <button class="btn order-tab-btn" data-status="To Ship">
+              To Ship
+            </button>
+            <button class="btn order-tab-btn" data-status="Shipped">
+              Shipped
+            </button>
+            <button class="btn order-tab-btn" data-status="To Review">
+              To Review
+            </button>
+          </div>
+
+          <!-- Orders List -->
+          <div id="buyerOrders"></div>
+        </div>
+      </section>
+
+      <!-- Order Details Modal -->
+      <div class="modal fade" id="orderDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Order Details</h5>
+              <button
+                type="button"
+                class="close"
+                data-dismiss="modal"
+                aria-label="Close">
+                <span>&times;</span>
+              </button>
+            </div>
+
+            <div class="modal-body">
+              <!-- Summary -->
+              <div id="order-summary" class="mb-3 p-3 bg-light rounded border">
+                <p><strong>Status:</strong> <span id="summaryStatus"></span></p>
+                <p><strong>Date:</strong> <span id="summaryDate"></span></p>
+                <p>
+                  <strong>Total Items:</strong> <span id="summaryItems"></span>
+                </p>
+              </div>
+              <p>
+                <strong>Tracking Number:</strong>
+                <span
+                  id="tracking"
+                  class="text-primary font-weight-bold"></span>
+              </p>
+
+              <!-- Product List -->
+              <table class="table table-bordered">
+                <thead>
+                  <tr>
+                    <th>Image</th>
+                    <th>Product</th>
+                    <th>Qty</th>
+                    <th>Price</th>
+                    <th>Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody id="orderDetailsBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Update Status Modal -->
+      <div
+        class="modal fade"
+        id="updateStatusModal"
+        tabindex="-1"
+        aria-hidden="true">
+        <div class="modal-dialog modal-md">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Update Order Status</h5>
+              <button
+                type="button"
+                class="close"
+                data-dismiss="modal"
+                aria-label="Close">
+                <span>&times;</span>
+              </button>
+            </div>
+
+            <div class="modal-body">
+              <!-- Hidden Order ID -->
+              <input type="hidden" id="statusOrderId" />
+
+              <div class="form-group">
+                <label>Order Status</label>
+                <select id="newOrderStatus" class="form-control">
+                  <option value="pending">Pending</option>
+                  <option value="to ship">To Ship</option>
+                  <option value="shipped">Shipped</option>
+                  <option value="completed">Completed</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="modal-footer">
+              <button class="btn btn-danger" data-dismiss="modal">
+                Cancel
+              </button>
+
+              <button
+                class="btn btn-success"
+                onclick="submitOrderStatusUpdate()">
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!--Footer-->
+    <footer>
+      <div class="social-share">
+        <ul>
+          <li><i class="fab fa-facebook"></i></li>
+          <li><i class="fab fa-twitter"></i></li>
+          <li><i class="fab fa-instagram-square"></i></li>
+          <li><i class="fab fa-pinterest"></i></li>
+          <li><i class="fab fa-youtube"></i></li>
+        </ul>
+      </div>
+      <div class="container-fluid general-info">
+        <div class="help">
+          <h3>Help</h3>
+          <ul>
+            <li>Frequently Ask Questions</li>
+            <li>Delivered Information</li>
+            <li>Arrange a Return</li>
+            <li>Product Recall</li>
+            <li>Customer Services</li>
+          </ul>
+        </div>
+        <div class="store-location">
+          <h3>Our Locations</h3>
+          <ul>
+            <li>Tangub</li>
+            <li>Ozamis</li>
+            <li>Pagadian</li>
+            <li>Tubod</li>
+            <li>Mukas</li>
+          </ul>
+        </div>
+        <div class="legal">
+          <h3>Privacy</h3>
+          <ul>
+            <li>Cookies & Privacy Policy</li>
+            <li>Terms & Conditions</li>
+          </ul>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Loading Spinner -->
+    <div
+      id="wait"
+      style="
+        display: none;
+        width: 69px;
+        height: 89px;
+        border: 1px solid black;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        padding: 2px;
+      ">
+      <img
+        src="assets/img/demo_wait.gif"
+        width="64"
+        height="64" /><br />Loading..
+    </div>
+  </body>
+</html>
