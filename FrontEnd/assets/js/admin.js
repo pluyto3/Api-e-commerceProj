@@ -6,6 +6,9 @@ let token = $.cookie("token");
 let usr = $.cookie("username");
 let role = $.cookie("role");
 let profileImage = $.cookie("profileImage");
+let orderChart = null;
+let statusChart = null;
+let ordersTable = null;
 
 // =======================================
 // LOAD USER SESSION & NAVBAR
@@ -72,7 +75,6 @@ function setupSidebarToggle() {
 // =======================================
 // COUNT DASHBOARD STATS (ROLE BASED)
 // =======================================
-
 function loadCounts() {
   $.ajax({
     url: `${ip}/api/counts`,
@@ -98,6 +100,173 @@ function loadCounts() {
 }
 
 // =======================================
+// Orders by Month Chart Function
+// =======================================
+function loadMonthlyOrders() {
+  fetch(`${ip}/api/checkout/dashboard/orders/monthly`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    },
+  })
+    .then((res) => res.json())
+    .then((data) => {
+      if (!data || !data.labels || !data.data) return;
+
+      orderChart.data.labels = data.labels;
+      orderChart.data.datasets[0].data = data.data;
+      orderChart.update();
+    })
+    .catch((err) => console.error("Monthly Orders Error:", err));
+}
+
+// =======================================
+// Orders by Status Chart Function
+// =======================================
+function loadOrderStatus() {
+  fetch(`${ip}/api/checkout/dashboard/orders/status`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    },
+  })
+    .then((res) => res.json())
+    .then((data) => {
+      if (!data || !data.labels || !data.data) return;
+
+      statusChart.data.labels = data.labels;
+      statusChart.data.datasets[0].data = data.data;
+      statusChart.update();
+    })
+    .catch((err) => console.error("Order Status Error:", err));
+}
+
+// =======================================
+// Iinitial function call
+// =======================================
+function initCharts() {
+  const orderCanvas = document.getElementById("orderChart");
+  const statusCanvas = document.getElementById("orderStatusChart");
+
+  // Destroy charts if they exist
+  if (orderChart) {
+    orderChart.destroy();
+    orderChart = null;
+  }
+  if (statusChart) {
+    statusChart.destroy();
+    statusChart = null;
+  }
+
+  orderChart = new Chart(orderCanvas.getContext("2d"), {
+    type: "pie",
+    data: {
+      labels: [],
+      datasets: [
+        {
+          data: [],
+          backgroundColor: [
+            "#4f46e5",
+            "#06b6d4",
+            "#22c55e",
+            "#f59e0b",
+            "#ef4444",
+            "#8b5cf6",
+          ],
+          borderColor: "#fff",
+          borderWidth: 2,
+        },
+      ],
+    },
+    options: { responsive: true, plugins: { legend: { position: "bottom" } } },
+  });
+
+  statusChart = new Chart(statusCanvas.getContext("2d"), {
+    type: "pie",
+    data: {
+      labels: [],
+      datasets: [
+        {
+          data: [],
+          backgroundColor: [
+            "#f97316",
+            "#84cc16",
+            "#3b82f6",
+            "#ec4899",
+            "#6366f1",
+          ],
+          borderColor: "#fff",
+          borderWidth: 2,
+        },
+      ],
+    },
+    options: { responsive: true, plugins: { legend: { position: "bottom" } } },
+  });
+}
+
+// =======================================
+// Load Recent Orders from API
+// =======================================
+function loadRecentOrders() {
+  $.ajax({
+    url: `${ip}/api/checkout/all`,
+    method: "GET",
+    headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
+    dataType: "json",
+    success: function (res) {
+      const tbody = $("#ordersTable tbody");
+      res.forEach((order, index) => {
+        const row = `
+        <tr>
+          <td>${index + 1}</td>
+            <td>${order.user_name || "N/A"}</td>
+            <td>${order.seller_name || "N/A"}</td>
+            <td>$${parseFloat(order.amount).toFixed(2)}</td>
+            <td>${order.status}</td>
+            <td>${order.payment_method || "N/A"}</td>
+            <td>
+              <button class="btn btn-sm btn-primary view-order" data-id="${order.id}">View</button>
+            </td>
+        </tr>
+        `;
+        tbody.append(row);
+      });
+
+      // Initialize DataTable
+      ordersTable = $("#ordersTable").DataTable({
+        pageLength: 10,
+        lengthChange: false,
+        responsive: true,
+        columnDefs: [
+          { orderable: false, targets: -1 }, // Disable ordering on the last column (Actions),
+        ],
+      });
+    },
+    error: function (xhr) {
+      console.error("Error loading recent orders:", xhr.responseText);
+    },
+  });
+}
+
+// =======================================
+// Loads the Charts
+// =======================================
+document.addEventListener("DOMContentLoaded", () => {
+  initCharts();
+  loadMonthlyOrders();
+  loadOrderStatus();
+});
+
+// =======================================
+// View Orders Button Click Handler
+// =======================================
+$(document).on("click", ".view-order", function () {
+  const orderId = $(this).data("id");
+  // You can open a modal or redirect to the order details page
+  console.log("View order ID:", orderId);
+});
+
+// =======================================
 // UTILITIES
 // =======================================
 $(document).ajaxStart(() => $("#wait").show());
@@ -107,6 +276,7 @@ $(document).ready(function () {
   load_user();
   loadCounts();
   setupSidebarToggle();
+  loadRecentOrders();
 
   // --- Load Navbar Profile Image ---
   if (usr) {
@@ -192,59 +362,6 @@ $(document).ready(function () {
     success: function (response) {
       console.log("Cart items fetched successfully:", response);
       updateCartCount(response.count);
-    },
-  });
-
-  // -------------------------------
-  // Chart.js
-  // -------------------------------
-
-  // Orders Over Time (Pie)
-  const orderCtx = document.getElementById("orderChart").getContext("2d");
-
-  new Chart(orderCtx, {
-    type: "pie",
-    data: {
-      labels: [],
-      datasets: [
-        {
-          data: [],
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          position: "bottom",
-        },
-      },
-    },
-  });
-
-  // Orders by Status (Pie)
-  const statusCtx = document
-    .getElementById("orderStatusChart")
-    .getContext("2d");
-
-  new Chart(statusCtx, {
-    type: "pie",
-    data: {
-      labels: ["Pending", "Shipped", "Completed", "Cancelled"],
-      datasets: [
-        {
-          data: [10, 6, 20, 4],
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      scales: {
-        y: {
-          beginAtZero: true,
-        },
-      },
     },
   });
 });
