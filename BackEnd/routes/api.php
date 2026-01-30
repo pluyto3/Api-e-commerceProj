@@ -134,7 +134,7 @@ Route::group(['prefix' => 'checkout'], function($router) {
         Route::get('/all', 'getAllOrders'); // Get all orders (admin)
     });
 
-// Dashboard Routes
+// Chart Dashboard Routes
     Route::group(['prefix' => 'dashboard'], function($router) {
         Route::controller(CheckoutController::class)->group(function () {
             Route::get('/orders/monthly', 'ordersMonthly'); // Get sales data for dashboard

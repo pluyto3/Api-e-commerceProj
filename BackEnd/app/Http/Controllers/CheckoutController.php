@@ -311,13 +311,11 @@ class CheckoutController extends Controller
         }
 
         // Load all checkouts with their items and product details
-        $orders = Checkout::with('items.product', 'user')
+        $orders = Checkout::with('items.product', 'user:user_id,username')
             ->orderBy('created_at', 'DESC')
             ->get();
 
-        return response()->json([
-            $orders, 200
-        ]);
+        return response()->json($orders, 200);
     }
 
     /**
