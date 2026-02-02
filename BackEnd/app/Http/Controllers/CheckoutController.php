@@ -310,10 +310,12 @@ class CheckoutController extends Controller
             return response()->json(['msg' => 'Unauthorized'], 403);
         }
 
-        // Load all checkouts with their items and product details
-        $orders = Checkout::with('items.product', 'user:user_id,username')
-            ->orderBy('created_at', 'DESC')
-            ->get();
+        $orders = Checkout::with([
+            'user',
+            'items.product.seller'
+        ])
+        ->orderBy('created_at', 'DESC')
+        ->get();
 
         return response()->json($orders, 200);
     }

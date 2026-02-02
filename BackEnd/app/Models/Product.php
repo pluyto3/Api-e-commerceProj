@@ -44,6 +44,10 @@ class Product extends Model
         return $this->hasMany(CheckoutItem::class, 'product_id', 'product_id');
     }
 
+    public function seller()
+    {
+        return $this->belongsTo(User::class, 'seller_id');
+    }
 
     protected $primaryKey = 'product_id';
 }
