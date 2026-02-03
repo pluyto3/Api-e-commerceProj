@@ -90,6 +90,7 @@ function loadCounts() {
       $("#countedCheckout").text(res.total_orders || 0);
       $("#pendingOrders").text(res.pending_orders || 0);
       $("#completedOrders").text(res.completed_orders || 0);
+      $("#cancelledOrders").text(res.cancelled_orders || 0);
 
       console.log("Dashboard counts loaded successfully:", res);
     },
@@ -211,39 +212,161 @@ function loadRecentOrders() {
   $.ajax({
     url: `${ip}/api/checkout/all`,
     method: "GET",
-    headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
+    headers: {
+      Accept: "application/json",
+      Authorization: `Bearer ${token}`,
+    },
     dataType: "json",
     success: function (res) {
       const tbody = $("#ordersTable tbody");
+      tbody.empty(); // important to avoid duplicates
+
       res.forEach((order, index) => {
+        // Collect seller names from order items
+        let sellers = "N/A";
+
+        if (order.items && order.items.length > 0) {
+          const sellerSet = new Set(
+            order.items
+              .map((item) => item.product?.seller?.username)
+              .filter(Boolean),
+          );
+
+          sellers = [...sellerSet].join(", ");
+        }
+
         const row = `
-        <tr>
-          <td>${index + 1}</td>
-            <td>${order.user_name || "N/A"}</td>
-            <td>${order.seller_name || "N/A"}</td>
-            <td>$${parseFloat(order.amount).toFixed(2)}</td>
-            <td>${order.status}</td>
-            <td>${order.payment_method || "N/A"}</td>
-            <td>
-              <button class="btn btn-sm btn-primary view-order" data-id="${order.id}">View</button>
-            </td>
-        </tr>
-        `;
+      <tr>
+        <td>${index + 1}</td>
+        <td>${order.user?.username ?? "N/A"}</td>
+        <td>${sellers}</td>
+        <td>$${parseFloat(order.total_amount).toFixed(2)}</td>
+        <td>${order.status}</td>
+        <td>${order.payment_method}</td>
+        <td>
+          <button class="btn btn-sm btn-primary view-order" data-id="${order.checkout_id}" data-toggle="modal" data-target="#orderDetailsModal">
+            View
+          </button>
+        </td>
+      </tr>
+    `;
+
         tbody.append(row);
       });
 
-      // Initialize DataTable
-      ordersTable = $("#ordersTable").DataTable({
+      // Reinitialize DataTable
+      $("#ordersTable").DataTable({
         pageLength: 10,
         lengthChange: false,
         responsive: true,
         columnDefs: [
-          { orderable: false, targets: -1 }, // Disable ordering on the last column (Actions),
+          { orderable: false, targets: -1, className: "text-center" },
         ],
       });
     },
     error: function (xhr) {
       console.error("Error loading recent orders:", xhr.responseText);
+    },
+  });
+}
+
+// =======================================
+// Function Load Order Details Modal
+// =======================================
+function loadOrderDetailsModal(orderId) {
+  // First, fetch all orders to get the full order data with user info
+  $.ajax({
+    url: `${ip}/api/checkout/all`,
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    },
+    success: function (allOrders) {
+      // Find the specific order in the list
+      const fullOrder = allOrders.find((o) => o.checkout_id == orderId);
+
+      if (!fullOrder) {
+        console.error("Order not found in list");
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: "Order not found.",
+        });
+        return;
+      }
+
+      const order = fullOrder;
+      const items = fullOrder.items || [];
+
+      console.log("Full Order:", order);
+      console.log("User info:", order.user);
+
+      // Populate Summary Section
+      $("#summaryStatus").text(order.status || "N/A");
+      $("#summaryDate").text(order.created_at || "N/A");
+      $("#summaryItems").text(items.length);
+
+      // Populate Tracking Number
+      if (order.tracking_number) {
+        $("#tracking").text(order.tracking_number);
+      } else {
+        $("#tracking").text("Not yet assigned");
+      }
+
+      // Populate Items Table
+      let rows = "";
+      items.forEach((item) => {
+        console.log("Item structure:", item); // Debug log
+
+        const subtotal = (
+          parseFloat(item.price) * parseInt(item.quantity)
+        ).toFixed(2);
+
+        // Get image from product or item
+        const imagePath =
+          item.product?.image || item.image || "FrontEnd/assets/img/back.jpg";
+
+        // Get product name from product or item
+        const productName =
+          item.product?.product_name || item.product_name || "N/A";
+
+        // Get seller from the product.seller or fallback to shop name
+        const sellerName =
+          item.product?.seller?.username || order.shop_name || "N/A";
+
+        // Get username from the order.user
+        const username = order.user?.username || "N/A";
+
+        rows += `
+          <tr>
+            <td>
+              <img src="${ip}/FrontEnd/assets/img/product/${imagePath}"
+                   onerror="this.src='assets/img/back.jpg'"
+                   style="width:70px; height:70px; object-fit:cover; border:1px solid #ddd;">
+            </td>
+            <td>${username}</td>
+            <td>${productName}</td>
+            <td>${sellerName}</td>
+            <td>${item.quantity || 0}</td>
+            <td>$${parseFloat(item.price).toFixed(2)}</td>
+            <td>$${subtotal}</td>
+          </tr>
+        `;
+      });
+
+      $("#orderDetailsBody").html(rows);
+
+      // Show Modal
+      $("#orderDetailsModal").modal("show");
+    },
+    error: function (xhr) {
+      console.error("Error loading order details:", xhr.responseText);
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Unable to load order details. Please try again.",
+      });
     },
   });
 }
@@ -262,8 +385,7 @@ document.addEventListener("DOMContentLoaded", () => {
 // =======================================
 $(document).on("click", ".view-order", function () {
   const orderId = $(this).data("id");
-  // You can open a modal or redirect to the order details page
-  console.log("View order ID:", orderId);
+  loadOrderDetailsModal(orderId);
 });
 
 // =======================================

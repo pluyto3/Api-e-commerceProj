@@ -200,7 +200,7 @@
           <li><a href="manageAccounts.html"><i class="fas fa-images"></i> <span class="text-link"> Accounts</span></a></li>
           <li><a href="brand.html"><i class="fas fa-dolly-flatbed"></i> <span class="text-link"> Brand</span></a></li>
           <li><a href="category.html"><i class="fas fa-dolly"></i> <span class="text-link"> Category</span></a></li>
-          <li><a href="product.html"><i class="fas fa-shopping-basket"></i> <span class="text-link"> Products</span></a></li>
+          <li><a href="admin-product.html"><i class="fas fa-shopping-basket"></i> <span class="text-link"> Products</span></a></li>
           <li><a href="orderDetails.html"><i class="fas fa-truck"></i> <span class="text-link"> Orders</span></a></li>
         </ul>
       </section>
@@ -214,53 +214,53 @@
           <!-- ===== (FINANCIAL ROW) ===== -->
           <div class="row mb-4">
 
-            <!-- Revenue -->
+            <!-- Users -->
             <div class="col-md-3">
               <div class="card bg-orange-g text-white">
                 <div class="card-body">
                   <h4 class="fot-weight-light"><i class="fas fa-dolly"></i> Users</h4>
                   <hr class="admin-hr">
                   <h5>
-                    <b id="totalRevenue">₱0.00</b>
+                    <b id="countedUsers">₱0.00</b>
                   </h5>
                 </div>
               </div>
             </div>
 
-            <!-- Refunds -->
+            <!-- Sellers -->
             <div class="col-md-3">
               <div class="card bg-green-g text-white">
                 <div class="card-body">
                   <h4 class="fot-weight-light"><i class="fas fa-dolly-flatbed"></i> Sellers</h4>
                   <hr class="admin-hr">
                   <h5>
-                    <b id="countedBrand"></b>
+                    <b id="countedSellers"></b>
                   </h5>
                 </div>
               </div>
             </div>
 
-            <!-- Net Profit -->
+            <!-- Product -->
             <div class="col-md-3">
               <div class="card bg-blue-g text-white">
                 <div class="card-body">
                   <h4 class="fot-weight-light"><i class="fas fa-money-bill"></i> Product</h4>
                   <hr class="admin-hr">
                   <h5>
-                    <b id="countedUsers"></b>
+                    <b id="countedProducts"></b>
                   </h5>
                 </div>
               </div>
             </div>
 
-            <!-- Platform Comission -->
+            <!-- Pending Approval -->
             <div class="col-md-3">
               <div class="card bg-orange-g text-white">
                 <div class="card-body">
                   <h4 class="fot-weight-light"><i class="fas fa-truck-loading"></i> Pending Approval</h4>
                   <hr class="admin-hr">
                   <h5>
-                    <b id="countedCheckout"></b>
+                    <b id="countedPendingApproval"></b>
                   </h5>
                 </div>
               </div>
@@ -278,7 +278,7 @@
                   <h4 class="fot-weight-light"><i class="fas fa-dolly"></i> Total Orders</h4>
                   <hr class="admin-hr">
                   <h5>
-                    <b id="totalRevenue">₱0.00</b>
+                    <b id="countedOrders">₱0.00</b>
                   </h5>
                 </div>
               </div>
@@ -291,33 +291,33 @@
                   <h4 class="fot-weight-light"><i class="fas fa-dolly-flatbed"></i> Pending Orders</h4>
                   <hr class="admin-hr">
                   <h5>
-                    <b id="countedBrand"></b>
+                    <b id="countedPendingOrders"></b>
                   </h5>
                 </div>
               </div>
             </div>
 
-            <!-- Users -->
+            <!-- Completed Orders -->
             <div class="col-md-3">
               <div class="card bg-blue-g text-white">
                 <div class="card-body">
                   <h4 class="fot-weight-light"><i class="fas fa-money-bill"></i> Completed Orders</h4>
                   <hr class="admin-hr">
                   <h5>
-                    <b id="countedUsers"></b>
+                    <b id="countedCompletedOrders"></b>
                   </h5>
                 </div>
               </div>
             </div>
 
-            <!-- Sellers -->
+            <!-- Cancelled -->
             <div class="col-md-3">
               <div class="card bg-orange-g text-white">
                 <div class="card-body">
                   <h4 class="fot-weight-light"><i class="fas fa-truck-loading"></i> Cancelled</h4>
                   <hr class="admin-hr">
                   <h5>
-                    <b id="countedCheckout"></b>
+                    <b id="countedCancelled"></b>
                   </h5>
                 </div>
               </div>
@@ -353,25 +353,76 @@
           <!-- ===== RECENT ORDERS TABLE ===== -->
           <div class="card">
             <div class="card-header">
-              <h2 class="mb-0">Recent Orders</h2>
+              <h2 class="mb-0">Orders</h2>
             </div>
             <div class="card-body table-responsive">
               <table class="table table-striped table-hover" id="ordersTable">
                 <thead>
                   <tr>
-                    <th>#</th>
-                    <th>User</th>
-                    <th>Seller</th>
-                    <th>Amount</th>
-                    <th>Status</th>
-                    <th>Payment</th>
-                    <th>Action</th>
+                    <th class="text-center">#</th>
+                    <th class="text-center">User</th>
+                    <th class="text-center">Seller</th>
+                    <th class="text-center">Amount</th>
+                    <th class="text-center">Status</th>
+                    <th class="text-center">Payment</th>
+                    <th class="text-center">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   <!-- Filled by JS -->
                 </tbody>
               </table>
+            </div>
+          </div>
+
+          <!-- ===== Modal View Order ===== -->
+          <div class="modal fade" id="orderDetailsModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title">Order Details</h5>
+                  <button
+                    type="button"
+                    class="close"
+                    data-dismiss="modal"
+                    aria-label="Close">
+                    <span>&times;</span>
+                  </button>
+                </div>
+
+                <div class="modal-body">
+                  <!-- Summary -->
+                  <div id="order-summary" class="mb-3 p-3 bg-light rounded border">
+                    <p><strong>Status:</strong> <span id="summaryStatus"></span></p>
+                    <p><strong>Date:</strong> <span id="summaryDate"></span></p>
+                    <p>
+                      <strong>Total Items:</strong> <span id="summaryItems"></span>
+                    </p>
+                  </div>
+                  <p>
+                    <strong>Tracking Number:</strong>
+                    <span
+                      id="tracking"
+                      class="text-primary font-weight-bold"></span>
+                  </p>
+
+                  <!-- Product List -->
+                  <table class="table table-bordered">
+                    <thead>
+                      <tr>
+                        <th>Image</th>
+                        <th>User Ordered</th>
+                        <th>Product</th>
+                        <th>Seller</th>
+                        <th>Qty</th>
+                        <th>Price</th>
+                        <th>Subtotal</th>
+                      </tr>
+                    </thead>
+                    <tbody id="orderDetailsBody"></tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </div>
 

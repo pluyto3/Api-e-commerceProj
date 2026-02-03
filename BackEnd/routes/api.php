@@ -59,6 +59,8 @@ Route::group(['prefix' => 'products'], function($router) {
         Route::post('/', 'createProduct'); // Create a new product
         Route::get('/{id}', 'getProduct_id'); // Get a specific product
         Route::put('/{id}', 'updateProduct'); // Update a specific product
+        Route::put('/{id}/approve', 'approveProduct'); // Approve a product (admin)
+        Route::put('/{id}/reject', 'rejectProduct'); // Reject a product (admin)
         Route::delete('/{id}', 'deleteProduct'); // Delete a specific product
     });
 });

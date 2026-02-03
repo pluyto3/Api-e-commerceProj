@@ -22,6 +22,10 @@ class Product extends Model
         'stock_quantity',
         'image',
         'status',
+        'approval_status',
+        'approval_reason',
+        'approved_at',
+        'approved_by',
     ];
 
     public function category()
@@ -47,6 +51,11 @@ class Product extends Model
     public function seller()
     {
         return $this->belongsTo(User::class, 'seller_id');
+    }
+
+    public function approver()
+    {
+        return $this->belongsTo(User::class, 'approved_by', 'user_id');
     }
 
     protected $primaryKey = 'product_id';

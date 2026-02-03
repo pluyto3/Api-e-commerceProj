@@ -22,10 +22,10 @@ class ProductController extends Controller
             $user = User::where('token', $token)->first();
             if($user){ 
 
-                // Fetch all products along with their related category and brand
-                $products = Product::with(['category', 'brand'])->get();
+                // Fetch all products along with their related category, brand and seller
+                $products = Product::with(['category', 'brand', 'seller'])->get();
 
-                // Format the response to include category and brand names
+                // Format the response to include category, brand and seller info plus approval fields
                 $data = $products->map(function ($p) {
                     return [
                         'product_id' => $p->product_id,
@@ -35,12 +35,18 @@ class ProductController extends Controller
                         'stock_quantity' => $p->stock_quantity,
                         'image' => $p->image,
                         'status' => $p->status,
-                        'category_name' => $p->category?->name,
-                        'brand_name' => $p->brand?->name,
+                        'category' => $p->category?->name,
+                        'brand' => $p->brand?->name,
+                        'seller' => $p->seller ? ['user_id' => $p->seller->user_id, 'username' => $p->seller->username] : null,
+                        'approval_status' => $p->approval_status ?? 'pending',
+                        'approval_reason' => $p->approval_reason ?? null,
+                        'approved_at' => $p->approved_at ?? null,
+                        'approved_by' => $p->approved_by ?? null,
+                        'created_at' => $p->created_at?->format('M d, Y'),
                     ];
                 });
 
-                return response()->json(['data' => $data]);
+                return response()->json(['data' => $data], 200);
             } else {
                 return response()->json([
                     'msg' => 'No products.'
@@ -120,9 +126,27 @@ class ProductController extends Controller
         if($token){
             $user = User::where('token', $token)->first();
             if($user){
-                $product = Product::find($id);
+                $product = Product::with(['category', 'brand', 'seller'])->find($id);
                 if($product){
-                    return response()->json($product, 200);
+                    // include approval fields and related info
+                    $result = [
+                        'product_id' => $product->product_id,
+                        'product_name' => $product->product_name,
+                        'product_price' => $product->product_price,
+                        'product_description' => $product->product_description,
+                        'stock_quantity' => $product->stock_quantity,
+                        'image' => $product->image,
+                        'status' => $product->status,
+                        'category' => $product->category?->name,
+                        'brand' => $product->brand?->name,
+                        'seller' => $product->seller ? ['user_id' => $product->seller->user_id, 'username' => $product->seller->username] : null,
+                        'approval_status' => $product->approval_status ?? 'pending',
+                        'approval_reason' => $product->approval_reason ?? null,
+                        'approved_at' => $product->approved_at ?? null,
+                        'approved_by' => $product->approved_by ?? null,
+                        'created_at' => $product->created_at?->format('M d, Y'),
+                    ];
+                    return response()->json(['product' => $result], 200);
                 }
                 else {
                     return response()->json([
@@ -242,6 +266,67 @@ class ProductController extends Controller
                 'msg' => 'No Token Provided.'
             ], 400);
         }
+    }
+
+    /**
+     * Approve a product (admin action)
+     */
+    public function approveProduct(Request $request, $id)
+    {
+        $token = $request->bearerToken();
+        if (!$token) {
+            return response()->json(['msg' => 'No Token Provided.'], 400);
+        }
+
+        $user = User::where('token', $token)->first();
+        if (!$user || $user->role !== 'admin') {
+            return response()->json(['msg' => 'Unauthorized.'], 403);
+        }
+
+        $product = Product::find($id);
+        if (!$product) {
+            return response()->json(['msg' => 'Product not found.'], 404);
+        }
+
+        $product->approval_status = 'approved';
+        $product->approval_reason = null;
+        $product->approved_at = now();
+        $product->approved_by = $user->user_id;
+        $product->save();
+
+        return response()->json(['msg' => 'Product approved.'], 200);
+    }
+
+    /**
+     * Reject a product with reason (admin action)
+     */
+    public function rejectProduct(Request $request, $id)
+    {
+        $token = $request->bearerToken();
+        if (!$token) {
+            return response()->json(['msg' => 'No Token Provided.'], 400);
+        }
+
+        $user = User::where('token', $token)->first();
+        if (!$user || $user->role !== 'admin') {
+            return response()->json(['msg' => 'Unauthorized.'], 403);
+        }
+
+        $product = Product::find($id);
+        if (!$product) {
+            return response()->json(['msg' => 'Product not found.'], 404);
+        }
+
+        $data = $request->all();
+        $reason = $data['reason'] ?? null;
+
+        $product->approval_status = 'rejected';
+        $product->approval_reason = $reason;
+        $product->approved_at = now();
+        $product->approved_by = $user->user_id;
+        $product->save();
+
+        return response()->json(['msg' => 'Product rejected.'], 200);
     }
 
 }
