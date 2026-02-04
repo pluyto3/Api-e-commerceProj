@@ -85,6 +85,8 @@ function loadProductsForApproval() {
       console.log("All Products:", res);
       allProducts = res.data || res || [];
       displayProductsTable(allProducts, "all");
+      // populate approved orders card/table from backend
+      fetchAndDisplayApprovedOrders();
     },
     error: function (xhr) {
       console.error("Error loading products:", xhr.responseText);
@@ -159,7 +161,7 @@ function displayProductsTable(products, statusFilter = "all") {
         <td>${statusBadge}</td>
         <td>${product.created_at || "N/A"}</td>
         <td>
-          <button class="btn btn-sm btn-info view-product" data-id="${product.product_id}" title="View Details">
+          <button class="btn btn-sm btn-info view-product" data-id="${product.product_id}" title="View Details" data-toggle="modal" data-target="#productDetailsModal">
             <i class="fas fa-eye"></i> View
           </button>
           ${actionButtons}
@@ -168,6 +170,245 @@ function displayProductsTable(products, statusFilter = "all") {
     `;
 
     tbody.append(row);
+  });
+}
+
+// =======================================
+// Populate Approved Orders Card/Table
+// =======================================
+function displayApprovedOrders(products) {
+  const tbody = $("#ordersTable tbody");
+  tbody.empty();
+
+  const approved = (products || []).filter(
+    (p) => (p.approval_status || "pending").toLowerCase() === "approved",
+  );
+
+  if (approved.length === 0) {
+    tbody.html(
+      `<tr><td colspan="11" class="text-center text-muted py-4">No approved orders/products found.</td></tr>`,
+    );
+    return;
+  }
+
+  approved.forEach((product, index) => {
+    const statusBadge = getStatusBadge("approved");
+    const img = buildImageCandidates(product.image)[0] || "assets/img/back.jpg";
+    const row = `
+      <tr>
+        <td class="text-center">${product.product_id || index + 1}</td>
+        <td class="text-center">${product.product_name || "N/A"}</td>
+        <td class="text-center">${product.seller?.username || "N/A"}</td>
+        <td class="text-center">${product.category || "N/A"}</td>
+        <td class="text-center">${product.brand || "N/A"}</td>
+        <td class="text-center">₱${parseFloat(product.product_price || 0).toFixed(2)}</td>
+        <td class="text-center">${product.stock_quantity || 0}</td>
+        <td class="text-center"><img src="${img}" alt="Product" style="width:50px;height:50px;object-fit:cover;border-radius:4px;" onerror="this.onerror=null;this.src='assets/img/back.jpg'"></td>
+        <td class="text-center">${statusBadge}</td>
+        <td class="text-center">${product.approved_at || product.created_at || "N/A"}</td>
+        <td class="text-center">
+          <button class="btn btn-sm btn-info view-product" data-id="${product.product_id}" title="View Details" data-toggle="modal" data-target="#productDetailsModal">
+            <i class="fas fa-eye"></i> View
+          </button>
+        </td>
+      </tr>
+    `;
+
+    tbody.append(row);
+  });
+}
+
+// =======================================
+// Fetch approved orders (checkouts) from backend and render
+// =======================================
+function fetchAndDisplayApprovedOrders() {
+  const tbody = $("#ordersTable tbody");
+  tbody.empty();
+
+  $.ajax({
+    url: `${ip}/api/checkout/all`,
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    },
+    success: function (res) {
+      const orders = res || [];
+
+      // Filter orders where first item's product has approval_status === 'approved'
+      const approved = (orders || []).filter((o) => {
+        const firstItem = o.items && o.items.length ? o.items[0] : null;
+        const approval =
+          firstItem?.product?.approval_status ||
+          firstItem?.approval_status ||
+          null;
+        return (approval || "").toLowerCase() === "approved";
+      });
+
+      if (approved.length === 0) {
+        tbody.html(
+          `<tr><td colspan="11" class="text-center text-muted py-4">No approved orders found.</td></tr>`,
+        );
+        return;
+      }
+
+      // Deduplicate by product_id to show each approved product only once
+      const uniq = {};
+      approved.forEach((order) => {
+        // Check all items in this order, not just the first one
+        if (order.items && order.items.length) {
+          order.items.forEach((item) => {
+            // Only include items with approval_status === 'approved'
+            const itemApprovalStatus =
+              item?.product?.approval_status ||
+              item?.approval_status ||
+              "pending";
+            if (itemApprovalStatus.toLowerCase() !== "approved") return;
+
+            const pid = item?.product_id || item?.product?.product_id;
+            if (!pid) return;
+
+            const date = order.created_at || order.updated_at || null;
+
+            if (!uniq[pid]) {
+              uniq[pid] = { order, item, date };
+            } else {
+              // Keep the most recent entry for this product
+              const existingDate = uniq[pid].date;
+              if (
+                date &&
+                (!existingDate || new Date(date) > new Date(existingDate))
+              ) {
+                uniq[pid] = { order, item, date };
+              }
+            }
+          });
+        }
+      });
+
+      const uniqueProducts = Object.values(uniq);
+      uniqueProducts.forEach(({ order, item }, idx) => {
+        const firstItem = item;
+        const productName = firstItem
+          ? firstItem.product_name || firstItem.product?.product_name
+          : "N/A";
+        const seller =
+          firstItem && firstItem.product && firstItem.product.seller
+            ? firstItem.product.seller.username
+            : order.user?.username || "N/A";
+        const category =
+          firstItem && firstItem.product && firstItem.product.category
+            ? firstItem.product.category
+            : "N/A";
+        const brand =
+          firstItem && firstItem.product && firstItem.product.brand
+            ? firstItem.product.brand.name
+            : firstItem?.product?.brand || "N/A";
+        const price = firstItem
+          ? firstItem.price || firstItem.product?.product_price || 0
+          : 0;
+        const stock = firstItem
+          ? firstItem.product?.stock_quantity || "N/A"
+          : "N/A";
+        const img = firstItem
+          ? firstItem.product?.image
+            ? buildImageCandidates(firstItem.product.image)[0]
+            : "assets/img/back.jpg"
+          : "assets/img/back.jpg";
+
+        const approvalStatus =
+          firstItem?.product?.approval_status ||
+          firstItem?.approval_status ||
+          "N/A";
+        const prodIdDisplay =
+          firstItem?.product_id ||
+          firstItem?.product?.product_id ||
+          order.checkout_id ||
+          idx + 1;
+
+        const row = `
+          <tr>
+            <td class="text-center">${prodIdDisplay}</td>
+            <td class="text-center">${productName}</td>
+            <td class="text-center">${seller}</td>
+            <td class="text-center">${category}</td>
+            <td class="text-center">${brand}</td>
+            <td class="text-center">₱${parseFloat(price || 0).toFixed(2)}</td>
+            <td class="text-center">${stock}</td>
+            <td class="text-center"><img src="${img}" alt="Product" style="width:50px;height:50px;object-fit:cover;border-radius:4px;" onerror="this.onerror=null;this.src='assets/img/back.jpg'"></td>
+            <td class="text-center"><span class="badge">${(approvalStatus || "").toUpperCase()}</span></td>
+            <td class="text-center">${order.created_at || order.updated_at || "N/A"}</td>
+            <td class="text-center"><button class="btn btn-sm btn-info" data-id="${order.checkout_id}" onclick="viewCheckout(${order.checkout_id})">View</button></td>
+          </tr>
+        `;
+
+        tbody.append(row);
+      });
+    },
+    error: function (xhr) {
+      console.error("Error fetching approved orders:", xhr.responseText);
+      tbody.html(
+        `<tr><td colspan="11" class="text-center text-danger py-4">Failed to load approved orders.</td></tr>`,
+      );
+    },
+  });
+}
+
+// helper used by action button above — opens order details modal (uses existing product modal for quick inspect)
+function viewCheckout(checkoutId) {
+  // try to open product details if mapping exists, otherwise fetch order details
+  $.ajax({
+    url: `${ip}/api/checkout/orders/${checkoutId}`,
+    method: "GET",
+    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+    success: function (res) {
+      const order = res.order || res;
+      if (!order)
+        return Swal.fire({
+          icon: "info",
+          title: "No details",
+          text: "No order details available.",
+        });
+
+      // populate modal with first item/product for quick view
+      const item = order.items && order.items.length ? order.items[0] : null;
+      if (item) {
+        $("#detailProductId").text(item.product_id || "N/A");
+        $("#detailProductName").text(item.product_name || "N/A");
+        $("#detailSeller").text(
+          item.product?.seller?.username || order.user?.username || "N/A",
+        );
+        $("#detailCategory").text(item.product?.category || "N/A");
+        $("#detailBrand").text(item.product?.brand?.name || "N/A");
+        $("#detailPrice").text(`₱${parseFloat(item.price || 0).toFixed(2)}`);
+        $("#detailStock").text(item.product?.stock_quantity || "N/A");
+        $("#detailDescription").text(
+          `Quantity: ${item.quantity}\nSubtotal: ₱${parseFloat(item.subtotal || 0).toFixed(2)}`,
+        );
+        $("#detailDate").text(order.created_at || "N/A");
+        const img =
+          item.image ||
+          (item.product && item.product.image
+            ? buildImageCandidates(item.product.image)[0]
+            : "assets/img/back.jpg");
+        $("#productImage").attr("src", img);
+        $("#productDetailsModal").modal("show");
+      } else {
+        Swal.fire({
+          icon: "info",
+          title: "No items",
+          text: "This order has no items to display.",
+        });
+      }
+    },
+    error: function (xhr) {
+      console.error("Error fetching order details:", xhr.responseText);
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Failed to load order details.",
+      });
+    },
   });
 }
 
@@ -266,10 +507,10 @@ function loadProductDetails(productId) {
     .addClass("badge")
     .addClass(
       status === "pending"
-        ? "badge-warning"
+        ? "Pending"
         : status === "approved"
-          ? "badge-success"
-          : "badge-danger",
+          ? "Approved"
+          : "Rejected",
     )
     .text(status.toUpperCase());
 
