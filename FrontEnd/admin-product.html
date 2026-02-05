@@ -184,7 +184,7 @@
           <h1 class="display-4"> Seller Products</h1>
           <hr class="admin-hr" />
 
-          <!-- Product Approval Table -->
+          <!-- Pending Product Approval Table -->
             <div class="card">
                 <div class="card-header">
                     <h2 class="mb-0">Products Pending Approval</h2>
@@ -215,7 +215,7 @@
                 </div>
             </div>
 
-          <!-- ===== Pending Approve Products ===== -->
+          <!-- ===== Approved Products ===== -->
           <div class="card">
             <div class="card-header">
               <h2 class="mb-0">Approved Orders</h2>
@@ -244,12 +244,50 @@
             </div>
           </div>
 
-          <!-- Product Details Modal -->
+          <!-- Product Details Modal for Pending-->
           <div class="modal fade" id="productDetailsModal" tabindex="-1" role="dialog" aria-labelledby="productDetailsModalLabel">
             <div class="modal-dialog modal-lg" role="document">
               <div class="modal-content">
                 <div class="modal-header">
                   <h5 class="modal-title" id="productDetailsModalLabel">Product Details</h5>
+                  <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span>&times;</span>
+                  </button>
+                </div>
+                <div class="modal-body">
+                  <div class="row">
+                    <div class="col-md-4">
+                      <img id="productImage" src="" alt="Product Image" class="img-fluid" style="max-height: 300px; object-fit: cover;">
+                    </div>
+                    <div class="col-md-8">
+                      <p><strong>Product ID:</strong> <span id="detailProductId"></span></p>
+                      <p><strong>Product Name:</strong> <span id="detailProductName"></span></p>
+                      <p><strong>Seller:</strong> <span id="detailSeller"></span></p>
+                      <p><strong>Category:</strong> <span id="detailCategory"></span></p>
+                      <p><strong>Brand:</strong> <span id="detailBrand"></span></p>
+                      <p><strong>Price:</strong> <span id="detailPrice"></span></p>
+                      <p><strong>Stock:</strong> <span id="detailStock"></span></p>
+                      <p><strong>Description:</strong></p>
+                      <p id="detailDescription" style="border: 1px solid #ddd; padding: 10px; border-radius: 4px;"></p>
+                      <p><strong>Status:</strong> <span id="detailStatus" class="badge"></span></p>
+                      <p><strong>Submitted Date:</strong> <span id="detailDate"></span></p>
+                    </div>
+                  </div>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-danger" id="rejectBtn" data-dismiss="modal">Reject</button>
+                  <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Product Details Modal for Approved Products -->
+          <div class="modal fade" id="productDetailsModalApproved" tabindex="-1" role="dialog" aria-labelledby="productDetailsModalApprovedLabel">
+            <div class="modal-dialog modal-lg" role="document">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="productDetailsModalApprovedLabel">Product Details</h5>
                   <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span>&times;</span>
                   </button>

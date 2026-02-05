@@ -84,7 +84,12 @@ function loadProductsForApproval() {
     success: function (res) {
       console.log("All Products:", res);
       allProducts = res.data || res || [];
-      displayProductsTable(allProducts, "all");
+      // Show only pending/non-approved products in the pending table
+      const pendingProducts = allProducts.filter((p) => {
+        const status = p.approval_status || "pending";
+        return status.toLowerCase() !== "approved";
+      });
+      displayProductsTable(pendingProducts, "all");
       // populate approved orders card/table from backend
       fetchAndDisplayApprovedOrders();
     },
@@ -289,40 +294,144 @@ function fetchAndDisplayApprovedOrders() {
       const uniqueProducts = Object.values(uniq);
       uniqueProducts.forEach(({ order, item }, idx) => {
         const firstItem = item;
-        const productName = firstItem
-          ? firstItem.product_name || firstItem.product?.product_name
-          : "N/A";
+        const prod = firstItem?.product || {};
+
+        // Debug: log the item structure to help diagnose missing fields
+        console.log("Approved order item:", { firstItem, prod, order });
+
+        // determine product id to allow lookups when product payload is minimal
+        const pid =
+          firstItem?.product_id ||
+          prod.product_id ||
+          prod.id ||
+          firstItem?.product?.product_id ||
+          null;
+
+        // try to find a full product record from previously loaded products
+        const matchedProduct =
+          pid && allProducts && allProducts.length
+            ? allProducts.find(
+                (p) => String(p.product_id || p.id) === String(pid),
+              )
+            : null;
+
+        const productName =
+          firstItem?.product_name ||
+          prod.product_name ||
+          prod.name ||
+          (matchedProduct &&
+            (matchedProduct.product_name || matchedProduct.name)) ||
+          "N/A";
+
         const seller =
-          firstItem && firstItem.product && firstItem.product.seller
-            ? firstItem.product.seller.username
-            : order.user?.username || "N/A";
-        const category =
-          firstItem && firstItem.product && firstItem.product.category
-            ? firstItem.product.category
-            : "N/A";
-        const brand =
-          firstItem && firstItem.product && firstItem.product.brand
-            ? firstItem.product.brand.name
-            : firstItem?.product?.brand || "N/A";
-        const price = firstItem
-          ? firstItem.price || firstItem.product?.product_price || 0
-          : 0;
-        const stock = firstItem
-          ? firstItem.product?.stock_quantity || "N/A"
-          : "N/A";
-        const img = firstItem
-          ? firstItem.product?.image
-            ? buildImageCandidates(firstItem.product.image)[0]
-            : "assets/img/back.jpg"
-          : "assets/img/back.jpg";
+          // seller may be an object or a string username/id
+          (prod.seller && (prod.seller.username || prod.seller)) ||
+          (matchedProduct &&
+            (matchedProduct.seller?.username || matchedProduct.seller)) ||
+          order.user?.username ||
+          "N/A";
+
+        // Extract category with comprehensive fallbacks, then fallback to matchedProduct
+        let category = "N/A";
+        if (prod.category) {
+          category =
+            typeof prod.category === "object"
+              ? prod.category.name ||
+                prod.category.category_name ||
+                prod.category.title ||
+                String(prod.category)
+              : String(prod.category);
+        } else if (firstItem?.category) {
+          category =
+            typeof firstItem.category === "object"
+              ? firstItem.category.name || String(firstItem.category)
+              : String(firstItem.category);
+        } else if (prod.category_name) {
+          category = prod.category_name;
+        } else if (prod.categoryName) {
+          category = prod.categoryName;
+        } else if (matchedProduct) {
+          category =
+            matchedProduct.category ||
+            matchedProduct.category_name ||
+            matchedProduct.categoryName ||
+            (matchedProduct.category &&
+              (matchedProduct.category.name || matchedProduct.category)) ||
+            "N/A";
+        }
+
+        // Extract brand with comprehensive fallbacks, then fallback to matchedProduct
+        let brand = "N/A";
+        if (prod.brand) {
+          brand =
+            typeof prod.brand === "object"
+              ? prod.brand.name ||
+                prod.brand.brand_name ||
+                prod.brand.title ||
+                String(prod.brand)
+              : String(prod.brand);
+        } else if (firstItem?.brand) {
+          brand =
+            typeof firstItem.brand === "object"
+              ? firstItem.brand.name || String(firstItem.brand)
+              : String(firstItem.brand);
+        } else if (prod.brand_name) {
+          brand = prod.brand_name;
+        } else if (prod.brandName) {
+          brand = prod.brandName;
+        } else if (matchedProduct) {
+          brand =
+            matchedProduct.brand ||
+            matchedProduct.brand_name ||
+            matchedProduct.brandName ||
+            (matchedProduct.brand &&
+              (matchedProduct.brand.name || matchedProduct.brand)) ||
+            "N/A";
+        }
+
+        console.log("Category extraction result:", {
+          category,
+          prod_category: prod.category,
+          firstItem_category: firstItem?.category,
+          matchedProduct: matchedProduct
+            ? { category: matchedProduct.category, brand: matchedProduct.brand }
+            : null,
+        });
+
+        const price =
+          firstItem?.price ||
+          prod.product_price ||
+          prod.price ||
+          (matchedProduct &&
+            (matchedProduct.product_price || matchedProduct.price)) ||
+          0;
+
+        const stock =
+          // prefer numeric stock if available, else show N/A
+          typeof prod.stock_quantity !== "undefined"
+            ? prod.stock_quantity
+            : typeof prod.stock !== "undefined"
+              ? prod.stock
+              : (matchedProduct &&
+                  (matchedProduct.stock_quantity || matchedProduct.stock)) ||
+                "N/A";
+
+        const img = prod.image
+          ? buildImageCandidates(prod.image)[0]
+          : firstItem?.image
+            ? buildImageCandidates(firstItem.image)[0]
+            : matchedProduct && matchedProduct.image
+              ? buildImageCandidates(matchedProduct.image)[0]
+              : "assets/img/back.jpg";
 
         const approvalStatus =
-          firstItem?.product?.approval_status ||
-          firstItem?.approval_status ||
-          "N/A";
+          prod.approval_status || firstItem?.approval_status || "N/A";
+
         const prodIdDisplay =
           firstItem?.product_id ||
-          firstItem?.product?.product_id ||
+          prod.product_id ||
+          (matchedProduct &&
+            (matchedProduct.product_id || matchedProduct.id)) ||
           order.checkout_id ||
           idx + 1;
 
@@ -337,8 +446,8 @@ function fetchAndDisplayApprovedOrders() {
             <td class="text-center">${stock}</td>
             <td class="text-center"><img src="${img}" alt="Product" style="width:50px;height:50px;object-fit:cover;border-radius:4px;" onerror="this.onerror=null;this.src='assets/img/back.jpg'"></td>
             <td class="text-center"><span class="badge">${(approvalStatus || "").toUpperCase()}</span></td>
-            <td class="text-center">${order.created_at || order.updated_at || "N/A"}</td>
-            <td class="text-center"><button class="btn btn-sm btn-info" data-id="${order.checkout_id}" onclick="viewCheckout(${order.checkout_id})">View</button></td>
+            <td class="text-center">${formatDate(order.created_at || order.updated_at)}</td>
+            <td class="text-center"><button class="btn btn-sm btn-info" data-id="${order.checkout_id}" onclick="viewCheckout(${order.checkout_id})" data-toggle="modal" data-target="#productDetailsModal"><i class="fas fa-eye"></i> View</button></td>
           </tr>
         `;
 
@@ -373,24 +482,68 @@ function viewCheckout(checkoutId) {
       // populate modal with first item/product for quick view
       const item = order.items && order.items.length ? order.items[0] : null;
       if (item) {
-        $("#detailProductId").text(item.product_id || "N/A");
-        $("#detailProductName").text(item.product_name || "N/A");
-        $("#detailSeller").text(
-          item.product?.seller?.username || order.user?.username || "N/A",
-        );
-        $("#detailCategory").text(item.product?.category || "N/A");
-        $("#detailBrand").text(item.product?.brand?.name || "N/A");
-        $("#detailPrice").text(`₱${parseFloat(item.price || 0).toFixed(2)}`);
-        $("#detailStock").text(item.product?.stock_quantity || "N/A");
+        let prod = item.product || {};
+        // fallback: if product details are not included in the order item,
+        // try to find the full product record from `allProducts` by id
+        const pid = item.product_id || prod.product_id || prod.id || null;
+        if (
+          (!prod || Object.keys(prod).length === 0) &&
+          pid &&
+          allProducts &&
+          allProducts.length
+        ) {
+          const matched = allProducts.find(
+            (p) => String(p.product_id || p.id) === String(pid),
+          );
+          if (matched) prod = matched;
+        }
+
+        const detailId = item.product_id || prod.product_id || prod.id || "N/A";
+        const detailName =
+          item.product_name || prod.product_name || prod.name || "N/A";
+        const seller =
+          (prod.seller && (prod.seller.username || prod.seller)) ||
+          order.user?.username ||
+          "N/A";
+        const category =
+          (prod.category && (prod.category.name || prod.category)) ||
+          item.category ||
+          "N/A";
+        const brand =
+          (prod.brand && (prod.brand.name || prod.brand)) ||
+          item.brand ||
+          "N/A";
+        const price = item.price || prod.product_price || prod.price || 0;
+        const stock =
+          typeof prod.stock_quantity !== "undefined"
+            ? prod.stock_quantity
+            : typeof prod.stock !== "undefined"
+              ? prod.stock
+              : "N/A";
+        const description =
+          item.description ||
+          prod.product_description ||
+          prod.description ||
+          "";
+
+        $("#detailProductId").text(detailId);
+        $("#detailProductName").text(detailName);
+        $("#detailSeller").text(seller);
+        $("#detailCategory").text(category);
+        $("#detailBrand").text(brand);
+        $("#detailPrice").text(`₱${parseFloat(price || 0).toFixed(2)}`);
+        $("#detailStock").text(stock);
         $("#detailDescription").text(
-          `Quantity: ${item.quantity}\nSubtotal: ₱${parseFloat(item.subtotal || 0).toFixed(2)}`,
+          description
+            ? description
+            : `Quantity: ${item.quantity}\nSubtotal: ₱${parseFloat(item.subtotal || 0).toFixed(2)}`,
         );
         $("#detailDate").text(order.created_at || "N/A");
-        const img =
-          item.image ||
-          (item.product && item.product.image
-            ? buildImageCandidates(item.product.image)[0]
-            : "assets/img/back.jpg");
+
+        const imgSource = prod.image || item.image || null;
+        const img = imgSource
+          ? buildImageCandidates(imgSource)[0]
+          : "assets/img/back.jpg";
         $("#productImage").attr("src", img);
         $("#productDetailsModal").modal("show");
       } else {
@@ -410,6 +563,20 @@ function viewCheckout(checkoutId) {
       });
     },
   });
+}
+
+// =======================================
+// Format Date Helper
+// =======================================
+function formatDate(dateString) {
+  if (!dateString) return "N/A";
+  try {
+    const date = new Date(dateString);
+    const options = { year: "numeric", month: "short", day: "numeric" };
+    return date.toLocaleDateString("en-US", options);
+  } catch (e) {
+    return dateString;
+  }
 }
 
 // =======================================
@@ -453,22 +620,45 @@ function buildImageSrc(image) {
 function buildImageCandidates(image) {
   if (!image) return ["assets/img/back.jpg"];
 
+  // extract filename (if an already partial path is provided)
+  const filename = String(image).split("/").pop();
+
+  // helper to join paths without duplicating segments or slashes
+  function joinParts(...parts) {
+    return parts
+      .map((p) => String(p || "").replace(/(^\/+|\/+$)/g, ""))
+      .filter(Boolean)
+      .join("/");
+  }
+
   // candidate 1: Laravel dev server (if used)
-  const c1 = `${ip}/FrontEnd/assets/img/product/${image}`;
+  const c1 = joinParts(ip, "FrontEnd", "assets", "img", "product", filename);
 
   // derive project base from current pathname (e.g., /e-commerce)
-  let projectBase = window.location.pathname;
+  let projectBase = window.location.pathname || "";
   if (projectBase.includes("/FrontEnd"))
     projectBase = projectBase.split("/FrontEnd")[0];
   else if (projectBase.includes("/BackEnd"))
     projectBase = projectBase.split("/BackEnd")[0];
+  // ensure leading slash for origin joining
+  if (!projectBase.startsWith("/"))
+    projectBase = projectBase ? `/${projectBase}` : "";
   const base = window.location.origin + projectBase;
 
   // candidate 2: XAMPP/Apache served BackEnd public folder
-  const c2 = `${base}/BackEnd/public/FrontEnd/assets/img/product/${image}`;
+  const c2 = joinParts(
+    base,
+    "BackEnd",
+    "public",
+    "FrontEnd",
+    "assets",
+    "img",
+    "product",
+    filename,
+  );
 
   // candidate 3: relative FrontEnd path
-  const c3 = `${base}/FrontEnd/assets/img/product/${image}`;
+  const c3 = joinParts(base, "FrontEnd", "assets", "img", "product", filename);
 
   return [c1, c2, c3];
 }
