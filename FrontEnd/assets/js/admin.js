@@ -81,16 +81,85 @@ function loadCounts() {
     method: "GET",
     headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
     success: function (res) {
-      // Admin
+      // Populate values available in /api/counts
+      $("#countedUsers").text(res.users || 0);
+      $("#countedOrders").text(res.total_orders || res.totalOrders || 0);
+      $("#countedPendingOrders").text(
+        res.pending_orders || res.pendingOrders || 0,
+      );
+      $("#countedCompletedOrders").text(
+        res.completed_orders || res.completedOrders || 0,
+      );
+
+      // keep older IDs for backward-compatibility if they exist
       $("#countedCategory").text(res.categories || 0);
       $("#countedBrand").text(res.brands || 0);
-      $("#countedUsers").text(res.users || 0);
 
-      // Seller/Admin orders (Checkout-based)
-      $("#countedCheckout").text(res.total_orders || 0);
-      $("#pendingOrders").text(res.pending_orders || 0);
-      $("#completedOrders").text(res.completed_orders || 0);
-      $("#cancelledOrders").text(res.cancelled_orders || 0);
+      // If API didn't return sellers/products/pendingApproval/cancelled, fetch them separately
+      // 1) Sellers count
+      $.ajax({
+        url: `${ip}/api/countedSellers`,
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        success: function (sres) {
+          $("#countedSellers").text(
+            sres.totalSellers || sres.total_sellers || 0,
+          );
+        },
+        error: function (xhr) {
+          console.warn("Could not load countedSellers:", xhr.responseText);
+          $("#countedSellers").text(0);
+        },
+      });
+
+      // 2) Products list — use to compute total products and pending approvals
+      $.ajax({
+        url: `${ip}/api/products`,
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        success: function (pres) {
+          const products = pres.data || [];
+          $("#countedProducts").text(products.length || 0);
+          const pendingCount = products.filter(
+            (p) => (p.approval_status || "pending") === "pending",
+          ).length;
+          $("#countedPendingApproval").text(pendingCount || 0);
+        },
+        error: function (xhr) {
+          console.warn("Could not load products for counts:", xhr.responseText);
+          $("#countedProducts").text(0);
+          $("#countedPendingApproval").text(0);
+        },
+      });
+
+      // 3) Compute cancelled orders from all orders
+      $.ajax({
+        url: `${ip}/api/checkout/all`,
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        success: function (orders) {
+          const cancelled = (orders || []).filter(
+            (o) => o.status === "cancelled",
+          ).length;
+          $("#countedCancelled").text(cancelled || 0);
+        },
+        error: function (xhr) {
+          console.warn(
+            "Could not load orders for cancelled count:",
+            xhr.responseText,
+          );
+          $("#countedCancelled").text(0);
+        },
+      });
 
       console.log("Dashboard counts loaded successfully:", res);
     },
@@ -304,7 +373,13 @@ function loadOrderDetailsModal(orderId) {
 
       // Populate Summary Section
       $("#summaryStatus").text(order.status || "N/A");
-      $("#summaryDate").text(order.created_at || "N/A");
+      const date = new Date(order.created_at);
+      const formattedDate = date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+      $("#summaryDate").text(formattedDate || "N/A");
       $("#summaryItems").text(items.length);
 
       // Populate Tracking Number

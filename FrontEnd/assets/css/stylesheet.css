@@ -1225,6 +1225,16 @@ th:last-child {
   border: 1px solid #ddd;
 }
 
+/* Center Table Content */
+#brand-table tbody tr td {
+  text-align: center;
+  vertical-align: middle;
+}
+#brand-table thead tr th {
+  text-align: center;
+  vertical-align: middle;
+}
+
 /* Dashboard role-based counts */
 .admin-only,
 .seller-only {

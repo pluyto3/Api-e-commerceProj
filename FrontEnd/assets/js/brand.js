@@ -209,15 +209,13 @@ $(document).ready(function () {
 
       // Initialize DataTable
       $("#brand-table").DataTable({
-        responsive: {
-          details: {
-            type: "column",
-            target: "tr",
-          },
-        },
-        scrollX: true,
-        autoWidth: false,
-        columnDefs: [{ targets: "_all", className: "text-center" }],
+        pagelength: 10,
+        lenghtchange: false,
+        searching: true,
+        responsive: true,
+        columnDefs: [
+          { orderable: false, targets: -1, className: "text-center" },
+        ],
       });
     },
     error: function (xhr) {
@@ -225,7 +223,7 @@ $(document).ready(function () {
       Swal.fire(
         "Error",
         xhr.responseJSON?.msg || "Failed to load brands",
-        "error"
+        "error",
       );
     },
   });
@@ -286,7 +284,7 @@ $(document).ready(function () {
       contentType: false,
       success: function () {
         Swal.fire("Updated!", "Brand updated successfully!", "success").then(
-          () => location.reload()
+          () => location.reload(),
         );
       },
       error: function (xhr) {
