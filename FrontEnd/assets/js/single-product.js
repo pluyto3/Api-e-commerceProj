@@ -44,7 +44,13 @@ function load_user() {
   $login.hide();
   $register.hide();
   $logout.show();
-  $cartCount.show();
+
+  // Show cart only for regular users (not sellers/admins)
+  if (!role || (role !== "admin" && role !== "seller")) {
+    $cartCount.show();
+  } else {
+    $cartCount.hide();
+  }
 
   // Role-based access
   if (role === "admin" || role === "seller") {
@@ -129,13 +135,13 @@ $(document).ready(function () {
 
       $("#main-img").attr(
         "src",
-        `${ip}/FrontEnd/assets/img/product/${product.image}`
+        `${ip}/FrontEnd/assets/img/product/${product.image}`,
       );
       $("#category-name").text(product.category ?? "Category Name");
       $("#product-name").text(product.product_name);
       $("#product-price").text(`Price: $${product.product_price ?? ""}`);
       $("#product-details-text").html(
-        product.product_description ?? "No details available"
+        product.product_description ?? "No details available",
       );
       $("input[type=number]").val(1);
     },

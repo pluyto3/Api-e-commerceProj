@@ -43,7 +43,13 @@ function load_user() {
   $login.hide();
   $register.hide();
   $logout.show();
-  $cartCount.show();
+
+  // Show cart only for regular users (not sellers/admins)
+  if (!role || (role !== "admin" && role !== "seller")) {
+    $cartCount.show();
+  } else {
+    $cartCount.hide();
+  }
 
   // Show admin dashboard for admin/seller only
   role === "admin" || role === "seller"

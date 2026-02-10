@@ -44,7 +44,13 @@ function load_user() {
   $login.hide();
   $register.hide();
   $logout.show();
-  $cartCount.show();
+
+  // Show cart only for regular users (not sellers/admins)
+  if (!role || (role !== "admin" && role !== "seller")) {
+    $cartCount.show();
+  } else {
+    $cartCount.hide();
+  }
 
   // Role-based access
   if (role === "admin" || role === "seller") {
@@ -153,7 +159,7 @@ $(document).ready(function () {
         locations = response; // In case the API just returns the array
       } else {
         console.error(
-          "Unexpected response format. Expected an array or { data: [...] }"
+          "Unexpected response format. Expected an array or { data: [...] }",
         );
         return;
       }
@@ -196,7 +202,7 @@ $(document).ready(function () {
       const allCartItems = response.cart || response.data || [];
 
       const cartItems = allCartItems.filter((item) =>
-        selectedIds.includes(item.addTocart_id)
+        selectedIds.includes(item.addTocart_id),
       );
       //   console.log("Cart items:", cartItems);
 
@@ -218,8 +224,8 @@ $(document).ready(function () {
         <li class="list-group-item d-flex align-items-center" style="text-align: start">
             <div>
                 <img src="${ip}/FrontEnd/assets/img/product/${
-          item.product.image
-        }" alt="${name}" width="80px" height="90px">
+                  item.product.image
+                }" alt="${name}" width="80px" height="90px">
             </div>
             <div class="flex-grow-1 cart-item-details" >
               <p class="fw-bold">${name}</p>
@@ -234,7 +240,7 @@ $(document).ready(function () {
 
         $(".cartItems").append(listCartItems);
         $(".cartTotalPrice").text(
-          `Total Price: ₱${totalAmount.toLocaleString()}`
+          `Total Price: ₱${totalAmount.toLocaleString()}`,
         );
       });
     },
@@ -252,7 +258,7 @@ $(document).ready(function () {
     // Validate that there are selected items
     if (!selectedItemsJSON) {
       alert(
-        "No items are selected. Please select items from your cart to check out."
+        "No items are selected. Please select items from your cart to check out.",
       );
       return;
     }
@@ -264,10 +270,10 @@ $(document).ready(function () {
     } catch (error) {
       console.error(
         "Error parsing selectedCartItems from sessionStorage:",
-        error
+        error,
       );
       alert(
-        "There was an error reading your cart. Please refresh and try again."
+        "There was an error reading your cart. Please refresh and try again.",
       );
       return;
     }
@@ -275,7 +281,7 @@ $(document).ready(function () {
     // Double-check that the array isn't empty
     if (!Array.isArray(selectedItemIDs) || selectedItemIDs.length === 0) {
       alert(
-        "No items are selected. Please select items from your cart to check out."
+        "No items are selected. Please select items from your cart to check out.",
       );
       return;
     }

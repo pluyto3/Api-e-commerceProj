@@ -38,7 +38,13 @@ function load_user() {
   $login.hide();
   $register.hide();
   $logout.show();
-  $cartCount.show();
+
+  // Show cart only for regular users (not sellers/admins)
+  if (!role || (role !== "admin" && role !== "seller")) {
+    $cartCount.show();
+  } else {
+    $cartCount.hide();
+  }
 
   // Role-based dashboard access
   role === "admin" || role === "seller"
@@ -96,7 +102,7 @@ function loadCategories($select = $("#category_id"), callback) {
       $select
         .empty()
         .append(
-          '<option value="" disabled selected>Select a category</option>'
+          '<option value="" disabled selected>Select a category</option>',
         );
       categories.forEach(({ category_id, name }) => {
         $select.append(`<option value="${category_id}">${name}</option>`);
@@ -184,7 +190,7 @@ function initAddProduct() {
       return Swal.fire(
         "Validation Error",
         "Please select both a category and a brand.",
-        "error"
+        "error",
       );
     }
 
@@ -322,7 +328,7 @@ function initEditProduct() {
               $("#image-preview")
                 .attr(
                   "src",
-                  `http://localhost/e-commerce/BackEnd/public/FrontEnd/assets/img/product/${p.image}`
+                  `http://localhost/e-commerce/BackEnd/public/FrontEnd/assets/img/product/${p.image}`,
                 )
                 .show();
             }
@@ -330,7 +336,7 @@ function initEditProduct() {
           error: (xhr) =>
             Swal.fire("Error", "Failed to fetch product data.", "error"),
         });
-      })
+      }),
     );
   });
 }
@@ -396,7 +402,7 @@ function initDeleteProduct() {
         headers: { Authorization: `Bearer ${token}` },
         success: (res) => {
           Swal.fire("Deleted!", res.msg, "success").then(() =>
-            location.reload()
+            location.reload(),
           );
         },
         error: (xhr) => Swal.fire("Error!", xhr.responseText, "error"),

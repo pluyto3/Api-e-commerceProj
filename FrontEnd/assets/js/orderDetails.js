@@ -44,7 +44,13 @@ function load_user() {
   $login.hide();
   $register.hide();
   $logout.show();
-  $cartCount.show();
+
+  // Show cart only for regular users (not sellers/admins)
+  if (!role || (role !== "admin" && role !== "seller")) {
+    $cartCount.show();
+  } else {
+    $cartCount.hide();
+  }
 
   // Role-based access
   if (role === "admin" || role === "seller") {
@@ -75,7 +81,7 @@ function fetchBuyerOrders() {
     error: function (err) {
       console.error("Error loading orders:", err);
       $("#buyerOrders").html(
-        `<div class="alert alert-danger">Failed to load orders.</div>`
+        `<div class="alert alert-danger">Failed to load orders.</div>`,
       );
     },
   });
@@ -147,7 +153,7 @@ function renderOrders(filter = "All") {
 
             <div class="font-weight-bold">₱${item.price}</div>
           </div>
-        `
+        `,
         )
         .join("");
 
@@ -197,8 +203,8 @@ function renderOrders(filter = "All") {
                   data-toggle="modal"
                   data-target="#updateStatusModal"
                   onclick="openStatusModal(${order.checkout_id}, '${
-        order.status
-      }')">
+                    order.status
+                  }')">
                     Update Status
                 </button>
 

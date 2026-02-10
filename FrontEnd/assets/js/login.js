@@ -39,11 +39,11 @@ $(document).ready(function () {
           icon: "success",
         }).then(() => {
           if (res.role === "admin") {
-            // window.location.replace("admin-dashboard.php");
-            window.location.href = "admin-dashboard.html";
+            // window.location.replace("dashboard.php");
+            window.location.href = "dashboard.html";
           } else if (res.role === "seller") {
             // window.location.replace("seller-dashboard.php");
-            window.location.href = "seller-dashboard.html";
+            window.location.href = "dashboard.html";
           } else {
             // window.location.replace("dashboard.php");
             window.location.href = "index.html";

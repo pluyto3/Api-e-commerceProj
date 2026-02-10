@@ -43,7 +43,13 @@ function load_user() {
   $login.hide();
   $register.hide();
   $logout.show();
-  $cartCount.show();
+
+  // Show cart only for regular users (not sellers/admins)
+  if (!role || (role !== "admin" && role !== "seller")) {
+    $cartCount.show();
+  } else {
+    $cartCount.hide();
+  }
 
   // Show/hide admin dashboard by role
   if (role === "admin" || role === "seller") {
@@ -93,7 +99,7 @@ $(document).ready(function () {
         if (response && response.image) {
           $("#navbarProfileImage").attr(
             "src",
-            "http://localhost:8000/FrontEnd/assets/img/user/" + response.image
+            "http://localhost:8000/FrontEnd/assets/img/user/" + response.image,
           );
           $("#navbarProfileImage").show();
           $("#defaultProfileIcon").hide();
@@ -249,7 +255,7 @@ $(document).ready(function () {
         console.error("Status:", xhr.status);
         console.error("Response Text:", xhr.responseText);
         alert(
-          "Failed to fetch category data. Please check the console for details."
+          "Failed to fetch category data. Please check the console for details.",
         );
       },
     });

@@ -44,7 +44,13 @@ function load_user() {
   $login.hide();
   $register.hide();
   $logout.show();
-  $cartCount.show();
+
+  // Show cart only for regular users (not sellers/admins)
+  if (!role || (role !== "admin" && role !== "seller")) {
+    $cartCount.show();
+  } else {
+    $cartCount.hide();
+  }
 
   // Role-based access
   if (role === "admin" || role === "seller") {
@@ -147,7 +153,7 @@ function loadCartItems() {
         if (selectedTotal > 0) {
           // If items are selected, update the text and make it VISIBLE
           $("#selected-total").text(
-            `Selected Item Total: ₱${selectedTotal.toLocaleString()}`
+            `Selected Item Total: ₱${selectedTotal.toLocaleString()}`,
           );
         } else {
           // If no items are selected, make it will be HIDDEN
@@ -282,7 +288,7 @@ $(document).ready(function () {
       Swal.fire(
         "No Items Selected",
         "Please select at least one item to check out.",
-        "warning"
+        "warning",
       );
       return; // Stop if nothing is selected
     } // Store the selected IDs in sessionStorage
@@ -319,7 +325,7 @@ $(document).ready(function () {
         },
         success: function (res) {
           Swal.fire("Deleted!", res.msg, "success").then(() =>
-            location.reload()
+            location.reload(),
           );
         },
         error: function (xhr) {

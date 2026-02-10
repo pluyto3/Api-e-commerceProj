@@ -43,7 +43,13 @@ function load_user() {
   $login.hide();
   $register.hide();
   $logout.show();
-  $cartCount.show();
+
+  // Show cart only for regular users (not sellers/admins)
+  if (!role || (role !== "admin" && role !== "seller")) {
+    $cartCount.show();
+  } else {
+    $cartCount.hide();
+  }
 
   // Show admin dashboard for admin/seller only
   role === "admin" || role === "seller"
@@ -154,10 +160,10 @@ function displayAddresses() {
       } else {
         console.error(
           "Unexpected response format. Expected { data: [...] }, got:",
-          res
+          res,
         );
         $("#addressList").html(
-          '<p class="text-danger">Invalid response from server.</p>'
+          '<p class="text-danger">Invalid response from server.</p>',
         );
         return;
       }
@@ -193,11 +199,11 @@ function displayAddresses() {
                 </div>
                 <div class="address-details d-flex flex-column align-items-start">
                   <p class="mb-1 small">${address.purok}, ${
-          address.barangay
-        },</p>
+                    address.barangay
+                  },</p>
                   <p class="mb-1 small">${address.city}, ${address.province}, ${
-          address.zipcode
-        }</p>
+                    address.zipcode
+                  }</p>
                 </div>
             </div>
             <div class="mt-2 d-flex flex-wrap align-items-center">
@@ -211,8 +217,8 @@ function displayAddresses() {
                     <button class="btn btn-sm btn-outline-secondary setDefault" data-id="${
                       address.location_id
                     }"  ${address.is_default ? "disabled" : ""}>${
-          address.is_default ? "Set as Default" : "Set as default"
-        }</button>
+                      address.is_default ? "Set as Default" : "Set as default"
+                    }</button>
                     ${deleteButton}
                 </div>
             </div>

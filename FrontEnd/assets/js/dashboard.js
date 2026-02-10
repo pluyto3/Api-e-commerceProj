@@ -14,14 +14,21 @@ let ordersTable = null;
 // LOAD USER SESSION & NAVBAR
 // =======================================
 function load_user() {
+  usr = $.cookie("username");
+  token = $.cookie("token");
+  role = $.cookie("role");
+  profileImage = $.cookie("profileImage");
+
   const $displayUsername = $("#displayUsername");
   const $login = $("#login");
   const $register = $("#register");
   const $logout = $("#logout");
   const $cartCount = $("#cart-count");
   const $adminDashboard = $("#adminDashboard");
+  const $adminDashboardContent = $("#adminDashboardContent");
   const $navbarProfileImage = $("#navbarProfileImage");
   const $defaultProfileIcon = $("#defaultProfileIcon");
+  const $cartNav = $("#cartNav");
 
   if (!usr || !token) {
     // No session
@@ -30,6 +37,7 @@ function load_user() {
     $register.show();
     $logout.hide();
     $cartCount.hide();
+    $cartNav.hide();
     $adminDashboard.hide();
     $navbarProfileImage.hide();
     $defaultProfileIcon.show();
@@ -41,13 +49,19 @@ function load_user() {
   $login.hide();
   $register.hide();
   $logout.show();
-  $cartCount.show();
+
+  // Show cart ONLY for user and seller
+  if (role === "user" || role === "seller") {
+    $cartNav.show();
+  } else {
+    $cartNav.hide(); // admin or no role
+  }
 
   // Role-based dashboard visibility
-  if (["admin", "seller"].includes(role)) {
-    $adminDashboard.show();
+  if (role === "admin") {
+    $("#adminDashboardContent").removeClass("d-none");
   } else {
-    $adminDashboard.hide();
+    $("#adminDashboardContent").addClass("d-none");
   }
 }
 
@@ -549,16 +563,17 @@ $(document).ready(function () {
   }
 
   // Fetch cart count on page load
-  $.ajax({
-    url: `${ip}/api/cart`,
-    method: "GET",
-    headers: {
-      Authorization: "Bearer " + token,
-      Accept: "application/json",
-    },
-    success: function (response) {
-      console.log("Cart items fetched successfully:", response);
-      updateCartCount(response.count);
-    },
-  });
+  if (role === "user" || role === "seller") {
+    $.ajax({
+      url: `${ip}/api/cart`,
+      method: "GET",
+      headers: {
+        Authorization: "Bearer " + token,
+        Accept: "application/json",
+      },
+      success: function (response) {
+        updateCartCount(response.count);
+      },
+    });
+  }
 });

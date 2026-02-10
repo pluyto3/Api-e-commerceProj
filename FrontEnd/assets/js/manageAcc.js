@@ -38,7 +38,13 @@ function load_user() {
   $login.hide();
   $register.hide();
   $logout.show();
-  $cartCount.show();
+
+  // Show cart only for regular users (not sellers/admins)
+  if (!role || (role !== "admin" && role !== "seller")) {
+    $cartCount.show();
+  } else {
+    $cartCount.hide();
+  }
 
   // Role-based dashboard visibility
   if (["admin", "seller"].includes(role)) {
@@ -319,7 +325,7 @@ function setupDeleteButtons() {
           },
           success: (res) => {
             Swal.fire("Deleted!", res.msg, "success").then(() =>
-              location.reload()
+              location.reload(),
             );
           },
           error: (xhr) => Swal.fire("Error!", xhr.responseText, "error"),
@@ -334,13 +340,13 @@ function setupDeleteButtons() {
 // =======================================
 function loadCounts() {
   fetchData("countedAccounts", (res) =>
-    $("#countedAccounts").text(res.totalAccounts)
+    $("#countedAccounts").text(res.totalAccounts),
   );
   fetchData("countedAdmins", (res) =>
-    $("#countedAdmins").text(res.totalAdmins)
+    $("#countedAdmins").text(res.totalAdmins),
   );
   fetchData("countedSellers", (res) =>
-    $("#countedSellers").text(res.totalSellers)
+    $("#countedSellers").text(res.totalSellers),
   );
   fetchData("countedUsers", (res) => $("#countedUsers").text(res.totalUsers));
 }
