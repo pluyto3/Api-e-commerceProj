@@ -159,8 +159,8 @@
                 </a>
                 <a
                   class="dropdown-item"
-                  href="admindashboard.html"
-                  id="adminDashboard"
+                  href="dashboard.html"
+                  id="dashboard"
                   style="display: none">
                   <i class="fas fa-home"></i> Dashboard
                 </a>
@@ -436,43 +436,17 @@
               <h1 class="display-4">Seller Dashboard</h1>
               <hr class="admin-hr">
 
-              <!-- ===== (FINANCIAL ROW) ===== -->
+              <!-- ===== (SELLER FINANCIAL ROW) ===== -->
               <div class="row mb-4">
 
-                <!-- Users -->
+                <!-- My Products -->
                 <div class="col-md-3">
                   <div class="card bg-orange-g text-white">
                     <div class="card-body">
-                      <h4 class="fot-weight-light"><i class="fas fa-dolly"></i> Users</h4>
+                      <h4 class="fot-weight-light"><i class="fas fa-dolly"></i> My Products</h4>
                       <hr class="admin-hr">
                       <h5>
-                        <b id="countedUsers">₱0.00</b>
-                      </h5>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Sellers -->
-                <div class="col-md-3">
-                  <div class="card bg-green-g text-white">
-                    <div class="card-body">
-                      <h4 class="fot-weight-light"><i class="fas fa-dolly-flatbed"></i> Sellers</h4>
-                      <hr class="admin-hr">
-                      <h5>
-                        <b id="countedSellers"></b>
-                      </h5>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Product -->
-                <div class="col-md-3">
-                  <div class="card bg-blue-g text-white">
-                    <div class="card-body">
-                      <h4 class="fot-weight-light"><i class="fas fa-money-bill"></i> Product</h4>
-                      <hr class="admin-hr">
-                      <h5>
-                        <b id="countedProducts"></b>
+                        <b id="countedMyProducts">0</b>
                       </h5>
                     </div>
                   </div>
@@ -480,74 +454,43 @@
 
                 <!-- Pending Approval -->
                 <div class="col-md-3">
-                  <div class="card bg-orange-g text-white">
-                    <div class="card-body">
-                      <h4 class="fot-weight-light"><i class="fas fa-truck-loading"></i> Pending Approval</h4>
-                      <hr class="admin-hr">
-                      <h5>
-                        <b id="countedPendingApproval"></b>
-                      </h5>
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-
-              <!-- ===== (SYSTEM ROW) ===== -->
-              <div class="row mb-4">
-
-                <!-- Orders -->
-                <div class="col-md-3">
-                  <div class="card bg-orange-g text-white">
-                    <div class="card-body">
-                      <h4 class="fot-weight-light"><i class="fas fa-dolly"></i> Total Orders</h4>
-                      <hr class="admin-hr">
-                      <h5>
-                        <b id="countedOrders">₱0.00</b>
-                      </h5>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Pending Orders -->
-                <div class="col-md-3">
                   <div class="card bg-green-g text-white">
                     <div class="card-body">
-                      <h4 class="fot-weight-light"><i class="fas fa-dolly-flatbed"></i> Pending Orders</h4>
+                      <h4 class="fot-weight-light"><i class="fas fa-dolly-flatbed"></i> Pending Approval</h4>
                       <hr class="admin-hr">
                       <h5>
-                        <b id="countedPendingOrders"></b>
+                        <b id="countedPendingApproval">0</b>
                       </h5>
                     </div>
                   </div>
                 </div>
 
-                <!-- Completed Orders -->
+                <!-- Approved Products -->
                 <div class="col-md-3">
                   <div class="card bg-blue-g text-white">
                     <div class="card-body">
-                      <h4 class="fot-weight-light"><i class="fas fa-money-bill"></i> Completed Orders</h4>
+                      <h4 class="fot-weight-light"><i class="fas fa-money-bill"></i> Approved Products</h4>
                       <hr class="admin-hr">
                       <h5>
-                        <b id="countedCompletedOrders"></b>
+                        <b id="countedApprovedProducts">0</b>
                       </h5>
                     </div>
                   </div>
                 </div>
 
-                <!-- Cancelled -->
+                <!-- My Orders -->
                 <div class="col-md-3">
                   <div class="card bg-orange-g text-white">
                     <div class="card-body">
-                      <h4 class="fot-weight-light"><i class="fas fa-truck-loading"></i> Cancelled</h4>
+                      <h4 class="fot-weight-light"><i class="fas fa-truck-loading"></i> My Orders</h4>
                       <hr class="admin-hr">
                       <h5>
-                        <b id="countedCancelled"></b>
+                        <b id="countedMyOrders">0</b>
                       </h5>
                     </div>
                   </div>
                 </div>
-                
+
               </div>
               
               <!-- ===== Graphs ===== -->
@@ -556,20 +499,20 @@
                   <!-- ===== Orders Over Time ===== -->
                   <div class="col-md-6">
                     <div class="card-header">
-                      <h2 class="mb-0">Orders Over Time</h2>
+                      <h2 class="mb-0">My Orders by Month</h2>
                     </div>
                     <div class="card-body">
-                      <canvas id="orderChart"></canvas>
+                      <canvas id="sellerOrderChart"></canvas>
                     </div>
                   </div>
 
                   <!-- ===== Order by Status ===== -->
                   <div class="col-md-6">
                     <div class="card-header">
-                      <h2 class="mb-0">Orders by Status</h2>
+                      <h2 class="mb-0">My Orders by Status</h2>
                     </div>
                     <div class="card-body">
-                      <canvas id="orderStatusChart"></canvas>
+                      <canvas id="sellerStatusChart"></canvas>
                     </div>
                   </div>
                 </div>
@@ -578,15 +521,15 @@
               <!-- ===== RECENT ORDERS TABLE ===== -->
               <div class="card">
                 <div class="card-header">
-                  <h2 class="mb-0">Orders</h2>
+                  <h2 class="mb-0">My Orders</h2>
                 </div>
                 <div class="card-body table-responsive">
-                  <table class="table table-striped table-hover" id="ordersTable">
+                  <table class="table table-striped table-hover" id="sellerOrdersTable">
                     <thead>
                       <tr>
                         <th class="text-center">ID</th>
-                        <th class="text-center">User</th>
-                        <th class="text-center">Seller</th>
+                        <th class="text-center">Product</th>
+                        <th class="text-center">Description</th>
                         <th class="text-center">Amount</th>
                         <th class="text-center">Status</th>
                         <th class="text-center">Payment</th>

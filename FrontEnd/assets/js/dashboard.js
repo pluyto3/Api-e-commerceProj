@@ -11,6 +11,16 @@ let statusChart = null;
 let ordersTable = null;
 
 // =======================================
+// DASHBOARD ROOT (ADMIN/SELLER)
+// =======================================
+function getDashboardRoot() {
+  if (role === "seller") {
+    return $("#sellerDashboardContent");
+  }
+  return $("#adminDashboardContent");
+}
+
+// =======================================
 // LOAD USER SESSION & NAVBAR
 // =======================================
 function load_user() {
@@ -26,6 +36,7 @@ function load_user() {
   const $cartCount = $("#cart-count");
   const $adminDashboard = $("#adminDashboard");
   const $adminDashboardContent = $("#adminDashboardContent");
+  const $sellerDashboardContent = $("#sellerDashboardContent");
   const $navbarProfileImage = $("#navbarProfileImage");
   const $defaultProfileIcon = $("#defaultProfileIcon");
   const $cartNav = $("#cartNav");
@@ -59,9 +70,14 @@ function load_user() {
 
   // Role-based dashboard visibility
   if (role === "admin") {
-    $("#adminDashboardContent").removeClass("d-none");
+    $adminDashboardContent.removeClass("d-none");
+    $sellerDashboardContent.addClass("d-none");
+  } else if (role === "seller") {
+    $sellerDashboardContent.removeClass("d-none");
+    $adminDashboardContent.addClass("d-none");
   } else {
-    $("#adminDashboardContent").addClass("d-none");
+    $adminDashboardContent.addClass("d-none");
+    $sellerDashboardContent.addClass("d-none");
   }
 }
 
@@ -90,24 +106,32 @@ function setupSidebarToggle() {
 // COUNT DASHBOARD STATS (ROLE BASED)
 // =======================================
 function loadCounts() {
+  if (role !== "admin" && role !== "seller") {
+    return;
+  }
+
+  const $dashboard = getDashboardRoot();
+
   $.ajax({
     url: `${ip}/api/counts`,
     method: "GET",
     headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
     success: function (res) {
       // Populate values available in /api/counts
-      $("#countedUsers").text(res.users || 0);
-      $("#countedOrders").text(res.total_orders || res.totalOrders || 0);
-      $("#countedPendingOrders").text(
-        res.pending_orders || res.pendingOrders || 0,
-      );
-      $("#countedCompletedOrders").text(
-        res.completed_orders || res.completedOrders || 0,
-      );
+      $dashboard.find("#countedUsers").text(res.users || 0);
+      $dashboard
+        .find("#countedOrders")
+        .text(res.total_orders || res.totalOrders || 0);
+      $dashboard
+        .find("#countedPendingOrders")
+        .text(res.pending_orders || res.pendingOrders || 0);
+      $dashboard
+        .find("#countedCompletedOrders")
+        .text(res.completed_orders || res.completedOrders || 0);
 
       // keep older IDs for backward-compatibility if they exist
-      $("#countedCategory").text(res.categories || 0);
-      $("#countedBrand").text(res.brands || 0);
+      $dashboard.find("#countedCategory").text(res.categories || 0);
+      $dashboard.find("#countedBrand").text(res.brands || 0);
 
       // If API didn't return sellers/products/pendingApproval/cancelled, fetch them separately
       // 1) Sellers count
@@ -119,13 +143,13 @@ function loadCounts() {
           Authorization: `Bearer ${token}`,
         },
         success: function (sres) {
-          $("#countedSellers").text(
-            sres.totalSellers || sres.total_sellers || 0,
-          );
+          $dashboard
+            .find("#countedSellers")
+            .text(sres.totalSellers || sres.total_sellers || 0);
         },
         error: function (xhr) {
           console.warn("Could not load countedSellers:", xhr.responseText);
-          $("#countedSellers").text(0);
+          $dashboard.find("#countedSellers").text(0);
         },
       });
 
@@ -139,16 +163,16 @@ function loadCounts() {
         },
         success: function (pres) {
           const products = pres.data || [];
-          $("#countedProducts").text(products.length || 0);
+          $dashboard.find("#countedProducts").text(products.length || 0);
           const pendingCount = products.filter(
             (p) => (p.approval_status || "pending") === "pending",
           ).length;
-          $("#countedPendingApproval").text(pendingCount || 0);
+          $dashboard.find("#countedPendingApproval").text(pendingCount || 0);
         },
         error: function (xhr) {
           console.warn("Could not load products for counts:", xhr.responseText);
-          $("#countedProducts").text(0);
-          $("#countedPendingApproval").text(0);
+          $dashboard.find("#countedProducts").text(0);
+          $dashboard.find("#countedPendingApproval").text(0);
         },
       });
 
@@ -164,14 +188,14 @@ function loadCounts() {
           const cancelled = (orders || []).filter(
             (o) => o.status === "cancelled",
           ).length;
-          $("#countedCancelled").text(cancelled || 0);
+          $dashboard.find("#countedCancelled").text(cancelled || 0);
         },
         error: function (xhr) {
           console.warn(
             "Could not load orders for cancelled count:",
             xhr.responseText,
           );
-          $("#countedCancelled").text(0);
+          $dashboard.find("#countedCancelled").text(0);
         },
       });
 
@@ -187,6 +211,8 @@ function loadCounts() {
 // Orders by Month Chart Function
 // =======================================
 function loadMonthlyOrders() {
+  if (!orderChart) return;
+
   fetch(`${ip}/api/checkout/dashboard/orders/monthly`, {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -208,6 +234,8 @@ function loadMonthlyOrders() {
 // Orders by Status Chart Function
 // =======================================
 function loadOrderStatus() {
+  if (!statusChart) return;
+
   fetch(`${ip}/api/checkout/dashboard/orders/status`, {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -229,8 +257,15 @@ function loadOrderStatus() {
 // Iinitial function call
 // =======================================
 function initCharts() {
-  const orderCanvas = document.getElementById("orderChart");
-  const statusCanvas = document.getElementById("orderStatusChart");
+  if (role !== "admin" && role !== "seller") {
+    return;
+  }
+
+  const $dashboard = getDashboardRoot();
+  const orderCanvas = $dashboard.find("#orderChart")[0];
+  const statusCanvas = $dashboard.find("#orderStatusChart")[0];
+
+  if (!orderCanvas || !statusCanvas) return;
 
   // Destroy charts if they exist
   if (orderChart) {
@@ -292,6 +327,14 @@ function initCharts() {
 // Load Recent Orders from API
 // =======================================
 function loadRecentOrders() {
+  if (role !== "admin" && role !== "seller") {
+    return;
+  }
+
+  const $dashboard = getDashboardRoot();
+  const $ordersTable = $dashboard.find("#ordersTable");
+  const tbody = $ordersTable.find("tbody");
+
   $.ajax({
     url: `${ip}/api/checkout/all`,
     method: "GET",
@@ -301,7 +344,6 @@ function loadRecentOrders() {
     },
     dataType: "json",
     success: function (res) {
-      const tbody = $("#ordersTable tbody");
       tbody.empty(); // important to avoid duplicates
 
       res.forEach((order, index) => {
@@ -338,7 +380,7 @@ function loadRecentOrders() {
       });
 
       // Reinitialize DataTable
-      $("#ordersTable").DataTable({
+      $ordersTable.DataTable({
         pageLength: 10,
         lengthChange: false,
         responsive: true,
@@ -357,6 +399,12 @@ function loadRecentOrders() {
 // Function Load Order Details Modal
 // =======================================
 function loadOrderDetailsModal(orderId) {
+  if (role !== "admin" && role !== "seller") {
+    return;
+  }
+
+  const $dashboard = getDashboardRoot();
+
   // First, fetch all orders to get the full order data with user info
   $.ajax({
     url: `${ip}/api/checkout/all`,
@@ -386,21 +434,21 @@ function loadOrderDetailsModal(orderId) {
       console.log("User info:", order.user);
 
       // Populate Summary Section
-      $("#summaryStatus").text(order.status || "N/A");
+      $dashboard.find("#summaryStatus").text(order.status || "N/A");
       const date = new Date(order.created_at);
       const formattedDate = date.toLocaleDateString("en-US", {
         year: "numeric",
         month: "long",
         day: "numeric",
       });
-      $("#summaryDate").text(formattedDate || "N/A");
-      $("#summaryItems").text(items.length);
+      $dashboard.find("#summaryDate").text(formattedDate || "N/A");
+      $dashboard.find("#summaryItems").text(items.length);
 
       // Populate Tracking Number
       if (order.tracking_number) {
-        $("#tracking").text(order.tracking_number);
+        $dashboard.find("#tracking").text(order.tracking_number);
       } else {
-        $("#tracking").text("Not yet assigned");
+        $dashboard.find("#tracking").text("Not yet assigned");
       }
 
       // Populate Items Table
@@ -444,10 +492,10 @@ function loadOrderDetailsModal(orderId) {
         `;
       });
 
-      $("#orderDetailsBody").html(rows);
+      $dashboard.find("#orderDetailsBody").html(rows);
 
       // Show Modal
-      $("#orderDetailsModal").modal("show");
+      $dashboard.find("#orderDetailsModal").modal("show");
     },
     error: function (xhr) {
       console.error("Error loading order details:", xhr.responseText);

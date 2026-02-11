@@ -10,6 +10,7 @@ use App\Http\Controllers\LocationController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\AddToCartController;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\DashboardController;
 
 /*
 |--------------------------------------------------------------------------
@@ -136,12 +137,22 @@ Route::group(['prefix' => 'checkout'], function($router) {
         Route::get('/all', 'getAllOrders'); // Get all orders (admin)
     });
 
-// Chart Dashboard Routes
+    // Chart Dashboard Routes
     Route::group(['prefix' => 'dashboard'], function($router) {
         Route::controller(CheckoutController::class)->group(function () {
             Route::get('/orders/monthly', 'ordersMonthly'); // Get sales data for dashboard
             Route::get('/orders/status', 'ordersByStatus'); // Get order status counts for dashboard
         });
     });
-    
+
 });
+
+// Seller Dashboard Routes
+Route::group(['prefix' => 'seller'], function($router) {
+    Route::controller(DashboardController::class)->group(function () {
+        Route::get('/dashboard', 'sellerDashboard'); // Get seller dashboard data
+    });
+});
+
+
+    
