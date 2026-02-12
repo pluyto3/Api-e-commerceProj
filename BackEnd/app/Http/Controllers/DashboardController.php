@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Product;
 use App\Models\Category;
 use App\Models\Checkout;
+use App\Models\User;
 
 class DashboardController extends Controller
 {

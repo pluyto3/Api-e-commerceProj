@@ -77,6 +77,7 @@ class ProductController extends Controller
                     'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:102400'
                 ]);
                 $product = new Product();
+                $product->seller_id = $user->user_id;
                 $product->category_id = $request->category_id;
                 $product->brand_id = $request->brand_id;
                 $product->product_name = $request->product_name;

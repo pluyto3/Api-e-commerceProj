@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\Category;
 use App\Models\Brands;
 use App\Models\Checkout;
+use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -582,13 +583,20 @@ class AuthController extends Controller
     /**
      * Get All Order Counts
      */
-    public function checkoutOrders(){
+    public function countCheckout(){
         
         $totalCheckout = Checkout::count();
 
         return response()->json([
             'totalCheckout' => $totalCheckout
         ], 200);
+    }
+
+    /**
+     * Backward-compatible alias for legacy calls
+     */
+    public function checkoutOrders(){
+        return $this->countCheckout();
     }
 
     /**
@@ -610,6 +618,9 @@ class AuthController extends Controller
             'categories' => 0,
             'brands' => 0,
             'users' => 0,
+            'my_products' => 0,
+            'pending_approval' => 0,
+            'approved_products' => 0,
             'total_orders' => 0,
             'pending_orders' => 0,
             'completed_orders' => 0,
@@ -633,13 +644,28 @@ class AuthController extends Controller
         // SELLER COUNTS
         // ==========================
         if ($user->role === 'seller') {
-            $data['total_orders'] = Checkout::where('seller_id', $user->user_id)->count();
-            
-            $data['pending_orders'] = Checkout::where('seller_id', $user->user_id)
+            $sellerProducts = Product::where('seller_id', $user->user_id);
+
+            $data['my_products'] = (clone $sellerProducts)->count();
+            $data['pending_approval'] = (clone $sellerProducts)
+                ->where(function ($query) {
+                    $query->whereNull('approval_status')
+                        ->orWhere('approval_status', 'pending');
+                })
+                ->count();
+            $data['approved_products'] = (clone $sellerProducts)
+                ->where('approval_status', 'approved')
+                ->count();
+
+            $sellerOrders = Checkout::whereHas('items', function ($query) use ($user) {
+                $query->where('seller_id', $user->user_id);
+            });
+
+            $data['total_orders'] = (clone $sellerOrders)->count();
+            $data['pending_orders'] = (clone $sellerOrders)
                 ->where('status', 'pending')
                 ->count();
-                
-            $data['completed_orders'] = Checkout::where('seller_id', $user->user_id)
+            $data['completed_orders'] = (clone $sellerOrders)
                 ->where('status', 'completed')
                 ->count();
         }

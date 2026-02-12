@@ -16,6 +16,7 @@ class CheckoutItem extends Model
     protected $fillable = [
         'checkout_id',
         'product_id',
+        'seller_id',
         'quantity',
         'price',
         'subtotal',
@@ -29,6 +30,11 @@ class CheckoutItem extends Model
     public function product()
     {
         return $this->belongsTo(Product::class, 'product_id');
+    }
+
+    public function seller()
+    {
+        return $this->belongsTo(User::class, 'seller_id', 'user_id');
     }
 
 }

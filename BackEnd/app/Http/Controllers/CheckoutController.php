@@ -50,6 +50,7 @@ class CheckoutController extends Controller
 
                 // Get cart items for the user
                 $cartItems = addToCart::where('user_id', $user->user_id)
+                    ->with('product')
                     ->whereIn('addTocart_id', $selectedIds)
                     ->get();
 
@@ -62,6 +63,7 @@ class CheckoutController extends Controller
                     CheckoutItem::create([
                         'checkout_id' => $checkout->checkout_id,
                         'product_id'  => $item->product_id,
+                        'seller_id'   => $item->product?->seller_id,
                         'quantity'    => $item->quantity,
                         'price'       => $item->product->product_price, 
                         'subtotal'    => $item->quantity * $item->product->product_price,
@@ -310,12 +312,24 @@ class CheckoutController extends Controller
             return response()->json(['msg' => 'Unauthorized'], 403);
         }
 
-        $orders = Checkout::with([
-            'user',
-            'items.product.seller'
-        ])
-        ->orderBy('created_at', 'DESC')
-        ->get();
+        $ordersQuery = Checkout::query()
+            ->with('user')
+            ->orderBy('created_at', 'DESC');
+
+        if ($user->role === 'seller') {
+            $ordersQuery->whereHas('items', function ($itemsQuery) use ($user) {
+                $itemsQuery->where('seller_id', $user->user_id);
+            })->with([
+                'items' => function ($itemsQuery) use ($user) {
+                    $itemsQuery->where('seller_id', $user->user_id)
+                        ->with('product.seller');
+                }
+            ]);
+        } else {
+            $ordersQuery->with('items.product.seller');
+        }
+
+        $orders = $ordersQuery->get();
 
         return response()->json($orders, 200);
     }
@@ -331,7 +345,14 @@ class CheckoutController extends Controller
             return response()->json(['msg' => 'Unauthorized'], 403);
         }
 
-         $orders = Checkout::selectRaw('YEAR(created_at) as year, MONTH(created_at) as month, COUNT(*) as total')
+        $query = Checkout::query();
+        if ($user->role === 'seller') {
+            $query->whereHas('items', function ($q) use ($user) {
+                $q->where('seller_id', $user->user_id);
+            });
+        }
+
+         $orders = $query->selectRaw('YEAR(created_at) as year, MONTH(created_at) as month, COUNT(*) as total')
             ->groupBy('year', 'month')
             ->orderBy('year')
             ->orderBy('month')
@@ -359,7 +380,14 @@ class CheckoutController extends Controller
             return response()->json(['msg' => 'Unauthorized'], 403);
         }
 
-         $orders = Checkout::selectRaw('status, COUNT(*) as total')
+        $query = Checkout::query();
+        if ($user->role === 'seller') {
+            $query->whereHas('items', function ($q) use ($user) {
+                $q->where('seller_id', $user->user_id);
+            });
+        }
+
+         $orders = $query->selectRaw('status, COUNT(*) as total')
             ->groupBy('status')
             ->get();
 
