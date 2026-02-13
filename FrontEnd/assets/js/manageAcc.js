@@ -7,6 +7,10 @@ let usr = $.cookie("username");
 let role = $.cookie("role");
 let profileImage = $.cookie("profileImage");
 
+function hasActiveSession() {
+  return Boolean(usr && token);
+}
+
 // =======================================
 // LOAD USER SESSION & NAVBAR
 // =======================================
@@ -79,6 +83,47 @@ function fetchData(url, successCallback, errorMessage) {
       console.error(`Error fetching ${url}:`, xhr);
       alert(errorMessage || "An error occurred. Check console for details.");
     },
+  });
+}
+
+function clearTable(tableId) {
+  if ($.fn.DataTable.isDataTable(tableId)) {
+    $(tableId).DataTable().clear().destroy();
+  }
+  $(`${tableId} tbody`).empty();
+}
+
+function renderNoAccountRow(tableId, message = "No account display") {
+  const columnCount = $(`${tableId} thead th`).length || 1;
+  $(`${tableId} tbody`).html(`
+    <tr>
+      <td colspan="${columnCount}" class="text-center">${message}</td>
+    </tr>
+  `);
+}
+
+function renderAccountsTable(tableId, accounts) {
+  clearTable(tableId);
+
+  if (!accounts.length) {
+    renderNoAccountRow(tableId);
+    return;
+  }
+
+  accounts.forEach((account) => appendTableRow(tableId, account));
+  initializeDataTable(tableId);
+}
+
+function showNoAccountDisplayState() {
+  const emptyText = "No account display";
+  $("#countedAccounts").text(emptyText);
+  $("#countedAdmins").text(emptyText);
+  $("#countedSellers").text(emptyText);
+  $("#countedUsers").text(emptyText);
+
+  ["#admin-table", "#seller-table", "#user-table"].forEach((tableId) => {
+    clearTable(tableId);
+    renderNoAccountRow(tableId, emptyText);
   });
 }
 
@@ -216,11 +261,7 @@ function loadAdmins() {
     const admins = res.admins || [];
     const tableId = "#admin-table";
 
-    $(tableId).DataTable().clear().destroy();
-    $(tableId + " tbody").empty();
-
-    admins.forEach((admin) => appendTableRow(tableId, admin));
-    initializeDataTable(tableId);
+    renderAccountsTable(tableId, admins);
   });
 }
 
@@ -229,11 +270,7 @@ function loadSellers() {
     const sellers = res.sellers || [];
     const tableId = "#seller-table";
 
-    $(tableId).DataTable().clear().destroy();
-    $(tableId + " tbody").empty();
-
-    sellers.forEach((seller) => appendTableRow(tableId, seller));
-    initializeDataTable(tableId);
+    renderAccountsTable(tableId, sellers);
   });
 }
 
@@ -242,11 +279,7 @@ function loadUsers() {
     const users = res.users || [];
     const tableId = "#user-table";
 
-    $(tableId).DataTable().clear().destroy();
-    $(tableId + " tbody").empty();
-
-    users.forEach((user) => appendTableRow(tableId, user));
-    initializeDataTable(tableId);
+    renderAccountsTable(tableId, users);
   });
 }
 
@@ -364,8 +397,14 @@ function loadCounts() {
 // =======================================
 $(document).ready(() => {
   load_user();
-  loadProfileImage();
   setupSidebarToggle();
+
+  if (!hasActiveSession()) {
+    showNoAccountDisplayState();
+    return;
+  }
+
+  loadProfileImage();
   setupRegistrationForm();
   setupEditButtons();
   setupAccountUpdate();

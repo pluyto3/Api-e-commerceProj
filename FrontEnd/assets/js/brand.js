@@ -204,18 +204,9 @@ $(document).ready(function () {
                    width="50" height="50">
             </td>
             <td>
-              <a href="#" 
-                 data-id="${brand.brand_id}" 
-                 class="text-success mx-1 editBtn" 
-                 data-toggle="modal" 
-                 data-target="#editBrandModal">
-                 <i class="fas fa-edit fa-2x"></i>
-              </a>
-              <a href="#" 
-                 data-id="${brand.brand_id}" 
-                 class="text-danger mx-1 deleteBtn">
-                 <i class="fas fa-trash fa-2x"></i>
-              </a>
+              <button class="btn btn-sm btn-info view-brand" data-id="${brand.brand_id}" data-toggle="modal" data-target="#brandDetailsModal">
+                <i class="fas fa-eye"></i> View
+              </button>
             </td>
           </tr>
         `);
