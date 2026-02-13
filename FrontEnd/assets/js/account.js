@@ -21,6 +21,8 @@ function load_user() {
   const $register = $("#register");
   const $logout = $("#logout");
   const $cartCount = $("#cart-count");
+  const $cartNav = $("#cartNav");
+  const $cartNavMobile = $("#cartNavMobile");
   const $adminDashboard = $("#adminDashboard");
   const $navbarProfileImage = $("#navbarProfileImage");
   const $defaultProfileIcon = $("#defaultProfileIcon");
@@ -32,6 +34,8 @@ function load_user() {
     $register.show();
     $logout.hide();
     $cartCount.hide();
+    $cartNav.hide();
+    $cartNavMobile.hide();
     $adminDashboard.hide();
     $navbarProfileImage.hide();
     $defaultProfileIcon.show();
@@ -44,11 +48,15 @@ function load_user() {
   $register.hide();
   $logout.show();
 
-  // Show cart only for regular users (not sellers/admins)
-  if (!role || (role !== "admin" && role !== "seller")) {
+  // Match dashboard behavior: show cart for user/seller, hide for admin
+  if (role === "user" || role === "seller") {
     $cartCount.show();
+    $cartNav.show();
+    $cartNavMobile.show();
   } else {
     $cartCount.hide();
+    $cartNav.hide();
+    $cartNavMobile.hide();
   }
 
   // Show admin dashboard for admin/seller only
@@ -574,18 +582,20 @@ $(document).ready(function () {
   }
 
   // Fetch cart count on page load
-  $.ajax({
-    url: `${ip}/api/cart`,
-    method: "GET",
-    headers: {
-      Authorization: "Bearer " + token,
-      Accept: "application/json",
-    },
-    success: function (response) {
-      console.log("Cart items fetched successfully:", response);
-      updateCartCount(response.count);
-    },
-  });
+  if ((role === "user" || role === "seller") && token) {
+    $.ajax({
+      url: `${ip}/api/cart`,
+      method: "GET",
+      headers: {
+        Authorization: "Bearer " + token,
+        Accept: "application/json",
+      },
+      success: function (response) {
+        console.log("Cart items fetched successfully:", response);
+        updateCartCount(response.count);
+      },
+    });
+  }
 
   /* -----------------------------
      LOGOUT HANDLER

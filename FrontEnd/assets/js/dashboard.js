@@ -117,7 +117,21 @@ function loadCounts() {
     method: "GET",
     headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
     success: function (res) {
-      // Populate values available in /api/counts
+      if (role === "seller") {
+        $dashboard.find("#countedMyProducts").text(res.my_products || 0);
+        $dashboard
+          .find("#countedPendingApproval")
+          .text(res.pending_approval || 0);
+        $dashboard
+          .find("#countedApprovedProducts")
+          .text(res.approved_products || 0);
+        $dashboard
+          .find("#countedMyOrders")
+          .text(res.total_orders || res.totalOrders || 0);
+        return;
+      }
+
+      // Admin values available in /api/counts
       $dashboard.find("#countedUsers").text(res.users || 0);
       $dashboard
         .find("#countedOrders")
@@ -219,12 +233,15 @@ function loadMonthlyOrders() {
       Accept: "application/json",
     },
   })
-    .then((res) => res.json())
+    .then((res) => {
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+      return res.json();
+    })
     .then((data) => {
-      if (!data || !data.labels || !data.data) return;
-
-      orderChart.data.labels = data.labels;
-      orderChart.data.datasets[0].data = data.data;
+      orderChart.data.labels = data?.labels || [];
+      orderChart.data.datasets[0].data = data?.data || [];
       orderChart.update();
     })
     .catch((err) => console.error("Monthly Orders Error:", err));
@@ -242,12 +259,15 @@ function loadOrderStatus() {
       Accept: "application/json",
     },
   })
-    .then((res) => res.json())
+    .then((res) => {
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+      return res.json();
+    })
     .then((data) => {
-      if (!data || !data.labels || !data.data) return;
-
-      statusChart.data.labels = data.labels;
-      statusChart.data.datasets[0].data = data.data;
+      statusChart.data.labels = data?.labels || [];
+      statusChart.data.datasets[0].data = data?.data || [];
       statusChart.update();
     })
     .catch((err) => console.error("Order Status Error:", err));
@@ -262,8 +282,12 @@ function initCharts() {
   }
 
   const $dashboard = getDashboardRoot();
-  const orderCanvas = $dashboard.find("#orderChart")[0];
-  const statusCanvas = $dashboard.find("#orderStatusChart")[0];
+  const orderCanvasSelector =
+    role === "seller" ? "#sellerOrderChart" : "#orderChart";
+  const statusCanvasSelector =
+    role === "seller" ? "#sellerStatusChart" : "#orderStatusChart";
+  const orderCanvas = $dashboard.find(orderCanvasSelector)[0];
+  const statusCanvas = $dashboard.find(statusCanvasSelector)[0];
 
   if (!orderCanvas || !statusCanvas) return;
 
@@ -332,7 +356,10 @@ function loadRecentOrders() {
   }
 
   const $dashboard = getDashboardRoot();
-  const $ordersTable = $dashboard.find("#ordersTable");
+  const tableSelector =
+    role === "seller" ? "#sellerOrdersTable" : "#ordersTable";
+  const $ordersTable = $dashboard.find(tableSelector);
+  if (!$ordersTable.length) return;
   const tbody = $ordersTable.find("tbody");
 
   $.ajax({
@@ -344,9 +371,44 @@ function loadRecentOrders() {
     },
     dataType: "json",
     success: function (res) {
+      if ($.fn.DataTable.isDataTable($ordersTable)) {
+        $ordersTable.DataTable().clear().destroy();
+      }
+
       tbody.empty(); // important to avoid duplicates
 
       res.forEach((order, index) => {
+        if (role === "seller") {
+          const sellerItems = order.items || [];
+          const firstItem = sellerItems[0];
+          const productName = firstItem?.product?.product_name || "N/A";
+          const description = firstItem?.product?.product_description || "N/A";
+          const statusText = order.status || "N/A";
+          const amount = sellerItems.reduce(
+            (sum, item) => sum + Number(item.subtotal || 0),
+            0,
+          );
+
+          const sellerRow = `
+            <tr>
+              <td>${order.checkout_id}</td>
+              <td>${productName}</td>
+              <td>${description}</td>
+              <td>$${amount.toFixed(2)}</td>
+              <td>${statusText}</td>
+              <td>${order.payment_method || "N/A"}</td>
+              <td>
+                <button type="button" class="btn btn-sm btn-primary view-order" data-id="${order.checkout_id}"> 
+                  View
+                </button>
+              </td>
+            </tr>
+          `;
+
+          tbody.append(sellerRow);
+          return;
+        }
+
         // Collect seller names from order items
         let sellers = "N/A";
 
@@ -369,7 +431,7 @@ function loadRecentOrders() {
         <td>${order.status}</td>
         <td>${order.payment_method}</td>
         <td>
-          <button class="btn btn-sm btn-primary view-order" data-id="${order.checkout_id}" data-toggle="modal" data-target="#orderDetailsModal">
+          <button type="button" class="btn btn-sm btn-primary view-order" data-id="${order.checkout_id}">
             View
           </button>
         </td>
@@ -404,6 +466,19 @@ function loadOrderDetailsModal(orderId) {
   }
 
   const $dashboard = getDashboardRoot();
+  const $modal = $dashboard.find("#orderDetailsModal");
+  if (!$modal.length) {
+    console.error("orderDetailsModal not found for current dashboard.");
+    return;
+  }
+
+  // Open modal immediately on click.
+  $modal.modal("show");
+  $modal.find("#summaryStatus").text("Loading...");
+  $modal.find("#summaryDate").text("Loading...");
+  $modal.find("#summaryItems").text("0");
+  $modal.find("#tracking").text("Loading...");
+  $modal.find("#orderDetailsBody").html("");
 
   // First, fetch all orders to get the full order data with user info
   $.ajax({
@@ -434,21 +509,21 @@ function loadOrderDetailsModal(orderId) {
       console.log("User info:", order.user);
 
       // Populate Summary Section
-      $dashboard.find("#summaryStatus").text(order.status || "N/A");
+      $modal.find("#summaryStatus").text(order.status || "N/A");
       const date = new Date(order.created_at);
       const formattedDate = date.toLocaleDateString("en-US", {
         year: "numeric",
         month: "long",
         day: "numeric",
       });
-      $dashboard.find("#summaryDate").text(formattedDate || "N/A");
-      $dashboard.find("#summaryItems").text(items.length);
+      $modal.find("#summaryDate").text(formattedDate || "N/A");
+      $modal.find("#summaryItems").text(items.length);
 
       // Populate Tracking Number
       if (order.tracking_number) {
-        $dashboard.find("#tracking").text(order.tracking_number);
+        $modal.find("#tracking").text(order.tracking_number);
       } else {
-        $dashboard.find("#tracking").text("Not yet assigned");
+        $modal.find("#tracking").text("Not yet assigned");
       }
 
       // Populate Items Table
@@ -492,10 +567,7 @@ function loadOrderDetailsModal(orderId) {
         `;
       });
 
-      $dashboard.find("#orderDetailsBody").html(rows);
-
-      // Show Modal
-      $dashboard.find("#orderDetailsModal").modal("show");
+      $modal.find("#orderDetailsBody").html(rows);
     },
     error: function (xhr) {
       console.error("Error loading order details:", xhr.responseText);
@@ -507,15 +579,6 @@ function loadOrderDetailsModal(orderId) {
     },
   });
 }
-
-// =======================================
-// Loads the Charts
-// =======================================
-document.addEventListener("DOMContentLoaded", () => {
-  initCharts();
-  loadMonthlyOrders();
-  loadOrderStatus();
-});
 
 // =======================================
 // View Orders Button Click Handler
@@ -533,6 +596,9 @@ $(document).ajaxComplete(() => $("#wait").hide());
 
 $(document).ready(function () {
   load_user();
+  initCharts();
+  loadMonthlyOrders();
+  loadOrderStatus();
   loadCounts();
   setupSidebarToggle();
   loadRecentOrders();
