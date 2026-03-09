@@ -192,9 +192,9 @@
       <section class="working-panel">
         <div class="container-fluid">
 
-          <!-- Admin Section -->
+          <!-- Approved Section -->
           <div class="adminBrandContent" id="adminBrandContent">
-            <h1 class="display-4">Seller Brands</h1>
+            <h1 class="display-4"> Approved Brands</h1>
             <hr class="admin-hr" />
 
             <!-- Brand Section -->
@@ -203,16 +203,20 @@
               <!-- Brand Table Display -->
               <div class="card">
                 <div class="card-header">
-                  <h2 class="mb-0">Brand List</h2>
+                  <h2 class="mb-0">Approved Brand List</h2>
                 </div>
                 <div class="card-body table-responsive">
-                  <table id="brand-table" class="table table-striped table-hover">
+                  <table id="approved-brand-table" class="table table-striped table-hover">
                     <thead>
                       <tr>
-                        <th>ID</th>
-                        <th>Brand Name</th>
-                        <th>Image</th>
-                        <th>Action</th>
+                        <th class="text-center">ID</th>
+                        <th class="text-center">Brand Name</th>
+                        <th class="text-center">Seller</th>
+                        <th class="text-center">Description</th>
+                        <th class="text-center">Status</th>
+                        <th class="text-center">Approved Date</th>
+                        <th class="text-center">Image</th>
+                        <th class="text-center">Action</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -222,12 +226,12 @@
                 </div>
               </div>
 
-              <!-- Edit New Brand -->
-              <div class="modal fade" id="brandDetailsModal" tabindex="-1" role="dialog" aria-labelledby="brandDetailsModalLabel">
+              <!-- Approved Brand -->
+              <div class="modal fade" id="brandApprovedDetailsModal" tabindex="-1" role="dialog" aria-labelledby="brandDetailsModalLabel">
                 <div class="modal-dialog modal-lg" role="document">
                   <div class="modal-content">
                     <div class="modal-header">
-                      <h5 class="modal-title" id="brandDetailsModalLabel">Brand Details</h5>
+                      <h5 class="modal-title" id="brandDetailsModalLabel"> Approved Brand Details</h5>
                       <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span>&times;</span>
                       </button>
@@ -235,22 +239,22 @@
                     <div class="modal-body">
                       <div class="row">
                         <div class="col-md-4">
-                          <img id="brandImage" src="" alt="Brand Image" class="img-fluid" style="max-height: 300px; object-fit: cover;">
+                          <img id="brandImage" src="" alt="Brand Image" class="img-fluid brand-detail-image" style="max-height: 300px; object-fit: cover;">
                         </div>
                         <div class="col-md-8">
-                          <p><strong>Brand ID:</strong> <span id="detailBrandId"></span></p>
-                          <p><strong>Brand Name:</strong> <span id="detailBrandName"></span></p>
-                          <p><strong>Seller:</strong> <span id="detailSeller"></span></p>
+                          <p><strong>Brand ID:</strong> <span id="detailBrandId" class="brand-detail-id"></span></p>
+                          <p><strong>Brand Name:</strong> <span id="detailBrandName" class="brand-detail-name"></span></p>
+                          <p><strong>Seller:</strong> <span id="detailSeller" class="brand-detail-seller"></span></p>
                           <p><strong>Description:</strong></p>
-                          <p id="detailDescription" style="border: 1px solid #ddd; padding: 10px; border-radius: 4px;"></p>
-                          <p><strong>Status:</strong> <span id="detailStatus" class="badge"></span></p>
-                          <p><strong>Submitted Date:</strong> <span id="detailDate"></span></p>
+                          <p id="detailDescription" class="brand-detail-description" style="border: 1px solid #ddd; padding: 10px; border-radius: 4px;"></p>
+                          <p><strong>Status:</strong> <span id="detailStatus" class="badge brand-detail-status"></span></p>
+                          <p><strong>Submitted Date:</strong> <span id="detailDate" class="brand-detail-date"></span></p>
                         </div>
                       </div>
                     </div>
                     <div class="modal-footer">
-                      <button type="button" class="btn btn-danger" id="rejectBtn" data-dismiss="modal">Reject</button>
-                      <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                      <button type="button" class="btn btn-danger" id="rejectApprovedBrandBtn">Reject</button>
+                      <button type="button" class="btn btn-secondary" id="closeApprovedBrandBtn" data-dismiss="modal">Close</button>
                     </div>
                   </div>
                 </div>
@@ -259,7 +263,9 @@
             </div>
 
           </div>
-          <h1 class="display-4">Seller Brands</h1>
+
+          <!-- Approval Section -->
+          <h1 class="display-4">Approval for Brands</h1>
 
           <!-- Adding Button -->
           <button type="button" class="btn btn-primary add_brand" data-toggle="modal" data-target="#brandModal">Add New Brand</button>
@@ -289,6 +295,10 @@
                         <label for="image" class="font-weight-bold">Image</label>
                         <input type="file" class="form-control" id="image" name="image" placeholder="Enter Image " required>
                       </div>
+                      <div class="form-group">
+                        <label for="description" class="font-weight-bold">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="4" placeholder="Enter brand description " required></textarea>
+                      </div>
                       <div class="modal-footer">
                         <button type="submit" class="btn btn-primary create" id="createBrand">Add</button>
                         <button type="button" class="btn btn-danger closeBtn" data-dismiss="modal">Close</button>
@@ -299,31 +309,36 @@
               </div>     
             </div>
 
-            <!-- Edit New Brand -->
-            <div class="modal fade" id="editBrandModal" tabindex="-1" aria-labelledby="editBrandModalLabel">
+            <!-- Approval Brands -->
+            <div class="modal fade" id="brandApprovalModal" tabindex="-1" aria-labelledby="editBrandModalLabel">
               <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                      <h5 class="modal-title" id="editBrandModalLabel">Edit Brand</h5>
+                      <h5 class="modal-title" id="editBrandModalLabel">Approval Brands</h5>
                       <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                       </button>
                     </div>
                     <div class="modal-body">
-                      <form action="#" method="POST" id="editBrandForm" enctype="multipart/form-data">
-                            <div class="form-group">
-                              <input type="hidden" class="form-control" id="brand_id" name="brand_id">
-                              <input type="hidden" name="_method" value="PUT">
-                              <label for="name" class="font-weight-bold">Brand Name</label>
-                              <input type="text" class="form-control" id="editName" name="editName" placeholder="Enter category name ">
-                              <label for="currentImage" class="form-control form-label mt-4">Current Image: </label><br>
-                                <img id="currentImagePreview" alt="Current Category Image" style="max-width: 100px; max-height: 100px;">
-                            </div>
-                        <div class="modal-footer">
-                          <button type="submit" class="btn btn-primary editBrand" id="editBrand">Update </button>
-                          <button type="button" src="" class="btn btn-danger" data-dismiss="modal">Close </button>
+                      <div class="row">
+                        <div class="col-md-4">
+                          <img id="brandImage" src="" alt="Brand Image" class="img-fluid brand-detail-image" style="max-height: 300px; object-fit: cover;">
                         </div>
-                      </form>
+                        <div class="col-md-8">
+                          <p><strong>Brand ID:</strong> <span id="detailBrandId" class="brand-detail-id"></span></p>
+                          <p><strong>Brand Name:</strong> <span id="detailBrandName" class="brand-detail-name"></span></p>
+                          <p><strong>Seller:</strong> <span id="detailSeller" class="brand-detail-seller"></span></p>
+                          <p><strong>Description:</strong></p>
+                          <p id="detailDescription" class="brand-detail-description" style="border: 1px solid #ddd; padding: 10px; border-radius: 4px;"></p>
+                          <p><strong>Status:</strong> <span id="detailStatus" class="badge brand-detail-status"></span></p>
+                          <p><strong>Submitted Date:</strong> <span id="detailDate" class="brand-detail-date"></span></p>
+                        </div>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-success" id="approveBrandBtn">Approve</button>
+                        <button type="button" class="btn btn-danger" id="rejectBrandBtn">Reject</button>
+                        <button type="button" class="btn btn-secondary" id="cancelBrandBtn" data-dismiss="modal">Cancel</button>
+                      </div>
                     </div>
                 </div>
               </div>     
@@ -332,16 +347,20 @@
             <!-- Brand Table Display -->
             <div class="card">
               <div class="card-header">
-                <h2 class="mb-0">Brand List</h2>
+                <h2 class="mb-0">Approval Brand List</h2>
               </div>
               <div class="card-body table-responsive">
-                <table id="brand-table" class="table table-striped table-hover">
+                <table id="approval-brand-table" class="table table-striped table-hover">
                   <thead>
                     <tr>
-                      <th>ID</th>
-                      <th>Brand Name</th>
-                      <th>Image</th>
-                      <th>Action</th>
+                      <th class="text-center">ID</th>
+                      <th class="text-center">Brand Name</th>
+                      <th class="text-center">Seller</th>
+                      <th class="text-center">Description</th>
+                      <th class="text-center">Status</th>
+                      <th class="text-center">Submitted Date</th>
+                      <th class="text-center">Image</th>
+                      <th class="text-center">Action</th>
                     </tr>
                   </thead>
                   <tbody>

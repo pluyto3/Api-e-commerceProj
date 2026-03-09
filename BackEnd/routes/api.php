@@ -83,6 +83,8 @@ Route::group(['prefix' => 'category'], function($router) {
     Route::controller(CategoryController::class)->group(function () {
         Route::get('/', 'index'); // Get all categories
         Route::post('/', 'createCategory'); // Create a new category
+        Route::put('/{id}/approve', 'approveCategory'); // Approve a category (admin)
+        Route::put('/{id}/reject', 'rejectCategory'); // Reject a category (admin)
         Route::get('/{id}', 'getCategory_id'); // Get a specific category by ID
         Route::delete('/{id}', 'deleteCategory'); // Delete a specific category by ID
         Route::put('/{id}', 'updateCategory'); // Update a specific category
@@ -95,6 +97,8 @@ Route::group(['prefix' => 'brands'], function($router) {
     Route::controller(BrandsController::class)->group(function () {
         Route::get('/', 'index'); // Get all brands
         Route::post('/', 'createBrands'); // Create a new brand
+        Route::put('/{id}/approve', 'approveBrand'); // Approve a brand (admin)
+        Route::put('/{id}/reject', 'rejectBrand'); // Reject a brand (admin)
         Route::get('/{id}', 'getBrands_id'); // Get a specific brand by ID
         Route::put('/{id}', 'updateBrands'); // Update a specific brand by ID
         Route::post('/{id}', 'updateBrands'); // Update a specific brand by ID
