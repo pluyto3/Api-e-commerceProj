@@ -194,7 +194,7 @@
 
           <!-- Approved Section -->
           <div class="approvedCategoryContent" id="approvedCategoryContent">
-            <h1 class="display-4"> Approved Categories</h1>
+            <h1 class="display-4"> Seller Category Lists</h1>
             <hr class="admin-hr" />
 
             <!-- Category Section -->
@@ -264,14 +264,6 @@
 
           </div>
 
-
-          <h1 class="display-4">Approval for Category</h1>
-
-          <!-- Adding Button -->
-          <button type="button" class="btn btn-primary add_category" data-toggle="modal" data-target="#categoryModal">Add New Category</button>
-
-          <hr class="admin-hr" />
-
           <!-- Category Section -->
           <div class="category-section">
             
@@ -291,7 +283,7 @@
                         <label for="name" class="font-weight-bold">Category Name</label>
                         <input type="text" class="form-control" id="name" name="name" placeholder="Enter category name " required>
                         <label for="description" class="font-weight-bold">Description</label>
-                        <input type="text" class="form-control" id="description" name="description" placeholder="Enter category description " required>
+                        <textarea class="form-control" id="description" name="description" rows="3" placeholder="Enter category description " required></textarea>
                         <label for="image" class="font-weight-bold">Images</label>
                         <input type="file" class="form-control" id="image" name="image" placeholder="Enter image " required>
                       </div>
@@ -376,8 +368,11 @@
 
             <!-- Category Table Display -->
              <div class="card">
+              <div id="addCategorySection" class="p-2 d-flex justify-content-end d-none">
+                <button type="button" class="btn btn-primary add_category" data-toggle="modal" data-target="#categoryModal"> Create Category</button>
+              </div>
               <div class="card-header">
-                <h2>Approval for Category List</h2>
+                <h2>Category Pending Approval</h2>
               </div>
               <div class="card-body table-responsive">
                 <table id="approval-category-table" class="table table-striped table-sm text-center table-hover justify-content-center" >

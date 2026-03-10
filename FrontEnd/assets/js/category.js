@@ -186,6 +186,7 @@ function load_user() {
   const $adminDashboard = $("#adminDashboard");
   const $navbarProfileImage = $("#navbarProfileImage");
   const $defaultProfileIcon = $("#defaultProfileIcon");
+  const $addCategorySection = $(".add_category");
 
   if (!usr || !token) {
     // No session → show login/register, hide logout and cart
@@ -201,6 +202,8 @@ function load_user() {
     // Show default icon, hide uploaded image
     $navbarProfileImage.hide();
     $defaultProfileIcon.show();
+    $addCategorySection.hide();
+
     return;
   }
 
@@ -226,6 +229,13 @@ function load_user() {
     $adminDashboard.show();
   } else {
     $adminDashboard.hide();
+  }
+
+  // Show "Category Button" only for sellers
+  if (role === "seller") {
+    $addCategorySection.show();
+  } else {
+    $addCategorySection.hide();
   }
 }
 

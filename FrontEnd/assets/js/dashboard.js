@@ -431,8 +431,8 @@ function loadRecentOrders() {
         <td>${order.status}</td>
         <td>${order.payment_method}</td>
         <td>
-          <button type="button" class="btn btn-sm btn-primary view-order" data-id="${order.checkout_id}">
-            View
+          <button type="button" class="btn btn-sm btn-info view-order" data-id="${order.checkout_id}">
+            <i class="fas fa-eye"></i> View
           </button>
         </td>
       </tr>

@@ -181,6 +181,7 @@ function load_user() {
   const $adminDashboard = $("#adminDashboard");
   const $navbarProfileImage = $("#navbarProfileImage");
   const $defaultProfileIcon = $("#defaultProfileIcon");
+  const $addBrandSection = $(".add_brand");
 
   // No session → show login/register
   if (!usr || !token) {
@@ -194,6 +195,7 @@ function load_user() {
     $adminDashboard.hide();
     $navbarProfileImage.hide();
     $defaultProfileIcon.show();
+    $addBrandSection.hide();
     return;
   }
 
@@ -219,6 +221,13 @@ function load_user() {
     $adminDashboard.show();
   } else {
     $adminDashboard.hide();
+  }
+
+  // Show "Create Brand" button only to sellers
+  if (role === "seller") {
+    $addBrandSection.show();
+  } else {
+    $addBrandSection.hide();
   }
 }
 
