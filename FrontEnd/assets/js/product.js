@@ -8,6 +8,7 @@ let usr = $.cookie("username");
 let role = $.cookie("role");
 let currentProductId = null;
 let allProducts = [];
+let approvedOrdersCache = [];
 
 console.log("adminProductApproval.js loaded", { token, usr, role, ip });
 
@@ -20,6 +21,8 @@ function load_user() {
   const $register = $("#register");
   const $logout = $("#logout");
   const $cartCount = $("#cart-count");
+  const $cartNav = $("#cartNav");
+  const $cartNavMobile = $("#cartNavMobile");
   const $adminDashboard = $("#adminDashboard");
   const $navbarProfileImage = $("#navbarProfileImage");
   const $defaultProfileIcon = $("#defaultProfileIcon");
@@ -31,6 +34,8 @@ function load_user() {
     $register.show();
     $logout.hide();
     $cartCount.hide();
+    $cartNav.hide();
+    $cartNavMobile.hide();
     $adminDashboard.hide();
     $navbarProfileImage.hide();
     $defaultProfileIcon.show();
@@ -42,6 +47,17 @@ function load_user() {
   $login.hide();
   $register.hide();
   $logout.show();
+
+  // Match dashboard behavior: show cart for user/seller, hide for admin
+  if (role === "user" || role === "seller") {
+    $cartCount.show();
+    $cartNav.show();
+    $cartNavMobile.show();
+  } else {
+    $cartCount.hide();
+    $cartNav.hide();
+    $cartNavMobile.hide();
+  }
 
   // Show cart only for regular users (not sellers/admins)
   if (!role || (role !== "admin" && role !== "seller")) {
@@ -237,6 +253,182 @@ function displayApprovedOrders(products) {
   });
 }
 
+// Normalize order status for filtering
+function normalizeOrderStatus(status) {
+  const normalized = String(status || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+
+  if (normalized === "processing" || normalized === "to_ship") {
+    return "to ship";
+  }
+  if (normalized === "pending_payment") {
+    return "pending";
+  }
+  return normalized.replace(/_/g, " ");
+}
+
+// Render approved orders with optional status filter
+function renderApprovedOrdersTable(statusFilter = "all") {
+  const tbody = $("#ordersTable tbody");
+  tbody.empty();
+
+  const filterValue = String(statusFilter || "all").toLowerCase();
+  const filtered = (approvedOrdersCache || []).filter(({ order }) => {
+    if (filterValue === "all") return true;
+    return normalizeOrderStatus(order.status) === filterValue;
+  });
+
+  if (filtered.length === 0) {
+    tbody.html(
+      `<tr><td colspan="11" class="text-center text-muted py-4">No orders found.</td></tr>`,
+    );
+    return;
+  }
+
+  filtered.forEach(({ order, item }, idx) => {
+    const firstItem = item;
+    const prod = firstItem?.product || {};
+
+    const pid =
+      firstItem?.product_id ||
+      prod.product_id ||
+      prod.id ||
+      firstItem?.product?.product_id ||
+      null;
+
+    const matchedProduct =
+      pid && allProducts && allProducts.length
+        ? allProducts.find((p) => String(p.product_id || p.id) === String(pid))
+        : null;
+
+    const productName =
+      firstItem?.product_name ||
+      prod.product_name ||
+      prod.name ||
+      (matchedProduct &&
+        (matchedProduct.product_name || matchedProduct.name)) ||
+      "N/A";
+
+    const seller =
+      (prod.seller && (prod.seller.username || prod.seller)) ||
+      (matchedProduct &&
+        (matchedProduct.seller?.username || matchedProduct.seller)) ||
+      order.user?.username ||
+      "N/A";
+
+    let category = "N/A";
+    if (prod.category) {
+      category =
+        typeof prod.category === "object"
+          ? prod.category.name ||
+            prod.category.category_name ||
+            prod.category.title ||
+            String(prod.category)
+          : String(prod.category);
+    } else if (firstItem?.category) {
+      category =
+        typeof firstItem.category === "object"
+          ? firstItem.category.name || String(firstItem.category)
+          : String(firstItem.category);
+    } else if (prod.category_name) {
+      category = prod.category_name;
+    } else if (prod.categoryName) {
+      category = prod.categoryName;
+    } else if (matchedProduct) {
+      category =
+        matchedProduct.category ||
+        matchedProduct.category_name ||
+        matchedProduct.categoryName ||
+        (matchedProduct.category &&
+          (matchedProduct.category.name || matchedProduct.category)) ||
+        "N/A";
+    }
+
+    let brand = "N/A";
+    if (prod.brand) {
+      brand =
+        typeof prod.brand === "object"
+          ? prod.brand.name ||
+            prod.brand.brand_name ||
+            prod.brand.title ||
+            String(prod.brand)
+          : String(prod.brand);
+    } else if (firstItem?.brand) {
+      brand =
+        typeof firstItem.brand === "object"
+          ? firstItem.brand.name || String(firstItem.brand)
+          : String(firstItem.brand);
+    } else if (prod.brand_name) {
+      brand = prod.brand_name;
+    } else if (prod.brandName) {
+      brand = prod.brandName;
+    } else if (matchedProduct) {
+      brand =
+        matchedProduct.brand ||
+        matchedProduct.brand_name ||
+        matchedProduct.brandName ||
+        (matchedProduct.brand &&
+          (matchedProduct.brand.name || matchedProduct.brand)) ||
+        "N/A";
+    }
+
+    const price =
+      firstItem?.price ||
+      prod.product_price ||
+      prod.price ||
+      (matchedProduct &&
+        (matchedProduct.product_price || matchedProduct.price)) ||
+      0;
+
+    const stock =
+      typeof prod.stock_quantity !== "undefined"
+        ? prod.stock_quantity
+        : typeof prod.stock !== "undefined"
+          ? prod.stock
+          : (matchedProduct &&
+              (matchedProduct.stock_quantity || matchedProduct.stock)) ||
+            "N/A";
+
+    const img = prod.image
+      ? buildImageCandidates(prod.image)[0]
+      : firstItem?.image
+        ? buildImageCandidates(firstItem.image)[0]
+        : matchedProduct && matchedProduct.image
+          ? buildImageCandidates(matchedProduct.image)[0]
+          : "assets/img/back.jpg";
+
+    const approvalStatus =
+      prod.approval_status || firstItem?.approval_status || "N/A";
+
+    const prodIdDisplay =
+      firstItem?.product_id ||
+      prod.product_id ||
+      (matchedProduct && (matchedProduct.product_id || matchedProduct.id)) ||
+      order.checkout_id ||
+      idx + 1;
+
+    const row = `
+      <tr>
+        <td class="text-center">${prodIdDisplay}</td>
+        <td class="text-center">${productName}</td>
+        <td class="text-center">${seller}</td>
+        <td class="text-center">${category}</td>
+        <td class="text-center">${brand}</td>
+        <td class="text-center">â‚±${parseFloat(price || 0).toFixed(2)}</td>
+        <td class="text-center">${stock}</td>
+        <td class="text-center"><img src="${img}" alt="Product" style="width:50px;height:50px;object-fit:cover;border-radius:4px;" onerror="this.onerror=null;this.src='assets/img/back.jpg'"></td>
+        <td class="text-center"><span class="badge">${(approvalStatus || "").toUpperCase()}</span></td>
+        <td class="text-center">${formatDate(order.created_at || order.updated_at)}</td>
+        <td class="text-center"><button class="btn btn-sm btn-info" data-id="${order.checkout_id}" onclick="viewCheckout(${order.checkout_id})" data-toggle="modal" data-target="#productDetailsModal"><i class="fas fa-eye"></i> View</button></td>
+      </tr>
+    `;
+
+    tbody.append(row);
+  });
+}
+
 // =======================================
 // Fetch approved orders (checkouts) from backend and render
 // =======================================
@@ -274,10 +466,8 @@ function fetchAndDisplayApprovedOrders() {
       // Deduplicate by product_id to show each approved product only once
       const uniq = {};
       approved.forEach((order) => {
-        // Check all items in this order, not just the first one
         if (order.items && order.items.length) {
           order.items.forEach((item) => {
-            // Only include items with approval_status === 'approved'
             const itemApprovalStatus =
               item?.product?.approval_status ||
               item?.approval_status ||
@@ -292,7 +482,6 @@ function fetchAndDisplayApprovedOrders() {
             if (!uniq[pid]) {
               uniq[pid] = { order, item, date };
             } else {
-              // Keep the most recent entry for this product
               const existingDate = uniq[pid].date;
               if (
                 date &&
@@ -305,168 +494,8 @@ function fetchAndDisplayApprovedOrders() {
         }
       });
 
-      const uniqueProducts = Object.values(uniq);
-      uniqueProducts.forEach(({ order, item }, idx) => {
-        const firstItem = item;
-        const prod = firstItem?.product || {};
-
-        // Debug: log the item structure to help diagnose missing fields
-        console.log("Approved order item:", { firstItem, prod, order });
-
-        // determine product id to allow lookups when product payload is minimal
-        const pid =
-          firstItem?.product_id ||
-          prod.product_id ||
-          prod.id ||
-          firstItem?.product?.product_id ||
-          null;
-
-        // try to find a full product record from previously loaded products
-        const matchedProduct =
-          pid && allProducts && allProducts.length
-            ? allProducts.find(
-                (p) => String(p.product_id || p.id) === String(pid),
-              )
-            : null;
-
-        const productName =
-          firstItem?.product_name ||
-          prod.product_name ||
-          prod.name ||
-          (matchedProduct &&
-            (matchedProduct.product_name || matchedProduct.name)) ||
-          "N/A";
-
-        const seller =
-          // seller may be an object or a string username/id
-          (prod.seller && (prod.seller.username || prod.seller)) ||
-          (matchedProduct &&
-            (matchedProduct.seller?.username || matchedProduct.seller)) ||
-          order.user?.username ||
-          "N/A";
-
-        // Extract category with comprehensive fallbacks, then fallback to matchedProduct
-        let category = "N/A";
-        if (prod.category) {
-          category =
-            typeof prod.category === "object"
-              ? prod.category.name ||
-                prod.category.category_name ||
-                prod.category.title ||
-                String(prod.category)
-              : String(prod.category);
-        } else if (firstItem?.category) {
-          category =
-            typeof firstItem.category === "object"
-              ? firstItem.category.name || String(firstItem.category)
-              : String(firstItem.category);
-        } else if (prod.category_name) {
-          category = prod.category_name;
-        } else if (prod.categoryName) {
-          category = prod.categoryName;
-        } else if (matchedProduct) {
-          category =
-            matchedProduct.category ||
-            matchedProduct.category_name ||
-            matchedProduct.categoryName ||
-            (matchedProduct.category &&
-              (matchedProduct.category.name || matchedProduct.category)) ||
-            "N/A";
-        }
-
-        // Extract brand with comprehensive fallbacks, then fallback to matchedProduct
-        let brand = "N/A";
-        if (prod.brand) {
-          brand =
-            typeof prod.brand === "object"
-              ? prod.brand.name ||
-                prod.brand.brand_name ||
-                prod.brand.title ||
-                String(prod.brand)
-              : String(prod.brand);
-        } else if (firstItem?.brand) {
-          brand =
-            typeof firstItem.brand === "object"
-              ? firstItem.brand.name || String(firstItem.brand)
-              : String(firstItem.brand);
-        } else if (prod.brand_name) {
-          brand = prod.brand_name;
-        } else if (prod.brandName) {
-          brand = prod.brandName;
-        } else if (matchedProduct) {
-          brand =
-            matchedProduct.brand ||
-            matchedProduct.brand_name ||
-            matchedProduct.brandName ||
-            (matchedProduct.brand &&
-              (matchedProduct.brand.name || matchedProduct.brand)) ||
-            "N/A";
-        }
-
-        console.log("Category extraction result:", {
-          category,
-          prod_category: prod.category,
-          firstItem_category: firstItem?.category,
-          matchedProduct: matchedProduct
-            ? { category: matchedProduct.category, brand: matchedProduct.brand }
-            : null,
-        });
-
-        const price =
-          firstItem?.price ||
-          prod.product_price ||
-          prod.price ||
-          (matchedProduct &&
-            (matchedProduct.product_price || matchedProduct.price)) ||
-          0;
-
-        const stock =
-          // prefer numeric stock if available, else show N/A
-          typeof prod.stock_quantity !== "undefined"
-            ? prod.stock_quantity
-            : typeof prod.stock !== "undefined"
-              ? prod.stock
-              : (matchedProduct &&
-                  (matchedProduct.stock_quantity || matchedProduct.stock)) ||
-                "N/A";
-
-        const img = prod.image
-          ? buildImageCandidates(prod.image)[0]
-          : firstItem?.image
-            ? buildImageCandidates(firstItem.image)[0]
-            : matchedProduct && matchedProduct.image
-              ? buildImageCandidates(matchedProduct.image)[0]
-              : "assets/img/back.jpg";
-
-        const approvalStatus =
-          prod.approval_status || firstItem?.approval_status || "N/A";
-
-        const prodIdDisplay =
-          firstItem?.product_id ||
-          prod.product_id ||
-          (matchedProduct &&
-            (matchedProduct.product_id || matchedProduct.id)) ||
-          order.checkout_id ||
-          idx + 1;
-
-        const row = `
-          <tr>
-            <td class="text-center">${prodIdDisplay}</td>
-            <td class="text-center">${productName}</td>
-            <td class="text-center">${seller}</td>
-            <td class="text-center">${category}</td>
-            <td class="text-center">${brand}</td>
-            <td class="text-center">₱${parseFloat(price || 0).toFixed(2)}</td>
-            <td class="text-center">${stock}</td>
-            <td class="text-center"><img src="${img}" alt="Product" style="width:50px;height:50px;object-fit:cover;border-radius:4px;" onerror="this.onerror=null;this.src='assets/img/back.jpg'"></td>
-            <td class="text-center"><span class="badge">${(approvalStatus || "").toUpperCase()}</span></td>
-            <td class="text-center">${formatDate(order.created_at || order.updated_at)}</td>
-            <td class="text-center"><button class="btn btn-sm btn-info" data-id="${order.checkout_id}" onclick="viewCheckout(${order.checkout_id})" data-toggle="modal" data-target="#productDetailsModal"><i class="fas fa-eye"></i> View</button></td>
-          </tr>
-        `;
-
-        tbody.append(row);
-      });
+      approvedOrdersCache = Object.values(uniq);
+      renderApprovedOrdersTable($("#statusFilter").val());
     },
     error: function (xhr) {
       console.error("Error fetching approved orders:", xhr.responseText);
@@ -818,6 +847,11 @@ $(document).ready(function () {
   load_user();
   setupSidebarToggle();
   loadProductsForApproval();
+
+  // --- Order Status Filter ---
+  $("#statusFilter").on("change", function () {
+    renderApprovedOrdersTable($(this).val());
+  });
 
   // --- Load Navbar Profile Image ---
   if (usr) {

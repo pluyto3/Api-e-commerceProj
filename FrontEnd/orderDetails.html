@@ -32,7 +32,6 @@
     <script src="assets/js/sweetalert2.all.js"></script>
     <script src="assets/js/owl.carousel.min.js"></script>
     <script src="assets/js/jquery.bxslider.min.js"></script>
-    <script src="assets/js/jquery.cookie.min.js"></script>
 
     <!-- 3. Your Custom Script LAST -->
     <script src="assets/js/orderDetails.js"></script>
@@ -247,20 +246,22 @@
 
       <section class="working-panel">
         <div class="container-fluid">
-          <h1 class="display-4 mb-3">Order Management</h1>
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h1 class="display-4 mb-0">Order Management</h1>
+          </div>
           <hr class="admin-hr" />
 
           <!-- Search Bar -->
-          <div class="d-flex align-items-center mb-3">
+          <!-- <div class="d-flex align-items-center mb-3">
             <input
               type="text"
               class="form-control"
               placeholder="Search your orders…" />
-          </div>
+          </div> -->
 
           <!-- Order Management Section -->
           <!-- Tabs -->
-          <div class="d-flex justify-content-between border-bottom mb-3 pb-2">
+          <!-- <div class="d-flex justify-content-between border-bottom mb-3 pb-2">
             <button class="btn order-tab-btn active" data-status="All">
               All
             </button>
@@ -276,10 +277,46 @@
             <button class="btn order-tab-btn" data-status="To Review">
               To Review
             </button>
-          </div>
+          </div> -->
 
           <!-- Orders List -->
-          <div id="buyerOrders"></div>
+          <!-- <div id="buyerOrders"> -->
+          <!-- Orders will be dynamically inserted here -->
+          <!-- </div> -->
+          <div class="card">
+            <div
+              class="card-header d-flex justify-content-between align-items-center">
+              <h2 class="mb-0">Order List</h2>
+              <!-- Status Filter Dropdown -->
+              <select
+                id="statusFilter"
+                class="form-control ml-2"
+                style="width: 150px">
+                <option value="all">All</option>
+                <option value="pending">Pending</option>
+                <option value="to ship">To Ship</option>
+                <option value="shipped">Shipped</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
+            <div class="card-body table-responsive">
+              <table
+                class="table table-bordered table-striped"
+                id="ordersTable">
+                <thead>
+                  <tr>
+                    <th class="text-center">Order ID</th>
+                    <th class="text-center">Customer</th>
+                    <th class="text-center">Total</th>
+                    <th class="text-center">Status</th>
+                    <th class="text-center">Date</th>
+                    <th class="text-center" style="width: 100px">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="buyerOrders"></tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -306,6 +343,13 @@
                 <p>
                   <strong>Total Items:</strong> <span id="summaryItems"></span>
                 </p>
+                <p>
+                  <strong>Customer:</strong> <span id="summaryCustomer"></span>
+                </p>
+                <p><strong>Email:</strong> <span id="summaryEmail"></span></p>
+                <p>
+                  <strong>Address:</strong> <span id="summaryAddress"></span>
+                </p>
               </div>
               <p>
                 <strong>Tracking Number:</strong>
@@ -327,6 +371,15 @@
                 </thead>
                 <tbody id="orderDetailsBody"></tbody>
               </table>
+              <!-- Total Amount -->
+              <p class="text-right font-weight-bold">
+                Total Amount: ₱<span id="orderTotal"></span>
+              </p>
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-secondary" data-dismiss="modal">
+                Close
+              </button>
             </div>
           </div>
         </div>
@@ -367,9 +420,7 @@
             </div>
 
             <div class="modal-footer">
-              <button class="btn btn-danger" data-dismiss="modal">
-                Cancel
-              </button>
+              <button class="btn btn-info" data-dismiss="modal">Close</button>
 
               <button
                 class="btn btn-success"

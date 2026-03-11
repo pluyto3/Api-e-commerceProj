@@ -6,6 +6,60 @@ let token = null;
 let usr = null;
 let role = null;
 let profileImage = null;
+let globalOrders = [];
+let ordersTable = null;
+let currentUserProfile = null;
+
+// Fallback for jquery.cookie if the plugin fails to load
+if (
+  typeof window.jQuery !== "undefined" &&
+  typeof window.jQuery.cookie !== "function"
+) {
+  window.jQuery.cookie = function (name, value, options) {
+    if (arguments.length > 1) {
+      const opts = options || {};
+      let cookie = `${encodeURIComponent(name)}=${encodeURIComponent(value)}`;
+      if (typeof opts.expires === "number") {
+        const date = new Date();
+        date.setTime(date.getTime() + opts.expires * 864e5);
+        cookie += `; expires=${date.toUTCString()}`;
+      } else if (opts.expires instanceof Date) {
+        cookie += `; expires=${opts.expires.toUTCString()}`;
+      }
+      cookie += `; path=${opts.path || "/"}`;
+      if (opts.domain) cookie += `; domain=${opts.domain}`;
+      if (opts.secure) cookie += "; secure";
+      document.cookie = cookie;
+      return cookie;
+    }
+
+    if (!name) {
+      const result = {};
+      const parts = document.cookie ? document.cookie.split("; ") : [];
+      parts.forEach((part) => {
+        const idx = part.indexOf("=");
+        const key = decodeURIComponent(idx >= 0 ? part.slice(0, idx) : part);
+        const val = idx >= 0 ? decodeURIComponent(part.slice(idx + 1)) : "";
+        result[key] = val;
+      });
+      return result;
+    }
+
+    const encoded = encodeURIComponent(name).replace(/[-.+*]/g, "\\$&");
+    const match = document.cookie.match(
+      new RegExp(`(?:^|; )${encoded}=([^;]*)`),
+    );
+    return match ? decodeURIComponent(match[1]) : null;
+  };
+
+  window.jQuery.removeCookie = function (name, options) {
+    window.jQuery.cookie(name, "", {
+      expires: -1,
+      path: (options && options.path) || "/",
+    });
+    return true;
+  };
+}
 
 // =======================================
 // User Session Handling
@@ -69,13 +123,147 @@ function load_user() {
 }
 
 // =======================================
+// Helpers
+// =======================================
+function isAdminView() {
+  return role === "admin" || role === "seller";
+}
+
+function normalizeStatus(status) {
+  return String(status || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_");
+}
+
+function formatStatusLabel(status) {
+  if (!status) return "N/A";
+  return String(status).replace(/_/g, " ").toUpperCase();
+}
+
+function mapStatusToSelectValue(status) {
+  const normalized = normalizeStatus(status);
+  if (normalized === "processing" || normalized === "to_ship") {
+    return "to ship";
+  }
+  if (normalized === "pending_payment") {
+    return "pending";
+  }
+  return normalized.replace(/_/g, " ");
+}
+
+function formatCurrency(amount) {
+  const num = Number(amount);
+  if (!Number.isFinite(num)) return String(amount || "0");
+  return num.toFixed(2);
+}
+
+function formatDate(value) {
+  if (!value) return "N/A";
+  const str = String(value);
+  if (!/\d{4}/.test(str)) return str;
+  const parsed = new Date(str);
+  if (Number.isNaN(parsed.getTime())) return str;
+  return parsed.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function formatAddress(order = {}, user = {}) {
+  const parts = [
+    order.purok,
+    order.barangay,
+    order.city,
+    order.province,
+  ].filter(Boolean);
+  if (parts.length) return parts.join(", ");
+  return order.address || user.address || "N/A";
+}
+
+function resolveImageSrc(image) {
+  if (!image) return "assets/img/back.jpg";
+  const src = String(image);
+  if (/^(https?:)?\/\//i.test(src)) return src;
+  if (src.startsWith("/")) return `${ip}${src}`;
+  if (src.includes("assets/")) return `${ip}/${src.replace(/^\/+/, "")}`;
+  return `${ip}/FrontEnd/assets/img/product/${src}`;
+}
+
+function getOrderItems(order, itemsOverride) {
+  const rawItems = itemsOverride || order.items || [];
+  return rawItems.map((item) => {
+    const product = item.product || {};
+    const productName =
+      item.product_name || product.product_name || "Unknown Product";
+    const quantity = Number(item.quantity || 0);
+    const price = Number(item.price || product.product_price || 0);
+    const subtotal = Number(
+      item.subtotal || (quantity && price ? quantity * price : 0),
+    );
+    const image = item.image || product.image || null;
+
+    return { productName, quantity, price, subtotal, image };
+  });
+}
+
+function populateOrderDetails(order, itemsOverride) {
+  const items = getOrderItems(order, itemsOverride);
+
+  $("#summaryStatus").text(formatStatusLabel(order.status));
+  $("#summaryDate").text(formatDate(order.created_at || order.updated_at));
+  $("#summaryItems").text(items.length);
+  const user = order.user || currentUserProfile || {};
+  const customerName =
+    order.customer_name || user.fullname || user.username || usr || "N/A";
+  const email = order.email || user.email || "N/A";
+  const address = formatAddress(order, user);
+  $("#summaryCustomer").text(customerName);
+  $("#summaryEmail").text(email);
+  $("#summaryAddress").text(address);
+
+  if (order.tracking_number) {
+    $("#tracking").text(order.tracking_number);
+  } else {
+    $("#tracking").text("Not yet assigned");
+  }
+
+  let rows = "";
+  let computedTotal = 0;
+  items.forEach((item) => {
+    computedTotal += Number(item.subtotal || item.quantity * item.price || 0);
+    rows += `
+      <tr>
+        <td>
+          <img src="${resolveImageSrc(item.image)}"
+               onerror="this.src='assets/img/back.jpg'"
+               style="width:70px; height:70px; object-fit:cover; border:1px solid #ddd;">
+        </td>
+        <td>${item.productName}</td>
+        <td>${item.quantity}</td>
+        <td>&#8369;${formatCurrency(item.price)}</td>
+        <td>&#8369;${formatCurrency(item.subtotal)}</td>
+      </tr>
+    `;
+  });
+
+  $("#orderDetailsBody").html(rows);
+
+  $("#orderTotal").text(formatCurrency(computedTotal));
+}
+
+// =======================================
 // Order Management Logic
 // =======================================
 function fetchBuyerOrders() {
   console.log("Attempting to fetch orders...");
+  const endpoint = isAdminView()
+    ? `${ip}/api/checkout/all`
+    : `${ip}/api/checkout/orders`;
 
   $.ajax({
-    url: `${ip}/api/checkout/orders`,
+    url: endpoint,
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -83,13 +271,14 @@ function fetchBuyerOrders() {
     },
     success: function (res) {
       console.log("Buyer Orders:", res);
-      globalOrders = res.data || res;
+      const orders = isAdminView() ? res : res.data || res;
+      globalOrders = Array.isArray(orders) ? orders : [];
       renderOrders("All");
     },
     error: function (err) {
       console.error("Error loading orders:", err);
       $("#buyerOrders").html(
-        `<div class="alert alert-danger">Failed to load orders.</div>`,
+        `<tr><td colspan="6" class="text-center text-danger py-4">Failed to load orders.</td></tr>`,
       );
     },
   });
@@ -99,144 +288,124 @@ function fetchBuyerOrders() {
 // Render Orders Based on Status
 // =======================================
 function renderOrders(filter = "All") {
-  const container = document.getElementById("buyerOrders");
-  container.innerHTML = "";
+  const $table = $("#ordersTable");
+  const $tbody = $("#buyerOrders");
+  $tbody.empty();
 
   // Status Mapping
-  const filteredOrders = globalOrders.filter((o) => {
-    switch (filter) {
-      case "Unpaid":
-        return o.status === "pending" || o.status === "pending_payment";
+  const filterKey = normalizeStatus(filter || "all");
+  const filteredOrders = (globalOrders || []).filter((o) => {
+    const statusKey = normalizeStatus(o.status);
+    switch (filterKey) {
+      case "unpaid":
+      case "pending":
+      case "pending_payment":
+        return statusKey === "pending" || statusKey === "pending_payment";
 
-      case "To Ship":
-        return o.status === "processing";
+      case "to_ship":
+      case "processing":
+        return statusKey === "processing" || statusKey === "to_ship";
 
-      case "Shipped":
-        return o.status === "shipped";
+      case "shipped":
+        return statusKey === "shipped";
 
-      case "To Review":
-        return o.status === "completed" || o.status === "delivered";
+      case "completed":
+        return statusKey === "completed" || statusKey === "delivered";
 
+      case "to_review":
+        return statusKey === "completed" || statusKey === "delivered";
+
+      case "all":
       default:
         return true; // "All"
     }
   });
 
+  if ($.fn.DataTable && $.fn.DataTable.isDataTable($table)) {
+    $table.DataTable().clear().destroy();
+  }
+
   // No orders
   if (filteredOrders.length === 0) {
-    container.innerHTML = `
-      <div class="p-5 text-center text-muted">No orders found.</div>
-    `;
+    $tbody.html(
+      `<tr><td colspan="6" class="text-center text-muted py-4">No orders found.</td></tr>`,
+    );
     return;
   }
 
-  // Status colors
-  const statusColors = {
-    pending_payment: "#ff8800",
-    pending: "#ff8800",
-    processing: "#ff8800",
-    shipped: "#0066ff",
-    completed: "#28a745",
-    delivered: "#28a745",
-    cancelled: "#dc3545",
-  };
+  const canUpdateStatus = isAdminView();
 
-  let htmlContent = filteredOrders
-    .map((order) => {
-      const color = statusColors[order.status] || "#6c757d";
+  filteredOrders.forEach((order) => {
+    const statusKey = normalizeStatus(order.status);
+    const statusLabel = formatStatusLabel(order.status);
+    const orderId = order.checkout_id || order.order_id || "N/A";
+    const customer = isAdminView()
+      ? order.user?.username ||
+        order.user?.fullname ||
+        order.customer_name ||
+        (order.user_id ? `User #${order.user_id}` : "N/A")
+      : usr || "N/A";
+    const total = formatCurrency(order.total_amount || order.total || 0);
+    const date = formatDate(order.created_at || order.updated_at);
 
-      // Items HTML
-      const itemsHtml = order.items
-        .map(
-          (item) => `
-          <div class="d-flex mb-3">
-            <img src="${ip}/${item.image}"
-                 onerror="this.src='assets/img/back.jpg'"
-                 style="width:70px;height:70px;object-fit:cover;border:1px solid #ddd;margin-right:15px;" />
+    const safeStatus = String(order.status || "").replace(/'/g, "\\'");
 
-            <div style="flex-grow:1">
-              <div class="font-weight-bold">${item.product_name}</div>
-              <div class="text-muted">Qty: ${item.quantity}</div>
-            </div>
+    const actionButtons = [];
+    actionButtons.push(`
+      <button class="btn btn-info btn-sm "
+        data-toggle="modal"
+        data-target="#orderDetailsModal"
+        data-id="${orderId}">
+        <i class="fas fa-eye"></i> View Order
+      </button>
+    `);
 
-            <div class="font-weight-bold">₱${item.price}</div>
-          </div>
-        `,
-        )
-        .join("");
+    if (canUpdateStatus) {
+      actionButtons.push(`
+        <button class="btn btn-info btn-sm "
+          data-toggle="modal"
+          data-target="#updateStatusModal"
+          onclick="openStatusModal(${orderId}, '${safeStatus}')">
+          <i class="fas fa-eye"></i> Update Status
+        </button>
+      `);
+    } else {
+      if (statusKey === "pending" || statusKey === "pending_payment") {
+        actionButtons.push(`
+          <button class="btn btn-outline-danger btn-sm btn-cancel"
+            data-id="${orderId}">
+            Cancel
+          </button>
+        `);
+      } else {
+        actionButtons.push(
+          `<button class="btn btn-secondary btn-sm" disabled>Cancel</button>`,
+        );
+      }
+    }
 
-      return `
-        <div class="card mb-3 shadow-sm" style="border-radius:6px;">
-          <div class="card-body">
+    const row = `
+      <tr>
+        <td>${orderId}</td>
+        <td>${customer}</td>
+        <td>&#8369;${total}</td>
+        <td>${statusLabel}</td>
+        <td>${date}</td>
+        <td class="text-center">${actionButtons.join("")}</td>
+      </tr>
+    `;
 
-            <!-- Shop Name + Status -->
-            <div class="d-flex justify-content-between mb-2">
-              <div class="font-weight-bold">
-                <i class="fas fa-store"></i> ${order.shop_name}
-              </div>
-              <div class="font-weight-bold text-uppercase" style="color:${color}">
-                ${order.status}
-              </div>
-            </div>
+    $tbody.append(row);
+  });
 
-            <!-- Date -->
-            <div class="text-muted mb-3" style="font-size:13px;">
-              Order Date: <b>${order.created_at}</b>
-            </div>
-
-            <hr/>
-
-            <!-- Items -->
-            ${itemsHtml}
-
-            <hr/>
-
-            <!-- Total & Actions -->
-            <div class="d-flex justify-content-between align-items-center">
-              <div class="font-weight-bold" style="font-size:18px;">
-                Total: ₱${order.total_amount}
-              </div>
-
-              <div>
-                <!-- View Order -->
-                <button class="btn btn-outline-dark btn-sm mr-2"
-                  data-toggle="modal"
-                  data-target="#orderDetailsModal"
-                  data-id="${order.checkout_id}">
-                    View Order
-                </button>
-
-                <!-- Update Status -->
-                <button class="btn btn-outline-dark btn-sm mr-2"
-                  data-toggle="modal"
-                  data-target="#updateStatusModal"
-                  onclick="openStatusModal(${order.checkout_id}, '${
-                    order.status
-                  }')">
-                    Update Status
-                </button>
-
-                <!-- Cancel Button -->
-                ${
-                  order.status === "pending" ||
-                  order.status === "pending_payment"
-                    ? `
-                    <button class="btn btn-outline-danger btn-sm btn-cancel"
-                      data-id="${order.checkout_id}">
-                      Cancel
-                    </button>`
-                    : `<button class="btn btn-secondary btn-sm" disabled>Cancel</button>`
-                }
-              </div>
-            </div>
-
-          </div>
-        </div>
-      `;
-    })
-    .join("");
-
-  container.innerHTML = htmlContent;
+  if ($.fn.DataTable) {
+    ordersTable = $table.DataTable({
+      pageLength: 10,
+      lengthChange: false,
+      responsive: true,
+      columnDefs: [{ orderable: false, targets: -1 }],
+    });
+  }
 }
 
 // =======================================
@@ -244,7 +413,7 @@ function renderOrders(filter = "All") {
 // =======================================
 function openStatusModal(orderId, currentStatus) {
   $("#statusOrderId").val(orderId);
-  $("#newOrderStatus").val(currentStatus);
+  $("#newOrderStatus").val(mapStatusToSelectValue(currentStatus));
 }
 
 // =======================================
@@ -283,6 +452,18 @@ function submitOrderStatusUpdate() {
 // Order Details Modal Logic
 // =======================================
 function loadOrderDetails(orderId) {
+  if (isAdminView()) {
+    const order = (globalOrders || []).find(
+      (o) => String(o.checkout_id) === String(orderId),
+    );
+    if (!order) {
+      Swal.fire("Error", "Unable to load order details.", "error");
+      return;
+    }
+    populateOrderDetails(order);
+    return;
+  }
+
   $.ajax({
     url: `${ip}/api/checkout/orders/${orderId}`,
     method: "GET",
@@ -292,44 +473,9 @@ function loadOrderDetails(orderId) {
     },
     success: function (res) {
       console.log("Order Details:", res);
-
-      const order = res.order;
-      const items = res.items;
-
-      // Summary Section
-      $("#summaryStatus").text(order.status);
-      $("#summaryDate").text(order.created_at);
-      $("#summaryItems").text(items.length);
-
-      // Tracking Number
-      if (order.tracking_number) {
-        $("#tracking").text(order.tracking_number);
-      } else {
-        $("#tracking").text("Not yet assigned");
-      }
-
-      // Items Section
-      let rows = "";
-
-      items.forEach((item) => {
-        let imageUrl = `${ip}/FrontEnd/assets/img/product/${item.image}`;
-
-        rows += `
-        <tr>
-            <td>
-              <img src="${ip}/${item.image}"
-                   onerror="this.src='assets/img/back.jpg'"
-                   style="width:70px; height:70px; object-fit:cover; border:1px solid #ddd;">
-            </td>
-            <td>${item.product_name}</td>
-            <td>${item.quantity}</td>
-            <td>₱${item.price}</td>
-            <td>₱${item.subtotal}</td>
-          </tr>
-        `;
-      });
-
-      $("#orderDetailsBody").html(rows);
+      const order = res.order || {};
+      const items = res.items || order.items || [];
+      populateOrderDetails(order, items);
     },
     error: function (xhr) {
       console.error(xhr);
@@ -385,6 +531,7 @@ $(document).ready(function () {
       },
       dataType: "json",
       success: function (response) {
+        currentUserProfile = response || null;
         const $navbarProfileImage = $("#navbarProfileImage");
         const $defaultProfileIcon = $("#defaultProfileIcon");
 
@@ -400,6 +547,7 @@ $(document).ready(function () {
       },
       error: function (xhr) {
         console.error("Error loading profile:", xhr.responseText);
+        currentUserProfile = null;
         $("#navbarProfileImage").hide();
         $("#defaultProfileIcon").show();
       },
@@ -442,6 +590,13 @@ $(document).ready(function () {
       btn.classList.add("active");
       renderOrders(btn.dataset.status);
     });
+  });
+
+  // -------------------------------
+  // Status Filter (Admin)
+  // -------------------------------
+  $("#statusFilter").on("change", function () {
+    renderOrders($(this).val());
   });
 
   // -------------------------------
