@@ -27,6 +27,7 @@ function load_user() {
   const $navbarProfileImage = $("#navbarProfileImage");
   const $defaultProfileIcon = $("#defaultProfileIcon");
   const $addCategorySection = $(".add_product");
+  const $sidebarAccounts = $("#sidebarAccounts");
 
   if (!usr || !token) {
     $displayUsername.html("My Account");
@@ -40,6 +41,7 @@ function load_user() {
     $navbarProfileImage.hide();
     $defaultProfileIcon.show();
     $addCategorySection.hide();
+    $sidebarAccounts.hide();
     return;
   }
 
@@ -74,8 +76,10 @@ function load_user() {
 
   if (role === "seller") {
     $addCategorySection.show();
+    $sidebarAccounts.hide();
   } else {
     $addCategorySection.hide();
+    $sidebarAccounts.show();
   }
 }
 
@@ -114,11 +118,30 @@ function loadProductsForApproval() {
     success: function (res) {
       console.log("All Products:", res);
       allProducts = res.data || res || [];
-      // Show only pending/non-approved products in the pending table
-      const pendingProducts = allProducts.filter((p) => {
-        const status = p.approval_status || "pending";
-        return status.toLowerCase() !== "approved";
+      // ======================================
+      // FILTER PRODUCTS IF SELLER IS LOGGED IN
+      // ======================================
+      let filteredProducts = allProducts;
+
+      if (role === "seller") {
+        filteredProducts = allProducts.filter((p) => {
+          const status = (p.approval_status || "pending").toLowerCase();
+
+          return (
+            p.seller?.username === usr &&
+            (status === "approved" || status === "pending")
+          );
+        });
+      }
+
+      // ======================================
+      // PENDING TABLE
+      // ======================================
+      const pendingProducts = filteredProducts.filter((p) => {
+        const status = (p.approval_status || "pending").toLowerCase();
+        return status === "pending";
       });
+
       displayProductsTable(pendingProducts, "all");
       // populate approved orders card/table from backend
       fetchAndDisplayApprovedOrders();
@@ -416,7 +439,7 @@ function renderApprovedOrdersTable(statusFilter = "all") {
         <td class="text-center">${seller}</td>
         <td class="text-center">${category}</td>
         <td class="text-center">${brand}</td>
-        <td class="text-center">â‚±${parseFloat(price || 0).toFixed(2)}</td>
+        <td class="text-center">₱${parseFloat(price || 0).toFixed(2)}</td>
         <td class="text-center">${stock}</td>
         <td class="text-center"><img src="${img}" alt="Product" style="width:50px;height:50px;object-fit:cover;border-radius:4px;" onerror="this.onerror=null;this.src='assets/img/back.jpg'"></td>
         <td class="text-center"><span class="badge">${(approvalStatus || "").toUpperCase()}</span></td>
@@ -444,17 +467,27 @@ function fetchAndDisplayApprovedOrders() {
       Accept: "application/json",
     },
     success: function (res) {
+      console.log("Approved Orders:", res);
       const orders = res || [];
 
       // Filter orders where first item's product has approval_status === 'approved'
-      const approved = (orders || []).filter((o) => {
+      let approved = (orders || []).filter((o) => {
         const firstItem = o.items && o.items.length ? o.items[0] : null;
         const approval =
           firstItem?.product?.approval_status ||
           firstItem?.approval_status ||
           null;
+
         return (approval || "").toLowerCase() === "approved";
       });
+
+      // FILTER IF SELLER
+      if (role === "seller") {
+        approved = approved.filter((o) => {
+          const firstItem = o.items && o.items.length ? o.items[0] : null;
+          return firstItem?.product?.seller?.username === usr;
+        });
+      }
 
       if (approved.length === 0) {
         tbody.html(
@@ -508,104 +541,64 @@ function fetchAndDisplayApprovedOrders() {
 
 // helper used by action button above — opens order details modal (uses existing product modal for quick inspect)
 function viewCheckout(checkoutId) {
-  // try to open product details if mapping exists, otherwise fetch order details
-  $.ajax({
-    url: `${ip}/api/checkout/orders/${checkoutId}`,
-    method: "GET",
-    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-    success: function (res) {
-      const order = res.order || res;
-      if (!order)
-        return Swal.fire({
-          icon: "info",
-          title: "No details",
-          text: "No order details available.",
-        });
+  // find order in cache
+  const cached = approvedOrdersCache.find(
+    (o) => o.order.checkout_id == checkoutId,
+  );
+  if (!cached) {
+    return Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: "Order not found.",
+    });
+  }
 
-      // populate modal with first item/product for quick view
-      const item = order.items && order.items.length ? order.items[0] : null;
-      if (item) {
-        let prod = item.product || {};
-        // fallback: if product details are not included in the order item,
-        // try to find the full product record from `allProducts` by id
-        const pid = item.product_id || prod.product_id || prod.id || null;
-        if (
-          (!prod || Object.keys(prod).length === 0) &&
-          pid &&
-          allProducts &&
-          allProducts.length
-        ) {
-          const matched = allProducts.find(
-            (p) => String(p.product_id || p.id) === String(pid),
-          );
-          if (matched) prod = matched;
-        }
+  const { order, item } = cached;
+  let prod = item?.product || {};
 
-        const detailId = item.product_id || prod.product_id || prod.id || "N/A";
-        const detailName =
-          item.product_name || prod.product_name || prod.name || "N/A";
-        const seller =
-          (prod.seller && (prod.seller.username || prod.seller)) ||
-          order.user?.username ||
-          "N/A";
-        const category =
-          (prod.category && (prod.category.name || prod.category)) ||
-          item.category ||
-          "N/A";
-        const brand =
-          (prod.brand && (prod.brand.name || prod.brand)) ||
-          item.brand ||
-          "N/A";
-        const price = item.price || prod.product_price || prod.price || 0;
-        const stock =
-          typeof prod.stock_quantity !== "undefined"
-            ? prod.stock_quantity
-            : typeof prod.stock !== "undefined"
-              ? prod.stock
-              : "N/A";
-        const description =
-          item.description ||
-          prod.product_description ||
-          prod.description ||
-          "";
+  // fallback to allProducts if product info missing
+  const pid = item?.product_id || prod.product_id || prod.id || null;
+  if ((!prod || Object.keys(prod).length === 0) && pid && allProducts.length) {
+    const matched = allProducts.find(
+      (p) => String(p.product_id || p.id) === String(pid),
+    );
+    if (matched) prod = matched;
+  }
 
-        $("#detailProductId").text(detailId);
-        $("#detailProductName").text(detailName);
-        $("#detailSeller").text(seller);
-        $("#detailCategory").text(category);
-        $("#detailBrand").text(brand);
-        $("#detailPrice").text(`₱${parseFloat(price || 0).toFixed(2)}`);
-        $("#detailStock").text(stock);
-        $("#detailDescription").text(
-          description
-            ? description
-            : `Quantity: ${item.quantity}\nSubtotal: ₱${parseFloat(item.subtotal || 0).toFixed(2)}`,
-        );
-        $("#detailDate").text(order.created_at || "N/A");
+  $("#detailProductId").text(
+    item?.product_id || prod.product_id || prod.id || "N/A",
+  );
+  $("#detailProductName").text(
+    item?.product_name || prod.product_name || prod.name || "N/A",
+  );
+  $("#detailSeller").text(
+    prod.seller?.username || prod.seller || order.user?.username || "N/A",
+  );
+  $("#detailCategory").text(
+    prod.category?.name || prod.category || item?.category || "N/A",
+  );
+  $("#detailBrand").text(
+    prod.brand?.name || prod.brand || item?.brand || "N/A",
+  );
+  $("#detailPrice").text(
+    `₱${parseFloat(item?.price || prod.product_price || prod.price || 0).toFixed(2)}`,
+  );
+  $("#detailStock").text(prod.stock_quantity ?? prod.stock ?? "N/A");
+  $("#detailDescription").text(
+    item?.description ||
+      prod.product_description ||
+      prod.description ||
+      `Quantity: ${item?.quantity}\nSubtotal: ₱${parseFloat(item?.subtotal || 0).toFixed(2)}`,
+  );
+  $("#detailDate").text(formatDate(order.created_at) || "N/A");
 
-        const imgSource = prod.image || item.image || null;
-        const img = imgSource
-          ? buildImageCandidates(imgSource)[0]
-          : "assets/img/back.jpg";
-        $("#productImage").attr("src", img);
-        $("#productDetailsModal").modal("show");
-      } else {
-        Swal.fire({
-          icon: "info",
-          title: "No items",
-          text: "This order has no items to display.",
-        });
-      }
-    },
-    error: function (xhr) {
-      console.error("Error fetching order details:", xhr.responseText);
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: "Failed to load order details.",
-      });
-    },
-  });
+  const img =
+    prod.image || item?.image
+      ? buildImageCandidates(prod.image || item?.image)[0]
+      : "assets/img/back.jpg";
+  $("#productImage").attr("src", img);
+
+  $("#productDetailsModal").modal("show");
 }
 
 // =======================================
@@ -733,9 +726,11 @@ function loadProductDetails(productId) {
   $("#detailStock").text(product.stock_quantity || 0);
   $("#detailDescription").text(product.product_description || "N/A");
   $("#detailDate").text(product.created_at || "N/A");
+  $("#detailDate").text(formatDate(product.created_at));
 
+  // Status badge
   const status = product.approval_status || "pending";
-  $("#detailStatus")
+  $("#detailPendingStatus")
     .removeClass()
     .addClass("badge")
     .addClass(

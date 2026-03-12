@@ -40,6 +40,7 @@ function load_user() {
   const $navbarProfileImage = $("#navbarProfileImage");
   const $defaultProfileIcon = $("#defaultProfileIcon");
   const $cartNav = $("#cartNav");
+  const $sidebarAccounts = $("#sidebarAccounts");
 
   if (!usr || !token) {
     // No session
@@ -52,6 +53,7 @@ function load_user() {
     $adminDashboard.hide();
     $navbarProfileImage.hide();
     $defaultProfileIcon.show();
+    $sidebarAccounts.hide();
     return;
   }
 
@@ -78,6 +80,12 @@ function load_user() {
   } else {
     $adminDashboardContent.addClass("d-none");
     $sellerDashboardContent.addClass("d-none");
+  }
+
+  if (role === "seller") {
+    $sidebarAccounts.hide();
+  } else {
+    $sidebarAccounts.show();
   }
 }
 

@@ -26,6 +26,7 @@ function load_user() {
   const $adminDashboard = $("#adminDashboard");
   const $navbarProfileImage = $("#navbarProfileImage");
   const $defaultProfileIcon = $("#defaultProfileIcon");
+  const $sidebarAccounts = $("#sidebarAccounts");
 
   if (!usr || !token) {
     // No session → show login/register, hide logout & cart
@@ -39,6 +40,7 @@ function load_user() {
     $adminDashboard.hide();
     $navbarProfileImage.hide();
     $defaultProfileIcon.show();
+    $sidebarAccounts.hide();
     return;
   }
 
@@ -57,6 +59,13 @@ function load_user() {
     $cartCount.hide();
     $cartNav.hide();
     $cartNavMobile.hide();
+  }
+
+  // Hide account manage if seller or user
+  if (role === "seller" || role === "user") {
+    $sidebarAccounts.hide();
+  } else {
+    $sidebarAccounts.show();
   }
 
   // Show admin dashboard for admin/seller only

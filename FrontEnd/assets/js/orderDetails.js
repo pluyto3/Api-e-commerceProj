@@ -81,6 +81,7 @@ function load_user() {
   const $adminDashboard = $("#adminDashboard");
   const $navbarProfileImage = $("#navbarProfileImage");
   const $defaultProfileIcon = $("#defaultProfileIcon");
+  const $sidebarAccounts = $("#sidebarAccounts");
 
   // No session → show login/register
   if (!usr || !token) {
@@ -94,6 +95,7 @@ function load_user() {
     $adminDashboard.hide();
     $navbarProfileImage.hide();
     $defaultProfileIcon.show();
+    $sidebarAccounts.hide();
     return;
   }
 
@@ -114,11 +116,13 @@ function load_user() {
     $cartNavMobile.hide();
   }
 
-  // Role-based access
+  // Role-based access for admin dashboard and sidebar accounts link
   if (role === "admin" || role === "seller") {
     $adminDashboard.show();
+    $sidebarAccounts.hide();
   } else {
     $adminDashboard.hide();
+    $sidebarAccounts.show();
   }
 }
 
@@ -208,6 +212,116 @@ function getOrderItems(order, itemsOverride) {
   });
 }
 
+function getItemSellerName(item = {}, order = {}) {
+  return (
+    item?.product?.seller?.username ||
+    item?.seller?.username ||
+    item?.seller_username ||
+    item?.seller_name ||
+    order?.seller?.username ||
+    order?.seller?.fullname ||
+    order?.seller_username ||
+    order?.seller_name ||
+    order?.shop_name ||
+    "N/A"
+  );
+}
+
+function getItemSubtotalValue(item) {
+  const quantity = Number(item?.quantity || item?.qty || 0);
+  const price = Number(item?.price || item?.product?.product_price || 0);
+  const rawSubtotal = item?.subtotal;
+  const subtotal = Number(
+    rawSubtotal !== undefined && rawSubtotal !== null && rawSubtotal !== ""
+      ? rawSubtotal
+      : quantity * price,
+  );
+  return Number.isFinite(subtotal) ? subtotal : 0;
+}
+
+function getItemQuantityValue(item) {
+  const quantity = Number(item?.quantity || item?.qty || 0);
+  return Number.isFinite(quantity) ? quantity : 0;
+}
+
+function sumItemsTotal(items) {
+  if (!Array.isArray(items)) return 0;
+  return items.reduce((sum, item) => sum + getItemSubtotalValue(item), 0);
+}
+
+function sumItemsQuantity(items) {
+  if (!Array.isArray(items)) return 0;
+  return items.reduce((sum, item) => sum + getItemQuantityValue(item), 0);
+}
+
+function getOrderQuantityFallback(order) {
+  if (!order) return 0;
+  const raw =
+    order.total_quantity ||
+    order.total_qty ||
+    order.total_items ||
+    order.quantity ||
+    0;
+  const qty = Number(raw);
+  return Number.isFinite(qty) ? qty : 0;
+}
+
+function groupItemsBySeller(order) {
+  const items = Array.isArray(order?.items) ? order.items : [];
+  if (items.length === 0) {
+    return [{ seller: getOrderSellerDisplayName(order), items: [] }];
+  }
+
+  const groups = new Map();
+  items.forEach((item) => {
+    const seller = getItemSellerName(item, order);
+    if (!groups.has(seller)) {
+      groups.set(seller, { seller, items: [] });
+    }
+    groups.get(seller).items.push(item);
+  });
+
+  return [...groups.values()];
+}
+
+function getOrderSellerDisplayName(order) {
+  if (!order) return "N/A";
+
+  const directSeller =
+    order.seller?.username ||
+    order.seller?.fullname ||
+    order.seller_username ||
+    order.seller_name ||
+    order.shop_name;
+
+  if (directSeller) return directSeller;
+
+  const items = order.items || [];
+  if (Array.isArray(items) && items.length > 0) {
+    const sellerSet = new Set(
+      items
+        .map(
+          (item) =>
+            item?.product?.seller?.username ||
+            item?.seller?.username ||
+            item?.seller_username ||
+            item?.seller_name,
+        )
+        .filter(Boolean),
+    );
+
+    if (sellerSet.size > 0) {
+      return [...sellerSet].join(", ");
+    }
+  }
+
+  if (role === "seller" && usr) {
+    return usr;
+  }
+
+  return "N/A";
+}
+
 function populateOrderDetails(order, itemsOverride) {
   const items = getOrderItems(order, itemsOverride);
 
@@ -278,7 +392,7 @@ function fetchBuyerOrders() {
     error: function (err) {
       console.error("Error loading orders:", err);
       $("#buyerOrders").html(
-        `<tr><td colspan="6" class="text-center text-danger py-4">Failed to load orders.</td></tr>`,
+        `<tr><td colspan="8" class="text-center text-danger py-4">Failed to load orders.</td></tr>`,
       );
     },
   });
@@ -328,7 +442,7 @@ function renderOrders(filter = "All") {
   // No orders
   if (filteredOrders.length === 0) {
     $tbody.html(
-      `<tr><td colspan="6" class="text-center text-muted py-4">No orders found.</td></tr>`,
+      `<tr><td colspan="8" class="text-center text-muted py-4">No orders found.</td></tr>`,
     );
     return;
   }
@@ -345,7 +459,8 @@ function renderOrders(filter = "All") {
         order.customer_name ||
         (order.user_id ? `User #${order.user_id}` : "N/A")
       : usr || "N/A";
-    const total = formatCurrency(order.total_amount || order.total || 0);
+    const fallbackTotal = Number(order.total_amount || order.total || 0);
+    const fallbackQuantity = getOrderQuantityFallback(order);
     const date = formatDate(order.created_at || order.updated_at);
 
     const safeStatus = String(order.status || "").replace(/'/g, "\\'");
@@ -366,7 +481,7 @@ function renderOrders(filter = "All") {
           data-toggle="modal"
           data-target="#updateStatusModal"
           onclick="openStatusModal(${orderId}, '${safeStatus}')">
-          <i class="fas fa-eye"></i> Update Status
+          <i class="fas fa-edit"></i> Update Status
         </button>
       `);
     } else {
@@ -384,18 +499,47 @@ function renderOrders(filter = "All") {
       }
     }
 
-    const row = `
-      <tr>
-        <td>${orderId}</td>
-        <td>${customer}</td>
-        <td>&#8369;${total}</td>
-        <td>${statusLabel}</td>
-        <td>${date}</td>
-        <td class="text-center">${actionButtons.join("")}</td>
-      </tr>
-    `;
+    const sellerGroups = groupItemsBySeller(order);
 
-    $tbody.append(row);
+    sellerGroups.forEach((group) => {
+      const seller = group.seller || "N/A";
+      const groupTotal = sumItemsTotal(group.items);
+      const groupQuantity = sumItemsQuantity(group.items);
+      const totalValue =
+        group.items.length === 0
+          ? fallbackTotal
+          : groupTotal > 0
+            ? groupTotal
+            : sellerGroups.length === 1
+              ? fallbackTotal
+              : groupTotal;
+      const quantityValue =
+        group.items.length === 0
+          ? fallbackQuantity
+          : groupQuantity > 0
+            ? groupQuantity
+            : sellerGroups.length === 1
+              ? fallbackQuantity
+              : groupQuantity;
+
+      const total = formatCurrency(totalValue);
+      const quantity = quantityValue;
+
+      const row = `
+        <tr>
+          <td>${orderId}</td>
+          <td>${customer}</td>
+          <td>${seller}</td>
+          <td>${quantity}</td>
+          <td>&#8369;${total}</td>
+          <td>${statusLabel}</td>
+          <td>${date}</td>
+          <td class="text-center">${actionButtons.join("")}</td>
+        </tr>
+      `;
+
+      $tbody.append(row);
+    });
   });
 
   if ($.fn.DataTable) {

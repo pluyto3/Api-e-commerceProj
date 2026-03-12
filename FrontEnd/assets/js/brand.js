@@ -6,6 +6,7 @@ let token = null;
 let usr = null;
 let role = null;
 let profileImage = null;
+let currentUserId = null;
 let brandsCache = [];
 let sellerLookup = {};
 const brandImageBaseUrl =
@@ -71,6 +72,42 @@ function getBrandSellerDisplayName(brand) {
     sellerLookup[String(brand?.seller_id || "")] ||
     "N/A"
   );
+}
+
+function getBrandSellerId(brand) {
+  return (
+    brand?.seller?.user_id || brand?.seller?.id || brand?.seller_id || null
+  );
+}
+
+function getBrandSellerUsername(brand) {
+  const sellerId = getBrandSellerId(brand);
+  return (
+    brand?.seller?.username ||
+    brand?.seller_username ||
+    sellerLookup[String(sellerId || "")] ||
+    brand?.seller_name ||
+    null
+  );
+}
+
+function isBrandOwnedByCurrentSeller(brand) {
+  if (role !== "seller") return true;
+  if (!usr) return false;
+
+  const sellerId = getBrandSellerId(brand);
+  if (currentUserId && sellerId) {
+    return String(sellerId) === String(currentUserId);
+  }
+
+  const sellerUsername = getBrandSellerUsername(brand);
+  if (!sellerUsername) return false;
+  return sellerUsername.toLowerCase() === usr.toLowerCase();
+}
+
+function filterBrandsForRole(brands) {
+  if (role !== "seller") return brands;
+  return brands.filter(isBrandOwnedByCurrentSeller);
 }
 
 function loadSellerLookup() {
@@ -182,6 +219,7 @@ function load_user() {
   const $navbarProfileImage = $("#navbarProfileImage");
   const $defaultProfileIcon = $("#defaultProfileIcon");
   const $addBrandSection = $(".add_brand");
+  const $sidebarAccounts = $("#sidebarAccounts");
 
   // No session → show login/register
   if (!usr || !token) {
@@ -196,6 +234,7 @@ function load_user() {
     $navbarProfileImage.hide();
     $defaultProfileIcon.show();
     $addBrandSection.hide();
+    $sidebarAccounts.hide();
     return;
   }
 
@@ -226,8 +265,10 @@ function load_user() {
   // Show "Create Brand" button only to sellers
   if (role === "seller") {
     $addBrandSection.show();
+    $sidebarAccounts.hide();
   } else {
     $addBrandSection.hide();
+    $sidebarAccounts.show();
   }
 }
 
@@ -280,6 +321,7 @@ $(document).ready(function () {
       success: function (response) {
         const $navbarProfileImage = $("#navbarProfileImage");
         const $defaultProfileIcon = $("#defaultProfileIcon");
+        currentUserId = response?.user_id || response?.id || null;
 
         if (response?.image) {
           $navbarProfileImage
@@ -360,7 +402,7 @@ $(document).ready(function () {
       brandsCache = Array.isArray(brands) ? brands : [];
       brandsCache.forEach(cacheSeller);
 
-      const approvedBrands = brandsCache.filter(
+      const approvedBrands = filterBrandsForRole(brandsCache).filter(
         (brand) =>
           normalizeBrandStatus(brand.status || brand.approval_status) ===
           "approved",
@@ -437,7 +479,7 @@ $(document).ready(function () {
       brandsCache = Array.isArray(brands) ? brands : [];
       brandsCache.forEach(cacheSeller);
 
-      const pendingBrands = brandsCache.filter(
+      const pendingBrands = filterBrandsForRole(brandsCache).filter(
         (brand) =>
           normalizeBrandStatus(brand.status || brand.approval_status) ===
           "pending",
