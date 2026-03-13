@@ -144,7 +144,7 @@ function loadProductsForApproval() {
 
       displayProductsTable(pendingProducts, "all");
       // populate approved orders card/table from backend
-      fetchAndDisplayApprovedOrders();
+      displayApprovedOrders(filteredProducts);
     },
     error: function (xhr) {
       console.error("Error loading products:", xhr.responseText);
@@ -189,17 +189,30 @@ function displayProductsTable(products, statusFilter = "all") {
     const status = product.approval_status || "pending";
     const statusBadge = getStatusBadge(status);
 
-    const actionButtons =
-      status === "pending"
-        ? `
+    let actionButtons = "";
+
+    // Admin Actions: Approve/Reject (only if pending)
+    if (role === "admin" && status === "pending") {
+      actionButtons += `
         <button class="btn btn-sm btn-success approve-product" data-id="${product.product_id}" title="Approve">
           <i class="fas fa-check"></i> Approve
         </button>
         <button class="btn btn-sm btn-danger reject-product" data-id="${product.product_id}" title="Reject">
           <i class="fas fa-times"></i> Reject
-        </button>
-      `
-        : `<span class="text-muted">-</span>`;
+        </button>`;
+    }
+
+    // Seller Actions: Edit
+    if (role === "seller") {
+      actionButtons += `
+        <button class="btn btn-sm btn-primary edit-product" data-id="${product.product_id}" title="Edit" data-toggle="modal" data-target="#editProductModal">
+          <i class="fas fa-edit"></i> Edit
+        </button>`;
+    }
+
+    if (actionButtons === "") {
+      actionButtons = `<span class="text-muted">-</span>`;
+    }
 
     const row = `
       <tr>
@@ -219,7 +232,7 @@ function displayProductsTable(products, statusFilter = "all") {
         <td>${statusBadge}</td>
         <td>${product.created_at || "N/A"}</td>
         <td>
-          <button class="btn btn-sm btn-info view-product" data-id="${product.product_id}" title="View Details" data-toggle="modal" data-target="#productDetailsModal">
+          <button class="btn btn-sm btn-success view-product" data-id="${product.product_id}" title="View Details" data-toggle="modal" data-target="#productDetailsModal">
             <i class="fas fa-eye"></i> View
           </button>
           ${actionButtons}
@@ -251,19 +264,44 @@ function displayApprovedOrders(products) {
 
   approved.forEach((product, index) => {
     const statusBadge = getStatusBadge("approved");
-    const img = buildImageCandidates(product.image)[0] || "assets/img/back.jpg";
+    const img = buildImageCandidates(product.image)[0];
+
+    let category = "N/A";
+    if (product.category) {
+      category =
+        typeof product.category === "object"
+          ? product.category.name || String(product.category)
+          : product.category;
+    } else if (product.category_name) {
+      category = product.category_name;
+    } else if (product.categoryName) {
+      category = product.categoryName;
+    }
+
+    let brand = "N/A";
+    if (product.brand) {
+      brand =
+        typeof product.brand === "object"
+          ? product.brand.name || String(product.brand)
+          : product.brand;
+    } else if (product.brand_name) {
+      brand = product.brand_name;
+    } else if (product.brandName) {
+      brand = product.brandName;
+    }
+
     const row = `
       <tr>
         <td class="text-center">${product.product_id || index + 1}</td>
         <td class="text-center">${product.product_name || "N/A"}</td>
         <td class="text-center">${product.seller?.username || "N/A"}</td>
-        <td class="text-center">${product.category || "N/A"}</td>
-        <td class="text-center">${product.brand || "N/A"}</td>
+        <td class="text-center">${category}</td>
+        <td class="text-center">${brand}</td>
         <td class="text-center">₱${parseFloat(product.product_price || 0).toFixed(2)}</td>
         <td class="text-center">${product.stock_quantity || 0}</td>
         <td class="text-center"><img src="${img}" alt="Product" style="width:50px;height:50px;object-fit:cover;border-radius:4px;" onerror="this.onerror=null;this.src='assets/img/back.jpg'"></td>
         <td class="text-center">${statusBadge}</td>
-        <td class="text-center">${product.approved_at || product.created_at || "N/A"}</td>
+        <td class="text-center">${formatDate(product.approved_at || product.created_at)}</td>
         <td class="text-center">
           <button class="btn btn-sm btn-info view-product" data-id="${product.product_id}" title="View Details" data-toggle="modal" data-target="#productDetailsModal">
             <i class="fas fa-eye"></i> View
@@ -574,12 +612,49 @@ function viewCheckout(checkoutId) {
   $("#detailSeller").text(
     prod.seller?.username || prod.seller || order.user?.username || "N/A",
   );
-  $("#detailCategory").text(
-    prod.category?.name || prod.category || item?.category || "N/A",
-  );
-  $("#detailBrand").text(
-    prod.brand?.name || prod.brand || item?.brand || "N/A",
-  );
+
+  let category = "N/A";
+  if (prod.category) {
+    category =
+      typeof prod.category === "object"
+        ? prod.category.name ||
+          prod.category.category_name ||
+          prod.category.title ||
+          String(prod.category)
+        : String(prod.category);
+  } else if (item?.category) {
+    category =
+      typeof item.category === "object"
+        ? item.category.name || String(item.category)
+        : String(item.category);
+  } else if (prod.category_name) {
+    category = prod.category_name;
+  } else if (prod.categoryName) {
+    category = prod.categoryName;
+  }
+  $("#detailCategory").text(category);
+
+  let brand = "N/A";
+  if (prod.brand) {
+    brand =
+      typeof prod.brand === "object"
+        ? prod.brand.name ||
+          prod.brand.brand_name ||
+          prod.brand.title ||
+          String(prod.brand)
+        : String(prod.brand);
+  } else if (item?.brand) {
+    brand =
+      typeof item.brand === "object"
+        ? item.brand.name || String(item.brand)
+        : String(item.brand);
+  } else if (prod.brand_name) {
+    brand = prod.brand_name;
+  } else if (prod.brandName) {
+    brand = prod.brandName;
+  }
+  $("#detailBrand").text(brand);
+
   $("#detailPrice").text(
     `₱${parseFloat(item?.price || prod.product_price || prod.price || 0).toFixed(2)}`,
   );
@@ -591,6 +666,19 @@ function viewCheckout(checkoutId) {
       `Quantity: ${item?.quantity}\nSubtotal: ₱${parseFloat(item?.subtotal || 0).toFixed(2)}`,
   );
   $("#detailDate").text(formatDate(order.created_at) || "N/A");
+
+  const status = prod.approval_status || item?.approval_status || "Approved";
+  $("#detailPendingStatus")
+    .removeClass()
+    .addClass("badge")
+    .addClass(
+      status.toLowerCase() === "pending"
+        ? "Pending"
+        : status.toLowerCase() === "approved"
+          ? "Approved"
+          : "Rejected",
+    )
+    .text(status.toUpperCase());
 
   const img =
     prod.image || item?.image
@@ -700,6 +788,65 @@ function buildImageCandidates(image) {
 }
 
 // =======================================
+// Dropdown Loaders (Category & Brand)
+// =======================================
+function loadCategories($select = $("#category_id"), callback) {
+  $.ajax({
+    url: `${ip}/api/category`,
+    method: "GET",
+    dataType: "json",
+    headers: { Authorization: `Bearer ${token}` },
+    success: (res) => {
+      const categories = res.categories || res.data || res || [];
+      $select
+        .empty()
+        .append(
+          '<option value="" disabled selected>Select a category</option>',
+        );
+      (Array.isArray(categories) ? categories : []).forEach((cat) => {
+        const id = cat.category_id || cat.id;
+        const name = cat.name || cat.category_name;
+        if (id && name)
+          $select.append(`<option value="${id}">${name}</option>`);
+      });
+      if (callback) callback();
+    },
+    error: (xhr) => {
+      console.error("Error loading categories:", xhr.responseText);
+      $select.html("<option disabled>Error loading categories</option>");
+      if (callback) callback();
+    },
+  });
+}
+
+function loadBrands($select = $("#brand_id"), callback) {
+  $.ajax({
+    url: `${ip}/api/brands`,
+    method: "GET",
+    dataType: "json",
+    headers: { Authorization: `Bearer ${token}` },
+    success: (res) => {
+      const brands = res.brands || res.data || res || [];
+      $select
+        .empty()
+        .append('<option value="" disabled selected>Select a brand</option>');
+      (Array.isArray(brands) ? brands : []).forEach((brand) => {
+        const id = brand.brand_id || brand.id;
+        const name = brand.name || brand.brand_name;
+        if (id && name)
+          $select.append(`<option value="${id}">${name}</option>`);
+      });
+      if (callback) callback();
+    },
+    error: (xhr) => {
+      console.error("Error loading brands:", xhr.responseText);
+      $select.html("<option disabled>Error loading brands</option>");
+      if (callback) callback();
+    },
+  });
+}
+
+// =======================================
 // Load Product Details
 // =======================================
 function loadProductDetails(productId) {
@@ -759,7 +906,7 @@ function loadProductDetails(productId) {
   currentProductId = product.product_id;
 
   // Show/hide approve/reject buttons based on status
-  if (status === "pending") {
+  if (status === "pending" && role === "admin") {
     $("#approveBtn").show();
     $("#rejectBtn").show();
   } else {
@@ -842,6 +989,136 @@ $(document).ready(function () {
   load_user();
   setupSidebarToggle();
   loadProductsForApproval();
+
+  // --- Add Product Handler ---
+  $(".add_product").on("click", () => {
+    loadCategories();
+    loadBrands();
+  });
+
+  // --- Create Product Form Submit ---
+  $("#productForm").on("submit", function (e) {
+    e.preventDefault();
+
+    const categoryId = $("#category_id").val();
+    const brandId = $("#brand_id").val();
+
+    if (!categoryId || !brandId) {
+      return Swal.fire(
+        "Validation Error",
+        "Please select both a category and a brand.",
+        "error",
+      );
+    }
+
+    const fd = new FormData(this);
+    fd.set("category_id", categoryId);
+    fd.set("brand_id", brandId);
+
+    $("#createProduct").text("Adding...").prop("disabled", true);
+
+    $.ajax({
+      url: `${ip}/api/products`,
+      method: "POST",
+      data: fd,
+      processData: false,
+      contentType: false,
+      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+      success: (res, _, xhr) => {
+        $("#createProduct").text("Create").prop("disabled", false);
+        Swal.fire({
+          icon: "success",
+          title: "Product Added",
+          text: "Your product has been added and is pending approval.",
+          showConfirmButton: false,
+          timer: 2000,
+        }).then(() => {
+          $("#productForm")[0].reset();
+          $("#productModal").modal("hide");
+          loadProductsForApproval();
+        });
+      },
+      error: (xhr) => {
+        $("#createProduct").text("Create").prop("disabled", false);
+        let msg = xhr.responseJSON?.msg || "Failed to add product";
+        if (xhr.status === 422 && xhr.responseJSON?.errors) {
+          msg = Object.values(xhr.responseJSON.errors)
+            .map((e) => e[0])
+            .join("\n");
+        }
+        Swal.fire("Error", msg, "error");
+      },
+    });
+  });
+
+  // --- Edit Product Handler (Populate Modal) ---
+  $(document).on("click", ".edit-product", function () {
+    const productId = $(this).data("id");
+    $("#edit_product_id").val(productId);
+
+    // Load categories and brands into the edit modal dropdowns
+    loadCategories($("#edit_category_id"), () => {
+      loadBrands($("#edit_brand_id"), () => {
+        // Fetch product details
+        const product = allProducts.find((p) => p.product_id == productId);
+        if (product) {
+          $("#edit_category_id").val(
+            product.category_id || product.category?.category_id,
+          );
+          $("#edit_brand_id").val(product.brand_id || product.brand?.brand_id);
+          $("#edit_product_name").val(product.product_name);
+          $("#edit_product_price").val(product.product_price);
+          $("#edit_product_description").val(product.product_description);
+          $("#edit_stock_quantity").val(product.stock_quantity);
+
+          const imgUrl = buildImageCandidates(product.image)[0];
+          $("#edit_image_preview").attr("src", imgUrl).show();
+        }
+      });
+    });
+  });
+
+  // --- Edit Product Form Submit ---
+  $("#editProductForm").on("submit", function (e) {
+    e.preventDefault();
+    const productId = $("#edit_product_id").val();
+    const fd = new FormData(this);
+    fd.append("_method", "PUT"); // Important for Laravel PUT requests via POST
+
+    $("#updateProductBtn").text("Updating...").prop("disabled", true);
+
+    $.ajax({
+      url: `${ip}/api/products/${productId}`,
+      method: "POST", // Use POST with _method=PUT
+      data: fd,
+      processData: false,
+      contentType: false,
+      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+      success: (res) => {
+        $("#updateProductBtn").text("Update").prop("disabled", false);
+        Swal.fire({
+          icon: "success",
+          title: "Product Updated",
+          text: "Product details have been updated successfully.",
+          timer: 2000,
+          showConfirmButton: false,
+        }).then(() => {
+          $("#editProductModal").modal("hide");
+          loadProductsForApproval();
+        });
+      },
+      error: (xhr) => {
+        $("#updateProductBtn").text("Update").prop("disabled", false);
+        let msg = xhr.responseJSON?.msg || "Failed to update product";
+        if (xhr.status === 422 && xhr.responseJSON?.errors) {
+          msg = Object.values(xhr.responseJSON.errors)
+            .map((e) => e[0])
+            .join("\n");
+        }
+        Swal.fire("Error", msg, "error");
+      },
+    });
+  });
 
   // --- Order Status Filter ---
   $("#statusFilter").on("change", function () {

@@ -302,6 +302,61 @@
             </div>     
           </div>
 
+          <!-- Edit Product Modal -->
+          <div class="modal fade" id="editProductModal" tabindex="-1" role="dialog" aria-labelledby="editProductModalLabel">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="editProductModalLabel">Edit Product</h5>
+                  <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span>&times;</span>
+                  </button>
+                </div>
+                <div class="modal-body">
+                  <form action="#" method="POST" id="editProductForm" enctype="multipart/form-data">
+                      <input type="hidden" id="edit_product_id" name="product_id">
+                      <div class="form-group">
+                        <label for="edit_category_id" class="font-weight-bold">Category</label>
+                        <select name="edit_category_id" id="edit_category_id" class="custom-select" required></select>
+                      </div>
+                      <div class="form-group">
+                          <label for="edit_brand_id" class="font-weight-bold">Brand</label>
+                          <select name="edit_brand_id" id="edit_brand_id" class="custom-select" required></select>
+                      </div>
+                      <div class="form-group">
+                        <label for="edit_product_name" class="font-weight-bold">Product Name</label>
+                        <input type="text" class="form-control" id="edit_product_name" name="edit_product_name" required>
+                      </div>
+                      <div class="form-group">
+                        <label for="edit_product_price" class="font-weight-bold">Price</label>
+                        <input type="text" class="form-control" id="edit_product_price" name="edit_product_price" required>
+                      </div>
+                      <div class="form-group">
+                        <label for="edit_product_description" class="font-weight-bold">Description</label>
+                        <textarea class="form-control" id="edit_product_description" name="edit_product_description" rows="4" required></textarea>
+                      </div>
+                      <div class="form-group">
+                        <label for="edit_stock_quantity" class="font-weight-bold">Quantity</label>
+                        <input type="text" class="form-control" id="edit_stock_quantity" name="edit_stock_quantity" required>
+                      </div>
+                      <div class="form-group">
+                        <label for="edit_image" class="font-weight-bold">Image</label>
+                        <input type="file" class="form-control" id="edit_image" name="image">
+                        <small class="text-muted">Leave blank to keep current image.</small>
+                      </div>
+                      <div class="form-group">
+                          <img id="edit_image_preview" src="" alt="Current Image" style="max-width: 100px; max-height: 100px; display: none; object-fit: cover;">
+                      </div>
+                      <div class="modal-footer">
+                        <button type="submit" class="btn btn-primary" id="updateProductBtn">Update</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                      </div>
+                  </form>
+              </div>
+            </div>
+            </div>     
+          </div>
+
           <!-- Product Details Modal for Pending-->
           <div class="modal fade" id="productDetailsModal" tabindex="-1" role="dialog" aria-labelledby="productDetailsModalLabel">
             <div class="modal-dialog modal-lg" role="document">

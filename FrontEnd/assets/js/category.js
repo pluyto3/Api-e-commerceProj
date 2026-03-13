@@ -75,7 +75,7 @@ function getCategorySellerDisplayName(category) {
 }
 
 function loadCategorySellerLookup() {
-  $.ajax({
+  return $.ajax({
     url: `${ip}/api/sellers`,
     method: "GET",
     headers: {
@@ -246,8 +246,6 @@ function load_user() {
 
 $(document).ready(function () {
   load_user(); //  initialize session
-  loadCategorySellerLookup();
-  loadCategories();
 
   // Sidebar Toggle
   $(".menu-btn").click(function () {
@@ -271,8 +269,10 @@ $(document).ready(function () {
   $(document).ajaxComplete(() => $("#wait").hide());
 
   // Load profile image in navbar
+  let profileReq = $.Deferred().resolve();
+
   if (usr) {
-    $.ajax({
+    profileReq = $.ajax({
       url: ip + "/api/getAccount_username/" + usr,
       type: "GET",
       headers: {
@@ -307,6 +307,10 @@ $(document).ready(function () {
   } else {
     console.error("No username found in cookie.");
   }
+
+  $.when(loadCategorySellerLookup(), profileReq).always(function () {
+    loadCategories();
+  });
 
   // Creating category
   $("#categoryForm").on("submit", function (e) {

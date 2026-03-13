@@ -471,7 +471,7 @@ function renderOrders(filter = "All") {
         data-toggle="modal"
         data-target="#orderDetailsModal"
         data-id="${orderId}">
-        <i class="fas fa-eye"></i> View Order
+        <i class="fas fa-eye"></i> View
       </button>
     `);
 
