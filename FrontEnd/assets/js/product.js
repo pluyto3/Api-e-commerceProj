@@ -180,7 +180,7 @@ function displayProductsTable(products, statusFilter = "all") {
 
   if (filteredProducts.length === 0) {
     tbody.html(
-      `<tr><td colspan="11" class="text-center text-muted py-4">No products found.</td></tr>`,
+      `<tr><td colspan="11" class="text-center text-muted py-4">No Pending Products found.</td></tr>`,
     );
     return;
   }
@@ -191,27 +191,12 @@ function displayProductsTable(products, statusFilter = "all") {
 
     let actionButtons = "";
 
-    // Admin Actions: Approve/Reject (only if pending)
-    if (role === "admin" && status === "pending") {
-      actionButtons += `
-        <button class="btn btn-sm btn-success approve-product" data-id="${product.product_id}" title="Approve">
-          <i class="fas fa-check"></i> Approve
-        </button>
-        <button class="btn btn-sm btn-danger reject-product" data-id="${product.product_id}" title="Reject">
-          <i class="fas fa-times"></i> Reject
-        </button>`;
-    }
-
     // Seller Actions: Edit
     if (role === "seller") {
       actionButtons += `
         <button class="btn btn-sm btn-primary edit-product" data-id="${product.product_id}" title="Edit" data-toggle="modal" data-target="#editProductModal">
           <i class="fas fa-edit"></i> Edit
         </button>`;
-    }
-
-    if (actionButtons === "") {
-      actionButtons = `<span class="text-muted">-</span>`;
     }
 
     const row = `
@@ -232,7 +217,7 @@ function displayProductsTable(products, statusFilter = "all") {
         <td>${statusBadge}</td>
         <td>${product.created_at || "N/A"}</td>
         <td>
-          <button class="btn btn-sm btn-success view-product" data-id="${product.product_id}" title="View Details" data-toggle="modal" data-target="#productDetailsModal">
+          <button class="btn btn-sm btn-info view-product" data-id="${product.product_id}" title="View Details" data-toggle="modal" data-target="#productDetailsModal">
             <i class="fas fa-eye"></i> View
           </button>
           ${actionButtons}
@@ -257,7 +242,7 @@ function displayApprovedOrders(products) {
 
   if (approved.length === 0) {
     tbody.html(
-      `<tr><td colspan="11" class="text-center text-muted py-4">No approved orders/products found.</td></tr>`,
+      `<tr><td colspan="11" class="text-center text-muted py-4">No Approved Products found.</td></tr>`,
     );
     return;
   }
@@ -686,6 +671,10 @@ function viewCheckout(checkoutId) {
       : "assets/img/back.jpg";
   $("#productImage").attr("src", img);
 
+  // Hide admin action buttons when viewing from order context to avoid accidental actions
+  $("#approveBtn").hide();
+  $("#rejectBtn").hide();
+
   $("#productDetailsModal").modal("show");
 }
 
@@ -906,9 +895,17 @@ function loadProductDetails(productId) {
   currentProductId = product.product_id;
 
   // Show/hide approve/reject buttons based on status
-  if (status === "pending" && role === "admin") {
-    $("#approveBtn").show();
-    $("#rejectBtn").show();
+  if (role === "admin") {
+    if (status === "pending") {
+      $("#approveBtn").show();
+      $("#rejectBtn").show();
+    } else if (status === "approved") {
+      $("#approveBtn").hide();
+      $("#rejectBtn").show();
+    } else {
+      $("#approveBtn").hide();
+      $("#rejectBtn").hide();
+    }
   } else {
     $("#approveBtn").hide();
     $("#rejectBtn").hide();
@@ -1184,33 +1181,6 @@ $(document).ready(function () {
   $(document).on("click", ".view-product", function () {
     const productId = $(this).data("id");
     loadProductDetails(productId);
-  });
-
-  // --- Approve Product (from table) ---
-  $(document).on("click", ".approve-product", function () {
-    const productId = $(this).data("id");
-
-    Swal.fire({
-      title: "Approve Product?",
-      text: "Are you sure you want to approve this product?",
-      icon: "question",
-      showCancelButton: true,
-      confirmButtonColor: "#28a745",
-      cancelButtonColor: "#6c757d",
-      confirmButtonText: "Yes, Approve",
-      cancelButtonText: "Cancel",
-    }).then((result) => {
-      if (result.isConfirmed) {
-        approveProduct(productId);
-      }
-    });
-  });
-
-  // --- Reject Product (from table - Show Modal) ---
-  $(document).on("click", ".reject-product", function () {
-    const productId = $(this).data("id");
-    currentProductId = productId;
-    $("#rejectionReasonModal").modal("show");
   });
 
   // --- Submit Rejection ---

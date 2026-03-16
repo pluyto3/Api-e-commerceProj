@@ -29,6 +29,17 @@ function getBrandStatusBadgeClass(status) {
   return "badge-secondary";
 }
 
+function getStatusBadge(status) {
+  const badgeClasses = {
+    pending: "Pending",
+    approved: "Approved",
+    rejected: "Rejected",
+  };
+
+  const badgeClass = badgeClasses[status] || "badge-secondary";
+  return `<span class="badge ${badgeClass}">${String(status).toUpperCase()}</span>`;
+}
+
 function formatBrandDate(dateValue) {
   if (!dateValue) return "N/A";
   const date = new Date(dateValue);
@@ -408,51 +419,60 @@ $(document).ready(function () {
           "approved",
       );
 
-      approvedBrands.forEach((brand) => {
-        const status = normalizeBrandStatus(
-          brand.status || brand.approval_status,
-        );
-        const seller = getBrandSellerDisplayName(brand);
-        const description = brand.description || brand.approval_reason || "N/A";
-        const approvedDate = formatBrandDate(
-          brand.approved_at || brand.updated_at || brand.created_at,
-        );
-
-        $("#approved-brand-table tbody").append(`
-          <tr>
-            <td>${brand.brand_id || "N/A"}</td>
-            <td>${brand.name || "N/A"}</td>
-            <td>${seller}</td>
-            <td>${description}</td>
-            <td class="text-capitalize">${status}</td>
-            <td>${approvedDate}</td>
-            <td>
-              <img src="${getBrandImageUrl(brand.image)}" 
-                   width="50" height="50">
-            </td>
-            <td>
-              <button class="btn btn-sm btn-info view-brand" data-id="${brand.brand_id}" data-toggle="modal" data-target="#brandApprovedDetailsModal">
-                <i class="fas fa-eye"></i> View
-              </button>
-            </td>
-          </tr>
-        `);
-      });
-
       // Initialize DataTable
       if ($.fn.DataTable.isDataTable("#approved-brand-table")) {
         $("#approved-brand-table").DataTable().destroy();
       }
+      $("#approved-brand-table tbody").empty();
 
-      $("#approved-brand-table").DataTable({
-        pageLength: 10,
-        lengthChange: false,
-        searching: true,
-        responsive: true,
-        columnDefs: [
-          { orderable: false, targets: -1, className: "text-center" },
-        ],
-      });
+      if (!approvedBrands || approvedBrands.length === 0) {
+        $("#approved-brand-table tbody").html(
+          `<tr><td colspan="8" class="text-center text-muted py-4">No Approved Brands found.</td></tr>`,
+        );
+      } else {
+        approvedBrands.forEach((brand) => {
+          const status = normalizeBrandStatus(
+            brand.status || brand.approval_status,
+          );
+          const statusBadge = getStatusBadge(status);
+          const seller = getBrandSellerDisplayName(brand);
+          const description =
+            brand.description || brand.approval_reason || "N/A";
+          const approvedDate = formatBrandDate(
+            brand.approved_at || brand.updated_at || brand.created_at,
+          );
+
+          $("#approved-brand-table tbody").append(`
+            <tr>
+              <td>${brand.brand_id || "N/A"}</td>
+              <td>${brand.name || "N/A"}</td>
+              <td>${seller}</td>
+              <td>${description}</td>
+              <td>${statusBadge}</td>
+              <td>${approvedDate}</td>
+              <td>
+                <img src="${getBrandImageUrl(brand.image)}" 
+                     width="50" height="50">
+              </td>
+              <td>
+                <button class="btn btn-sm btn-info view-brand" data-id="${brand.brand_id}" data-toggle="modal" data-target="#brandApprovedDetailsModal">
+                  <i class="fas fa-eye"></i> View
+                </button>
+              </td>
+            </tr>
+          `);
+        });
+
+        $("#approved-brand-table").DataTable({
+          pageLength: 10,
+          lengthChange: false,
+          searching: true,
+          responsive: true,
+          columnDefs: [
+            { orderable: false, targets: -1, className: "text-center" },
+          ],
+        });
+      }
     },
     error: function (xhr) {
       console.error("Error fetching brands:", xhr);
@@ -485,51 +505,73 @@ $(document).ready(function () {
           "pending",
       );
 
-      pendingBrands.forEach((brand) => {
-        const status = normalizeBrandStatus(
-          brand.status || brand.approval_status,
-        );
-        const seller = getBrandSellerDisplayName(brand);
-        const description = brand.description || brand.approval_reason || "N/A";
-        const submittedDate = formatBrandDate(
-          brand.created_at || brand.submitted_at || brand.updated_at,
-        );
-
-        $("#approval-brand-table tbody").append(`
-          <tr>
-            <td>${brand.brand_id || "N/A"}</td>
-            <td>${brand.name || "N/A"}</td>
-            <td>${seller}</td>
-            <td>${description}</td>
-            <td class="text-capitalize">${status}</td>
-            <td>${submittedDate}</td>
-            <td>
-              <img src="${getBrandImageUrl(brand.image)}" 
-                   width="50" height="50">
-            </td>
-            <td>
-              <button class="btn btn-sm btn-info view-brand" data-id="${brand.brand_id}" data-toggle="modal" data-target="#brandApprovalModal">
-                <i class="fas fa-eye"></i> View
-              </button>
-            </td>
-          </tr>
-        `);
-      });
-
       // Initialize DataTable
       if ($.fn.DataTable.isDataTable("#approval-brand-table")) {
         $("#approval-brand-table").DataTable().destroy();
       }
+      $("#approval-brand-table tbody").empty();
 
-      $("#approval-brand-table").DataTable({
-        pageLength: 10,
-        lengthChange: false,
-        searching: true,
-        responsive: true,
-        columnDefs: [
-          { orderable: false, targets: -1, className: "text-center" },
-        ],
-      });
+      if (!pendingBrands || pendingBrands.length === 0) {
+        $("#approval-brand-table tbody").html(
+          `<tr><td colspan="8" class="text-center text-muted py-4">No Pending Brands found.</td></tr>`,
+        );
+      } else {
+        pendingBrands.forEach((brand) => {
+          const status = normalizeBrandStatus(
+            brand.status || brand.approval_status,
+          );
+          const statusBadge = getStatusBadge(status);
+          const seller = getBrandSellerDisplayName(brand);
+          const description =
+            brand.description || brand.approval_reason || "N/A";
+          const submittedDate = formatBrandDate(
+            brand.created_at || brand.submitted_at || brand.updated_at,
+          );
+
+          let actionButtons = `
+            <button class="btn btn-sm btn-info view-brand" data-id="${brand.brand_id}" data-toggle="modal" data-target="#brandApprovalModal">
+              <i class="fas fa-eye"></i> View
+            </button>
+          `;
+
+          // Add Edit button for sellers
+          if (role === "seller") {
+            actionButtons += `
+              <button class="btn btn-sm btn-primary editBtn" data-id="${brand.brand_id}" data-toggle="modal" data-target="#editBrandModal">
+                <i class="fas fa-edit"></i> Edit
+              </button>
+            `;
+          }
+
+          $("#approval-brand-table tbody").append(`
+            <tr>
+              <td>${brand.brand_id || "N/A"}</td>
+              <td>${brand.name || "N/A"}</td>
+              <td>${seller}</td>
+              <td>${description}</td>
+              <td>${statusBadge}</td>
+              <td>${submittedDate}</td>
+              <td>
+                <img src="${getBrandImageUrl(brand.image)}" 
+                     width="50" height="50">
+              </td>
+              <td>
+                ${actionButtons}
+              </td>
+            </tr>
+          `);
+        });
+
+        $("#approval-brand-table").DataTable({
+          pageLength: 10,
+          lengthChange: false,
+          searching: true,
+          responsive: true,
+          columnDefs: [
+            { orderable: false, targets: -1, className: "text-center" },
+          ],
+        });
+      }
     },
     error: function (xhr) {
       console.error("Error fetching brands:", xhr);
@@ -719,6 +761,7 @@ $(document).ready(function () {
       },
       success: function (res) {
         $("#editName").val(res.name);
+        $("#editDescription").val(res.description || "");
 
         const imageUrl = res.image
           ? `http://localhost/e-commerce/BackEnd/public/FrontEnd/assets/img/brand/${res.image}`

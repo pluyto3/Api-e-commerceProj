@@ -27,6 +27,17 @@ function getCategoryStatusBadgeClass(status) {
   return "badge-secondary";
 }
 
+function getStatusBadge(status) {
+  const badgeClasses = {
+    pending: "Pending",
+    approved: "Approved",
+    rejected: "Rejected",
+  };
+
+  const badgeClass = badgeClasses[status] || "badge-secondary";
+  return `<span class="badge ${badgeClass}">${String(status).toUpperCase()}</span>`;
+}
+
 function formatCategoryDate(dateValue) {
   if (!dateValue) return "N/A";
   const date = new Date(dateValue);
@@ -377,11 +388,21 @@ $(document).ready(function () {
   function renderApprovedCategories(categories) {
     $("#approved-category-table tbody").empty();
 
+    if (!categories || categories.length === 0) {
+      $("#approved-category-table tbody").html(
+        `<tr><td colspan="8" class="text-center text-muted py-4">No Approved Categories found.</td></tr>`,
+      );
+      return;
+    }
+
     categories.forEach((category) => {
       const seller = getCategorySellerDisplayName(category);
       const description = category.description || "N/A";
       const approvedDate = formatCategoryDate(
         category.approved_at || category.updated_at || category.created_at,
+      );
+      const statusBadge = getStatusBadge(
+        normalizeCategoryStatus(category.status || category.approval_status),
       );
 
       $("#approved-category-table tbody").append(`
@@ -390,7 +411,7 @@ $(document).ready(function () {
         <td>${category.name}</td>
         <td>${seller}</td>
         <td>${description}</td>
-        <td>approved</td>
+        <td>${statusBadge}</td>
         <td>${approvedDate}</td>
         <td>
           <img src="${getCategoryImageUrl(category.image)}" width="50">
@@ -400,7 +421,7 @@ $(document).ready(function () {
           data-id="${category.category_id}"
           data-toggle="modal"
           data-target="#categoryApprovedDetailsModal">
-          View
+          <i class="fas fa-eye"></i> View
           </button>
         </td>
       </tr>
@@ -412,10 +433,41 @@ $(document).ready(function () {
   function renderPendingCategories(categories) {
     $("#approval-category-table tbody").empty();
 
+    if (!categories || categories.length === 0) {
+      $("#approval-category-table tbody").html(
+        `<tr><td colspan="8" class="text-center text-muted py-4">No Pending Categories found.</td></tr>`,
+      );
+      return;
+    }
+
     categories.forEach((category) => {
       const seller = getCategorySellerDisplayName(category);
       const description = category.description || "N/A";
       const submittedDate = formatCategoryDate(category.created_at);
+      const statusBadge = getStatusBadge(
+        normalizeCategoryStatus(category.status || category.approval_status),
+      );
+
+      let actionButtons = `
+        <button class="btn btn-sm btn-info view-category"
+        data-id="${category.category_id}"
+        data-toggle="modal"
+        data-target="#categoryApprovalModal">
+        <i class="fas fa-eye"></i> View
+        </button>
+      `;
+
+      // Add Edit button for sellers
+      if (role === "seller") {
+        actionButtons += `
+          <button class="btn btn-sm btn-primary editBtn"
+          data-id="${category.category_id}"
+          data-toggle="modal"
+          data-target="#editCategoryModal">
+          <i class="fas fa-edit"></i> Edit
+          </button>
+        `;
+      }
 
       $("#approval-category-table tbody").append(`
       <tr>
@@ -423,18 +475,13 @@ $(document).ready(function () {
         <td>${category.name}</td>
         <td>${seller}</td>
         <td>${description}</td>
-        <td>pending</td>
+        <td>${statusBadge}</td>
         <td>${submittedDate}</td>
         <td>
           <img src="${getCategoryImageUrl(category.image)}" width="50">
         </td>
         <td>
-          <button class="btn btn-sm btn-info view-category"
-          data-id="${category.category_id}"
-          data-toggle="modal"
-          data-target="#categoryApprovalModal">
-          View
-          </button>
+          ${actionButtons}
         </td>
       </tr>
     `);
