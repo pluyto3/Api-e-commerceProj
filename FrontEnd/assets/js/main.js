@@ -111,8 +111,65 @@ $(document).ready(() => {
     .ajaxComplete(() => $("#wait").hide());
 
   /* -----------------------------
+     LOAD BRANDS (for Carousel)
+  ----------------------------- */
+  $.ajax({
+    url: `${ip}/api/brands`,
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    },
+    success: (response) => {
+      const brands = Array.isArray(response) ? response : response.data || [];
+      const $brandCarousel = $("#brand-carousel").empty();
+
+      brands.forEach((b) => {
+        $brandCarousel.append(`
+          <div class="product-card">
+            <div class="product-img">
+              <img src="${ip}/FrontEnd/assets/img/brand/${b.image}" 
+                   alt="${b.brand_name || "Brand"}" height="100px" />
+            </div>
+            
+            <a href="products.html?brand=${b.brand_id}" 
+               class="text-success mx-1 productDetails">
+              <div class="card-contents">
+                <button type="button" class="btn btn-warning cart-btn add-to-cart" data-brand-id="${b.brand_id}">
+                  <i class="fas fa-cart-plus"></i>
+                </button>
+              </div>
+              <div class="product-details">
+                <h5 class="product-name">${b.brand_name || "Brand Name"}</h5>
+                <p class="product-price">
+                  <span class="text-success">View Products</span>
+                </p>
+              </div>
+            </a>
+          </div>
+        `);
+      });
+
+      // Initialize Owl Carousel ONLY AFTER the items are appended to the DOM
+      $brandCarousel.owlCarousel({
+        loop: true,
+        margin: 30,
+        nav: false,
+        autoplay: true,
+        responsive: {
+          0: { items: 2 },
+          600: { items: 4 },
+          1000: { items: 6 },
+        },
+      });
+    },
+    error: (xhr) => console.error("Error fetching brands:", xhr.responseText),
+  });
+
+  /* -----------------------------
      LOAD PRODUCTS (for Carousel)
   ----------------------------- */
+  $("#product-carousel").html("<p>Loading products...</p>");
   $.ajax({
     url: `${ip}/api/products`,
     method: "GET",
@@ -135,14 +192,14 @@ $(document).ready(() => {
             <a href="single-product.html?id=${p.product_id}" 
                class="text-success mx-1 productDetails">
               <div class="card-contents">
-                <button type="button" class="btn btn-warning cart-btn">
+                <button type="button" class="btn btn-warning cart-btn add-to-cart" data-product-id="${p.product_id}">
                   <i class="fas fa-cart-plus"></i>
                 </button>
               </div>
               <div class="product-details">
                 <h5 class="product-name">${p.product_name}</h5>
                 <p class="product-price">
-                  <span class="text-success">Price: $${
+                  <span class="text-success">Price: ₱${
                     p.product_price ?? ""
                   }</span>
                 </p>
@@ -162,6 +219,7 @@ $(document).ready(() => {
         loop: true,
         margin: 10,
         nav: true,
+        autoplay: true,
         responsive: {
           0: { items: 1 },
           480: { items: 2 },
@@ -173,6 +231,85 @@ $(document).ready(() => {
     error: (xhr) => {
       console.error("Error fetching products:", xhr.responseText);
     },
+  });
+
+  /* -----------------------------
+     LOAD FEATURED PRODUCTS
+  ----------------------------- */
+  $.ajax({
+    url: `${ip}/api/products`, // Change this if you have a specific /api/featured-products endpoint
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    },
+    success: (response) => {
+      const products = Array.isArray(response) ? response : response.data;
+      const $featuredContainer = $("#featured-container").empty();
+
+      // Slice the array to only show the first 4 products as "Featured"
+      const featuredProducts = products.slice(0, 4);
+
+      featuredProducts.forEach((p) => {
+        $featuredContainer.append(`
+          <div class="product text-center col-lg-3 col-md-4 col-sm-12 mb-4">
+            <div class="position-relative">
+              <div class="badge badge-danger position-absolute" style="top: 10px; left: 10px; z-index: 10;">
+                Featured
+              </div>
+              <img src="${ip}/FrontEnd/assets/img/product/${p.image}" class="img-fluid mb-3" alt="${p.product_name}" style="height: 400px; object-fit: cover; width: 100%;">
+            </div>
+
+            <h5 class="p-name">${p.product_name}</h5>
+            <h4 class="p-price">₱${p.product_price ?? ""}</h4>
+
+            <a href="single-product.html?id=${p.product_id}">
+              <button class="buy-btn">Buy Now</button>
+            </a>
+          </div>
+        `);
+      });
+    },
+    error: (xhr) =>
+      console.error("Error fetching featured products:", xhr.responseText),
+  });
+
+  /* -----------------------------
+     LOAD DAILY PRODUCTS (Shopee Style)
+  ----------------------------- */
+  $.ajax({
+    url: `${ip}/api/products`,
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    },
+    success: (response) => {
+      const products = Array.isArray(response) ? response : response.data;
+      const $dailyProductsContainer = $("#dailyProducts-container").empty();
+
+      // Display all products without slicing to mimic a full marketplace feed
+      products.forEach((p) => {
+        $dailyProductsContainer.append(`
+          <div class="col-6 col-sm-4 col-md-3 col-lg-2 mb-3">
+            <div class="card dailyProductCard">
+              <div class="card-body p-2 d-flex flex-column">
+                <a href="single-product.html?id=${p.product_id}" class="text-decoration-none text-dark">
+                  <img src="${ip}/FrontEnd/assets/img/product/${p.image}" class="card-img-top rounded-0" style="aspect-ratio: 1; object-fit: cover;" alt="${p.product_name}">
+                </a>
+                <p class="card-title mb-1" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 0.85rem; line-height: 1.2;">${p.product_name}</p>
+                <div class="mt-auto d-flex justify-content-between align-items-center pt-2">
+                    <span style="color: #ee4d2d; font-size: 1.1rem; font-weight: 500;">₱${p.product_price ?? ""}</span>
+                    <small class="text-muted" style="font-size: 0.7rem;">Sold 88</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        `);
+      });
+    },
+    error: (xhr) =>
+      console.error("Error fetching daily products:", xhr.responseText),
   });
 
   /* -----------------------------
@@ -189,6 +326,15 @@ $(document).ready(() => {
     },
     success: (res) => updateCartCount(res.count || 0),
     error: (xhr) => console.error("Error fetching cart:", xhr.responseText),
+  });
+
+  /* -----------------------------
+     ADD TO CART HANDLER
+  ----------------------------- */
+  $(document).on("click", ".cart-btn", function (e) {
+    e.preventDefault();
+    const id = $(this).data("id");
+    addToCart(id);
   });
 
   /* -----------------------------

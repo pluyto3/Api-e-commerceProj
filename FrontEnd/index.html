@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -13,19 +13,16 @@
     <link rel="stylesheet" href="assets/css/owl.carousel.min.css" />
     <link rel="stylesheet" href="assets/css/owl.theme.default.min.css" />
     <link rel="stylesheet" href="assets/css/jquery.bxslider.min.css" />
-    <link rel="stylesheet" href="assets/css/datatables.min.css"/>
+    <link rel="stylesheet" href="assets/css/datatables.min.css" />
     <link rel="stylesheet" href="assets/css/stylesheet.css" />
 
     <!-- jQuery -->
-    <script src="assets/js/jquery-3.5.1.min.js"></script> 
-
-    <!-- jQuery Cookie Plugin --> 
-    <script src="assets/js/jquery.cookie.min.js"></script>
+    <script src="assets/js/jquery-3.5.1.min.js"></script>
 
     <!-- DataTables -->
     <script src="assets/js/datatables.min.js"></script>
 
-    <!-- Bootstrap JS + Others --> 
+    <!-- Bootstrap JS + Others -->
     <script src="assets/js/popper.min.js"></script>
     <script src="assets/js/bootstrap.min.js"></script>
     <script src="assets/js/fontawesome.min.js"></script>
@@ -89,20 +86,29 @@
             </li>
           </ul>
           <!-- Search bar (responsive) -->
-          <!-- <form class="form-inline my-2 my-lg-0 mx-lg-2 w-100 w-lg-auto search-form">
-              <input id="searchInput" class="form-control mr-sm-2" type="search" placeholder="Search products..." aria-label="Search">
-              <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
-            </form> -->
+          <form
+            class="form-inline my-2 my-lg-0 mx-lg-2 w-100 w-lg-auto search-form">
+            <input
+              id="searchInput"
+              class="form-control mr-sm-2"
+              type="search"
+              placeholder="Search products..."
+              aria-label="Search" />
+            <button class="btn btn-outline-success my-2 my-sm-0" type="submit">
+              Search
+            </button>
+          </form>
 
           <ul class="navbar-nav ml-lg-3 d-flex align-items-center">
             <!-- Cart Icon -->
             <li class="nav-item mr-3">
-              <a class="nav-link position-relative d-flex align-items-center" href="cart.html">
+              <a
+                class="nav-link position-relative d-flex align-items-center"
+                href="cart.html">
                 <i class="fa fa-shopping-cart white-icon fa-lg"></i>
                 <span
                   id="cart-count"
-                  class="badge bg-danger rounded-pill position-absolute"
-                >
+                  class="badge bg-danger rounded-pill position-absolute">
                   0
                 </span>
               </a>
@@ -116,44 +122,69 @@
                 id="navbardrop"
                 data-toggle="dropdown"
                 aria-haspopup="true"
-                aria-expanded="false"
-              >
+                aria-expanded="false">
                 <!-- Profile Image -->
                 <img
                   id="navbarProfileImage"
                   alt="Profile"
                   class="rounded-circle mr-2"
-                  style="width: 35px; height: 35px; object-fit: cover; display: none;"
-                />
+                  style="
+                    width: 35px;
+                    height: 35px;
+                    object-fit: cover;
+                    display: none;
+                  " />
 
                 <!-- Username -->
-                <span id="displayUsername" class="text-white font-weight-bold"></span>
+                <span
+                  id="displayUsername"
+                  class="text-white font-weight-bold"></span>
               </a>
 
               <!-- Dropdown Menu -->
-              <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbardrop">
+              <div
+                class="dropdown-menu dropdown-menu-right"
+                aria-labelledby="navbardrop">
                 <a class="dropdown-item" href="account.html">
-                  <i class="fa fa-user user-icon" aria-hidden="true"></i> Profile
+                  <i class="fa fa-user user-icon" aria-hidden="true"></i>
+                  Profile
                 </a>
                 <a class="dropdown-item" href="account.html">
-                  <i class="fab fa-first-order user-orders" aria-hidden="true"></i> Your Orders
+                  <i
+                    class="fab fa-first-order user-orders"
+                    aria-hidden="true"></i>
+                  Your Orders
                 </a>
                 <a class="dropdown-item" href="product.html" id="productUi">
-                  <i class="fab fa-product-hunt" aria-hidden="true"></i> Your Products
+                  <i class="fab fa-product-hunt" aria-hidden="true"></i> Your
+                  Products
                 </a>
                 <a
                   class="dropdown-item"
                   href="admindashboard.html"
                   id="adminDashboard"
-                  style="display: none"
-                >
+                  style="display: none">
                   <i class="fas fa-home"></i> Dashboard
                 </a>
                 <hr class="user-menu" />
-                <span class="dropdown-item-text text-muted small">If new user please Register.</span>
-                <a id="register" href="register.html" class="dropdown-item text-center">Register</a>
-                <a id="login" href="login.html" class="dropdown-item text-center">Login</a>
-                <a id="logout" class="dropdown-item text-center" href="#">Logout</a>
+                <span class="dropdown-item-text text-muted small"
+                  >If new user please Register.</span
+                >
+                <a
+                  id="register"
+                  href="register.html"
+                  class="dropdown-item text-center"
+                  >Register</a
+                >
+                <a
+                  id="login"
+                  href="login.html"
+                  class="dropdown-item text-center"
+                  >Login</a
+                >
+                <a id="logout" class="dropdown-item text-center" href="#"
+                  >Logout</a
+                >
               </div>
             </li>
           </ul>
@@ -162,7 +193,6 @@
     </nav>
 
     <main>
-
       <!--Home-->
       <section id="home" class="home">
         <div class="container container-home">
@@ -174,339 +204,64 @@
       </section>
 
       <!-- Brands -->
-      <!-- <section id="product-section" class="container-fluid py-5 ml-4">
-          <div class="section-header">
-            <h3 class="header">Brands</h3>
+      <section id="brands-section" class="container-fluid py-5 ml-4">
+        <div class="section-header">
+          <h3 class="header">Brands</h3>
+        </div>
+        <div class="section-product-cards">
+          <div class="owl-carousel" id="brand-carousel">
+            <!-- Brand items will be dynamically inserted here -->
           </div>
-            <div class="section-product-cards">
-
-              <div class="owl-carousel d-flex flex-wrap gap-3" id="brand-carousel">
-
-              </div>
-
-            </div>
-      </section> -->
-
-      <!-- Lastest Products -->
-      <section id="product-section" class="container-fluid py-5 ml-4">
-          <div class="section-header">
-            <h3 class="header">Latest Products</h3>
-          </div>
-            <div class="section-product-cards">
-
-              <div class="owl-carousel" id="product-carousel">
-                <!-- Product cards will be dynamically inserted here -->
-              </div>
-
-          </div> 
+        </div>
       </section>
 
-      <!-- New -->
-      <section id="new" class="w-100">
-        <div class="row p-0 m-0">
-            <!-- One -->
-            <div class="one col-lg-4 col-md-12 col-sm-12 p-0">
-              <img src="assets/img/display1.jpg" class="img-fluid" alt="New Arrival 1" />
-              <div class="details">
-                <h2>Extremely Awesome Shoes</h2>
-                <button class="text-uppercase">Shop Now</button>
-              </div>
-            </div>
-            <!-- Two -->
-            <div class="one col-lg-4 col-md-12 col-sm-12 p-0">
-              <img src="assets/img/display2.jpg" class="img-fluid" alt="New Arrival 2" />
-              <div class="details">
-                <h2>Comfortable T-Shirts</h2>
-                <button class="text-uppercase">Shop Now</button>
-              </div>
-            </div>
-            <!-- Three -->
-            <div class="one col-lg-4 col-md-12 col-sm-12 p-0">
-              <img src="assets/img/display3.jpeg" class="img-fluid" alt="New Arrival 2" />
-              <div class="details">
-                <h2>50% Off Jackets</h2>
-                <button class="text-uppercase">Shop Now</button>
-              </div>
-            </div>
+      <!-- Latest Products -->
+      <section id="latest-products-section" class="container-fluid py-5 ml-4">
+        <div class="section-header">
+          <h3 class="header">Latest Products</h3>
+        </div>
+        <div class="section-product-cards">
+          <div class="owl-carousel" id="product-carousel">
+            <!-- Product cards will be dynamically inserted here -->
+          </div>
+        </div>
       </section>
 
       <!-- Featured -->
       <section id="featured" class="my-5 pb-5">
-          <div class="container text-center mt-5 pt-5">
-            <h3>Our Featured</h3>
-            <hr class="mx-auto">
-            <p>Here you can check out our featured products</p>
-          </div>
-          <div class="row mx-auto container-fluid">
-            <div class="product text-center col-lg-3 col-md-4 col-sm-12">
-              <img src="assets/img/featured1.jpg" class="img-fluid mb-3">
-              <div class="star">
-                <i class="fa fa-star" aria-hidden="true"></i>
-                <i class="fa fa-star" aria-hidden="true"></i>
-                <i class="fa fa-star" aria-hidden="true"></i>
-                <i class="fa fa-star" aria-hidden="true"></i>
-                <i class="fa fa-star" aria-hidden="true"></i>
-              </div>
-              <h5 class="p-name">Sports Shoes</h5>
-              <h4 class="p-price">$199.8</h4>
-              <button class="buy-btn">Buy Now</button>
-            </div>
-
-              <div class="product text-center col-lg-3 col-md-4 col-sm-12">
-                <img src="assets/img/featured2.jpg" class="img-fluid mb-3">
-                <div class="star">
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                </div>
-                <h5 class="p-name">Sports Shoes</h5>
-                <h4 class="p-price">$199.8</h4>
-                <button class="buy-btn">Buy Now</button>
-              </div>
-
-              <div class="product text-center col-lg-3 col-md-4 col-sm-12">
-                <img src="assets/img/featured3.jpg" class="img-fluid mb-3">
-                <div class="star">
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                </div>
-                <h5 class="p-name">Sports Shoes</h5>
-                <h4 class="p-price">$199.8</h4>
-                <button class="buy-btn">Buy Now</button>
-              </div>
-
-              <div class="product text-center col-lg-3 col-md-4 col-sm-12">
-                <img src="assets/img/featured4.jpg" class="img-fluid mb-3">
-                <div class="star">
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                </div>
-                <h5 class="p-name">Sports Shoes</h5>
-                <h4 class="p-price">$199.8</h4>
-                <button class="buy-btn">Buy Now</button>
-              </div>
-
-          </div>
+        <div class="container text-center mt-5 pt-5">
+          <h3>Our Featured</h3>
+          <hr class="mx-auto" />
+          <p>Here you can check out our featured products</p>
+        </div>
+        <div class="row mx-auto container-fluid" id="featured-container">
+          <!-- Featured items will be dynamically inserted here -->
+        </div>
       </section>
 
       <!-- Banner -->
       <section id="banner" class="my-5 py-5">
-          <div class="container">
-            <h4>MID SEASON'S SALE</h4>
-            <h1>Autumn Collection <br> Up to 30% OFF</h1>
-            <button class="text-uppercase">Shop Now</button>
-          </div>
+        <div class="container">
+          <h4>MID SEASON'S SALE</h4>
+          <h1>
+            Autumn Collection <br />
+            Up to 30% OFF
+          </h1>
+          <button class="text-uppercase">Shop Now</button>
+        </div>
       </section>
 
-      <!-- Clothes --> 
-      <section id="clothes" class="my-5">
-          <div class="container text-center mt-5 pt-5">
-            <h3>Dresses & Coats</h3>
-            <hr class="mx-auto">
-            <p>Here you can check out our amazing clothes</p>
-          </div>
-          <div class="row mx-auto container-fluid">
-            <div class="product text-center col-lg-3 col-md-4 col-sm-12">
-              <img src="assets/img/clothes1.jpg" class="img-fluid mb-3">
-              <div class="star">
-                <i class="fa fa-star" aria-hidden="true"></i>
-                <i class="fa fa-star" aria-hidden="true"></i>
-                <i class="fa fa-star" aria-hidden="true"></i>
-                <i class="fa fa-star" aria-hidden="true"></i>
-                <i class="fa fa-star" aria-hidden="true"></i>
-              </div>
-              <h5 class="p-name">Sports Shoes</h5>
-              <h4 class="p-price">$199.8</h4>
-              <button class="buy-btn">Buy Now</button>
-            </div>
-
-              <div class="product text-center col-lg-3 col-md-4 col-sm-12">
-                <img src="assets/img/clothes2.jpg" class="img-fluid mb-3">
-                <div class="star">
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                </div>
-                <h5 class="p-name">Sports Shoes</h5>
-                <h4 class="p-price">$199.8</h4>
-                <button class="buy-btn">Buy Now</button>
-              </div>
-
-              <div class="product text-center col-lg-3 col-md-4 col-sm-12">
-                <img src="assets/img/clothes3.jpg" class="img-fluid mb-3">
-                <div class="star">
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                </div>
-                <h5 class="p-name">Sports Shoes</h5>
-                <h4 class="p-price">$199.8</h4>
-                <button class="buy-btn">Buy Now</button>
-              </div>
-
-              <div class="product text-center col-lg-3 col-md-4 col-sm-12">
-                <img src="assets/img/clothes4.jpg" class="img-fluid mb-3">
-                <div class="star">
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                </div>
-                <h5 class="p-name">Sports Shoes</h5>
-                <h4 class="p-price">$199.8</h4>
-                <button class="buy-btn">Buy Now</button>
-              </div>
-          </div>
-
+      <!-- Daily Products -->
+      <section id="dailyProducts" class="my-5">
+        <div class="container text-center mt-5 pt-5">
+          <h3>Daily Products</h3>
+          <hr class="mx-auto" />
+          <p>Here you can check out our amazing products</p>
+        </div>
+        <div class="container-fluid" id="dailyProducts-container">
+          <!-- Daily Products items will be dynamically inserted here -->
+        </div>
       </section>
-
-      <!-- Watches -->
-      <section id="watches" class="my-5">
-          <div class="container text-center mt-5 pt-5">
-            <h3>Best Watches</h3>
-            <hr class="mx-auto">
-            <p>Check out our unique watches</p>
-          </div>
-          <div class="row mx-auto container-fluid">
-            <div class="product text-center col-lg-3 col-md-4 col-sm-12">
-              <img src="assets/img/watch1.jpg" class="img-fluid mb-3">
-              <div class="star">
-                <i class="fa fa-star" aria-hidden="true"></i>
-                <i class="fa fa-star" aria-hidden="true"></i>
-                <i class="fa fa-star" aria-hidden="true"></i>
-                <i class="fa fa-star" aria-hidden="true"></i>
-                <i class="fa fa-star" aria-hidden="true"></i>
-              </div>
-              <h5 class="p-name">Sports Shoes</h5>
-              <h4 class="p-price">$199.8</h4>
-              <button class="buy-btn">Buy Now</button>
-            </div>
-
-              <div class="product text-center col-lg-3 col-md-4 col-sm-12">
-                <img src="assets/img/watch2.jpg" class="img-fluid mb-3">
-                <div class="star">
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                </div>
-                <h5 class="p-name">Sports Shoes</h5>
-                <h4 class="p-price">$199.8</h4>
-                <button class="buy-btn">Buy Now</button>
-              </div>
-
-              <div class="product text-center col-lg-3 col-md-4 col-sm-12">
-                <img src="assets/img/watch3.jpeg" class="img-fluid mb-3">
-                <div class="star">
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                </div>  
-                <h5 class="p-name">Sports Shoes</h5>
-                <h4 class="p-price">$199.8</h4>
-                <button class="buy-btn">Buy Now</button>
-              </div>
-
-              <div class="product text-center col-lg-3 col-md-4 col-sm-12">
-                <img src="assets/img/watch4.jpeg" class="img-fluid mb-3">
-                <div class="star">
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                </div>
-                <h5 class="p-name">Sports Shoes</h5>
-                <h4 class="p-price">$199.8</h4>
-                <button class="buy-btn">Buy Now</button>
-              </div>
-          </div>
-
-      </section>
-
-      <!-- Shoes -->
-      <section id="shoes" class="my-5">
-          <div class="container text-center mt-5 pt-5">
-            <h3>Shoes</h3>
-            <hr class="mx-auto">
-            <p>Here you can check out our amazing shoes</p>
-          </div>
-          <div class="row mx-auto container-fluid">
-            <div class="product text-center col-lg-3 col-md-4 col-sm-12">
-              <img src="assets/img/shoes1.jpg" class="img-fluid mb-3">
-              <div class="star">
-                <i class="fa fa-star" aria-hidden="true"></i>
-                <i class="fa fa-star" aria-hidden="true"></i>
-                <i class="fa fa-star" aria-hidden="true"></i>
-                <i class="fa fa-star" aria-hidden="true"></i>
-                <i class="fa fa-star" aria-hidden="true"></i>
-              </div>
-              <h5 class="p-name">Sports Shoes</h5>
-              <h4 class="p-price">$199.8</h4>
-              <button class="buy-btn">Buy Now</button>
-            </div>
-
-              <div class="product text-center col-lg-3 col-md-4 col-sm-12">
-                <img src="assets/img/shoes2.jpg" class="img-fluid mb-3">
-                <div class="star">
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                </div>
-                <h5 class="p-name">Sports Shoes</h5>
-                <h4 class="p-price">$199.8</h4>
-                <button class="buy-btn">Buy Now</button>
-              </div>
-
-              <div class="product text-center col-lg-3 col-md-4 col-sm-12">
-                <img src="assets/img/shoes3.jpg" class="img-fluid mb-3">
-                <div class="star">
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                </div>
-                <h5 class="p-name">Sports Shoes</h5>
-                <h4 class="p-price">$199.8</h4>
-                <button class="buy-btn">Buy Now</button>
-              </div>
-
-              <div class="product text-center col-lg-3 col-md-4 col-sm-12">
-                <img src="assets/img/shoes4.jpg" class="img-fluid mb-3">
-                <div class="star">
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                  <i class="fa fa-star" aria-hidden="true"></i>
-                </div>
-                <h5 class="p-name">Sports Shoes</h5>
-                <h4 class="p-price">$199.8</h4>
-                <button class="buy-btn">Buy Now</button>
-              </div>
-          </div>
-
-      </section>
-
     </main>
 
     <!--Footer-->
@@ -550,7 +305,7 @@
         </div>
       </div>
     </footer>
-    
+
     <!-- loader and scripts -->
     <div
       id="wait"
@@ -563,13 +318,11 @@
         top: 50%;
         left: 50%;
         padding: 2px;
-      "
-    >
+      ">
       <img
         src="assets/img/demo_wait.gif"
         width="64"
-        height="64"
-      /><br />Loading..
+        height="64" /><br />Loading..
     </div>
   </body>
 </html>
