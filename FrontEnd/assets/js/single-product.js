@@ -131,24 +131,138 @@ $(document).ready(function () {
     success: function (response) {
       console.log(" Product Response:", response);
 
-      const product = response.data || response;
+      // Handle if the API returns an array or wraps it in 'product' or 'data'
+      let product = response.product || response.data || response;
+      if (Array.isArray(product)) {
+        product = product[0];
+      }
 
-      $("#main-img").attr(
-        "src",
-        `${ip}/FrontEnd/assets/img/product/${product.image}`,
+      if (!product) {
+        console.error("Product data not found in response.");
+        return;
+      }
+
+      // Format category properly if it's a nested object
+      let category = "Category Name";
+      if (product.category) {
+        category =
+          typeof product.category === "object"
+            ? product.category.name ||
+              product.category.category_name ||
+              "Category"
+            : product.category;
+      } else if (product.category_name) {
+        category = product.category_name;
+      }
+
+      const imgUrl = product.image
+        ? `${ip}/FrontEnd/assets/img/product/${product.image}`
+        : "assets/img/back.jpg";
+      const price = parseFloat(product.product_price || product.price || 0);
+
+      $("#main-img").attr("src", imgUrl);
+      $("#category-name").text(category);
+      $("#product-name").text(
+        product.product_name || product.name || "Unknown Product",
       );
-      $("#category-name").text(product.category ?? "Category Name");
-      $("#product-name").text(product.product_name);
-      $("#product-price").text(`Price: $${product.product_price ?? ""}`);
+      $("#product-price").text(
+        `Price: ₱${price.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      );
       $("#product-details-text").html(
-        product.product_description ?? "No details available",
+        product.product_description ||
+          product.description ||
+          "No details available.",
       );
-      $("input[type=number]").val(1);
+
+      const stock = product.stock_quantity ?? product.stock ?? 0;
+      $("#product-stock").text(`${stock} pieces available`);
+      $("#product-quantity-input").val(1).attr("max", stock);
+
+      // Load products from the same shop
+      loadSameShopProducts(product);
     },
     error: function (xhr) {
-      console.error("❌ Error fetching product:", xhr.responseText);
+      console.error(" Error fetching product:", xhr.responseText);
     },
   });
+
+  // --- Load Same Shop Products ---
+  function loadSameShopProducts(currentProduct) {
+    const currentSellerUser =
+      currentProduct.seller?.username || currentProduct.seller_username;
+    const currentSellerId =
+      currentProduct.seller?.user_id || currentProduct.seller_id;
+
+    if (!currentSellerUser && !currentSellerId) {
+      $("#sameShop-products").html(
+        "<p class='text-muted ml-3'>Seller information not available.</p>",
+      );
+      return;
+    }
+
+    $.ajax({
+      url: `${ip}/api/products`,
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+      },
+      success: function (response) {
+        const allProducts = response.data || response || [];
+        const $container = $("#sameShop-products").empty();
+
+        const sameShopProducts = allProducts.filter((p) => {
+          const pSellerUser = p.seller?.username || p.seller_username;
+          const pSellerId = p.seller?.user_id || p.seller_id;
+          const isSameSeller =
+            (currentSellerUser && pSellerUser === currentSellerUser) ||
+            (currentSellerId && pSellerId === currentSellerId);
+          const isNotCurrentProduct =
+            String(p.product_id || p.id) !==
+            String(currentProduct.product_id || currentProduct.id);
+          const isApproved =
+            (p.approval_status || "approved").toLowerCase() === "approved";
+
+          return isSameSeller && isNotCurrentProduct && isApproved;
+        });
+
+        if (sameShopProducts.length === 0) {
+          $container.html(
+            "<p class='text-muted ml-3'>No other products from this shop.</p>",
+          );
+          return;
+        }
+
+        // Display up to 6 products
+        sameShopProducts.slice(0, 6).forEach((p) => {
+          const imgUrl = p.image
+            ? `${ip}/FrontEnd/assets/img/product/${p.image}`
+            : "assets/img/back.jpg";
+          const price = parseFloat(p.product_price || p.price || 0).toFixed(2);
+          const productName = p.product_name || p.name || "Unknown Product";
+
+          $container.append(`
+            <div class="col-6 col-sm-4 col-md-3 col-lg-2 mb-3">
+              <div class="card dailyProductCard h-100">
+                <div class="card-body p-2 d-flex flex-column">
+                  <a href="single-product.html?id=${p.product_id || p.id}" class="text-decoration-none text-dark">
+                    <img src="${imgUrl}" class="card-img-top rounded-0" style="aspect-ratio: 1; object-fit: cover;" alt="${productName}">
+                  </a>
+                  <p class="card-title mb-1 mt-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 0.85rem; line-height: 1.2;">${productName}</p>
+                  <div class="mt-auto d-flex justify-content-between align-items-center pt-2">
+                      <span style="color: #ee4d2d; font-size: 1.1rem; font-weight: 500;">₱${price}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `);
+        });
+      },
+      error: function (xhr) {
+        console.error("Error fetching same shop products:", xhr.responseText);
+      },
+    });
+  }
 
   /* ============================================================
      CART FUNCTIONS
@@ -159,7 +273,8 @@ $(document).ready(function () {
 
   // --- Add to Cart ---
   $(".product-add-to-cart-btn").on("click", function () {
-    const quantity = $("input[type=number]").val();
+    const quantity =
+      $("#product-quantity-input").val() || $("input[type=number]").val();
 
     $.ajax({
       url: `${ip}/api/cart`,
@@ -185,7 +300,46 @@ $(document).ready(function () {
         });
       },
       error: function (xhr) {
-        console.error("❌ Error adding to cart:", xhr.responseText);
+        console.error(" Error adding to cart:", xhr.responseText);
+      },
+    });
+  });
+
+  // --- Buy Now ---
+  $(".product-buy-now-btn").on("click", function () {
+    const quantity = $("#product-quantity-input").val() || 1;
+
+    if (!token) {
+      Swal.fire({
+        title: "Login Required",
+        text: "Please login to purchase this item.",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Login",
+      }).then((result) => {
+        if (result.isConfirmed) {
+          window.location.href = "login.html";
+        }
+      });
+      return;
+    }
+
+    $.ajax({
+      url: `${ip}/api/cart`,
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      data: JSON.stringify({ product_id: productId, quantity }),
+      success: function (response) {
+        window.location.href = `cart.html?select_product_id=${productId}`;
+      },
+      error: function (xhr) {
+        console.error(" Error during Buy Now:", xhr.responseText);
+        const msg = xhr.responseJSON?.msg || "Failed to add product to cart.";
+        Swal.fire("Error", msg, "error");
       },
     });
   });

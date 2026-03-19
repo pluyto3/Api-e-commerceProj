@@ -87,10 +87,11 @@ function loadCartItems() {
         const quantity = item.quantity ?? 0;
         const subtotal = item.subtotal ?? price * quantity;
         totalAmount += subtotal;
+        const productId = item.product?.product_id;
 
         const row = `
           <tr>
-            <td><input type="checkbox" class="select-item" data-id="${id}" data-price="${subtotal}"></td>
+            <td><input type="checkbox" class="select-item" data-id="${id}" data-product-id="${productId}" data-price="${subtotal}"></td>
             <td>${id}</td>
             <td>
               <img src="${ip}/FrontEnd/assets/img/product/${item.product.image}"
@@ -160,6 +161,27 @@ function loadCartItems() {
           $("#selected-total").html("&nbsp;");
         }
       }
+
+      // Check for pre-selected item from "Buy Now" button
+      const urlParams = new URLSearchParams(window.location.search);
+      const productToSelect = urlParams.get("select_product_id");
+      if (productToSelect) {
+        // Find checkbox using datatables api to work across pages
+        const $checkbox = cartDataTable
+          .rows()
+          .nodes()
+          .to$()
+          .find(`input.select-item[data-product-id="${productToSelect}"]`)
+          .last();
+        if ($checkbox.length) {
+          $checkbox.prop("checked", true);
+        }
+        // Clean the URL to avoid re-selecting on refresh
+        history.replaceState(null, "", window.location.pathname);
+      }
+
+      // Initial calculation of selected total
+      updateSelectedTotal();
 
       $("#select-all").on("click", function (event) {
         // STOP the click from bubbling up to the <th> and triggering a sort

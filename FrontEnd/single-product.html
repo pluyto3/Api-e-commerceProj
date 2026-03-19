@@ -201,9 +201,29 @@
             <h6 class="badge badge-dark category-name" id="category-name"></h6>
             <h3 class="py-4" id="product-name"></h3>
             <h2 class="product-price" id="product-price"></h2>
-            <input type="number" />
+            <div class="d-flex align-items-center mb-3 mt-2">
+              <input
+                type="number"
+                id="product-quantity-input"
+                value="1"
+                min="1"
+                style="
+                  width: 70px;
+                  height: 40px;
+                  padding-left: 10px;
+                  margin-right: 15px;
+                  border: 1px solid #ccc;
+                " />
+              <span
+                id="product-stock"
+                class="text-muted"
+                style="font-size: 1rem"></span>
+            </div>
             <button type="button" class="buy-btn product-add-to-cart-btn">
               Add To Cart
+            </button>
+            <button type="button" class="buy-btn product-buy-now-btn">
+              Buy Now
             </button>
             <h4 class="mt-5 mb-5 productDetails">Product Details</h4>
             <div class="product-details-text" id="product-details-text"></div>
@@ -214,12 +234,10 @@
       <!-- Related Prodcut -->
       <section id="related-products" class="my-5 pb-5">
         <div class="container text-center mt-5 pt-5">
-          <h3>Related Products</h3>
+          <h3>FROM THE SAME SHOP</h3>
           <hr class="mx-auto" />
         </div>
-        <div
-          class="row mx-auto container-fluid"
-          id="related-products-container">
+        <div class="row mx-auto container-fluid" id="sameShop-products">
           <!-- Related products will be dynamically inserted here -->
         </div>
       </section>

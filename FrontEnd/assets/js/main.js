@@ -135,15 +135,9 @@ $(document).ready(() => {
             <a href="products.html?brand=${b.brand_id}" 
                class="text-success mx-1 productDetails">
               <div class="card-contents">
-                <button type="button" class="btn btn-warning cart-btn add-to-cart" data-brand-id="${b.brand_id}">
-                  <i class="fas fa-cart-plus"></i>
-                </button>
               </div>
               <div class="product-details">
-                <h5 class="product-name">${b.brand_name || "Brand Name"}</h5>
-                <p class="product-price">
-                  <span class="text-success">View Products</span>
-                </p>
+                <h5 class="product-name">${b.name || b.brand_name || "Brand Name"}</h5>
               </div>
             </a>
           </div>
@@ -331,10 +325,38 @@ $(document).ready(() => {
   /* -----------------------------
      ADD TO CART HANDLER
   ----------------------------- */
-  $(document).on("click", ".cart-btn", function (e) {
+  $(document).on("click", ".add-to-cart", function (e) {
     e.preventDefault();
-    const id = $(this).data("id");
-    addToCart(id);
+    e.stopPropagation(); // Prevents the <a> tag link from firing before AJAX
+
+    const productId = $(this).data("product-id");
+
+    if (!token) {
+      Swal.fire("Warning", "Please login to add items to the cart.", "warning");
+      return;
+    }
+
+    $.ajax({
+      url: `${ip}/api/cart`,
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      data: JSON.stringify({ product_id: productId, quantity: 1 }),
+      success: function (response) {
+        updateCartCount(response.count);
+
+        // Redirect seamlessly to the single product page
+        window.location.href = `single-product.html?id=${productId}`;
+      },
+      error: function (xhr) {
+        console.error("Error adding to cart:", xhr.responseText);
+        const msg = xhr.responseJSON?.msg || "Failed to add product to cart.";
+        Swal.fire("Error", msg, "error");
+      },
+    });
   });
 
   /* -----------------------------
