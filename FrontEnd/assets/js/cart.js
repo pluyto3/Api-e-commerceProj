@@ -92,7 +92,6 @@ function loadCartItems() {
         const row = `
           <tr>
             <td><input type="checkbox" class="select-item" data-id="${id}" data-product-id="${productId}" data-price="${subtotal}"></td>
-            <td>${id}</td>
             <td>
               <img src="${ip}/FrontEnd/assets/img/product/${item.product.image}"
                    alt="${name}" width="50"><br>${name}

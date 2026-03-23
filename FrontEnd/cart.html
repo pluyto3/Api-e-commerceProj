@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -43,7 +43,7 @@
       <div class="container-fluid">
         <!-- Brand -->
         <a class="navbar-brand d-flex align-items-center" href="index.html">
-          <img src="assets/img/ecomLogo.jpg" alt="" style="height: 40px" />
+          <img src="assets/img/hanz-goLogo.png" alt="" style="height: 40px" />
         </a>
         <div class="toggle-btns">
           <!-- Menu Button -->
@@ -128,6 +128,9 @@
                     height: 35px;
                     object-fit: cover;
                     display: none;
+                    background: #fff;
+                    border: 2px solid #fff;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
                   " />
 
                 <!-- Username -->
@@ -189,40 +192,47 @@
 
     <main>
       <!--Cart-->
-      <section class="cart container my-5 py-5">
-        <div class="container mt-5">
-          <h2>Your Cart</h2>
-          <hr class="cart-hr" />
-        </div>
+      <section class="cart-panel">
+        <div class="container-fluid">
+          <div class="container mt-3">
+            <div class="d-flex align-items-center mb-3">
+              <img
+                src="assets/img/hanz-goLogo.png"
+                alt="Logo"
+                class="shopLogo m-0 mr-4" />
+              <h2 class="shoppingCart display-5 mb-0">Shopping Cart</h2>
+            </div>
+            <hr class="admin-hr" />
+          </div>
 
-        <!-- Cart Table -->
-        <table
-          id="cart-table"
-          class="table table-striped table-sm text-center table-hover justify-content-center"
-          style="padding: 15px 50px; width: 80%">
-          <thead>
-            <tr>
-              <th><input type="checkbox" id="select-all" /> All</th>
-              <th>ID</th>
-              <th>Product</th>
-              <th>Price</th>
-              <th>Quantity</th>
-              <th>Total</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- Cart items will be dynamically inserted here -->
-          </tbody>
-        </table>
+          <!-- Cart Table -->
+          <table
+            id="cart-table"
+            class="table table-striped table-sm text-center table-hover justify-content-center"
+            style="padding: 15px 50px; width: 80%">
+            <thead>
+              <tr>
+                <th><input type="checkbox" id="select-all" /> All</th>
+                <th>Product</th>
+                <th>Price</th>
+                <th>Quantity</th>
+                <th>Total</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Cart items will be dynamically inserted here -->
+            </tbody>
+          </table>
 
-        <!-- Cart Total Section & CheckOut Button -->
-        <div class="float-right pt-3">
-          <p id="selected-total" class="h5 fw-bold"></p>
-          <span id="total-amount" class="fw-bold h5"></span>
-          <a class="btn btn-success w-100 mt-2" href="#" id="checkout-btn"
-            >Check Out</a
-          >
+          <!-- Cart Total Section & CheckOut Button -->
+          <div class="float-right pt-3">
+            <p id="selected-total" class="h5 fw-bold"></p>
+            <span id="total-amount" class="fw-bold h5"></span>
+            <a class="btn btn-success w-100 mt-2" href="#" id="checkout-btn"
+              >Check Out</a
+            >
+          </div>
         </div>
       </section>
     </main>

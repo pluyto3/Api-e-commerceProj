@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\File;
 use Illuminate\Http\FileException;
+use Illuminate\Support\Facades\DB;
 
 class ProductController extends Controller
 {
@@ -22,8 +23,18 @@ class ProductController extends Controller
             $user = User::where('token', $token)->first();
             if($user){ 
 
-                // Fetch all products along with their related category, brand and seller
-                $products = Product::with(['category', 'brand', 'seller'])->get();
+                $soldSubquery = DB::table('checkout_items as ci')
+                    ->join('checkouts as c', 'ci.checkout_id', '=', 'c.checkout_id')
+                    ->where('c.status', 'completed')
+                    ->whereColumn('ci.product_id', 'products.product_id')
+                    ->selectRaw('COALESCE(SUM(ci.quantity), 0)');
+
+                // Fetch all products along with their related category, brand, seller and the total items sold
+                $products = Product::select('products.*')
+                    ->selectSub($soldSubquery, 'sold')
+                    ->get();
+
+                $products->load(['category', 'brand', 'seller']);
 
                 // Format the response to include category, brand and seller info plus approval fields
                 $data = $products->map(function ($p) {
@@ -33,6 +44,7 @@ class ProductController extends Controller
                         'product_price' => $p->product_price,
                         'product_description' => $p->product_description,
                         'stock_quantity' => $p->stock_quantity,
+                        'sold' => $p->sold ?? 0,
                         'image' => $p->image,
                         'status' => $p->status,
                         'category' => $p->category?->name,

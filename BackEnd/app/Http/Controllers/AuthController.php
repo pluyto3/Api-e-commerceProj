@@ -116,6 +116,13 @@ class AuthController extends Controller
             ], 400);
         }
 
+            // Check if already verified
+        if ($user->email_verified_at) {
+            return response()->json([
+                'msg' => 'Email is already verified.'
+            ], 400);
+        }
+
         $user->email_verified_at = now();
         $user->verification_token = null; // Clear the token
         $user->save();
@@ -176,7 +183,7 @@ class AuthController extends Controller
                 $mail->SMTPSecure = 'tls';
                 $mail->Port       = 587;
 
-                $mail->setFrom('your_email@gmail.com', 'Your App');
+                $mail->setFrom('dummyodinvalhalla17@gmail.com', 'Hanz-Go');
                 $mail->addAddress($user->email, $user->fullname);
 
                 $resetUrl = 'http://localhost/e-commerce/FrontEnd/resetPassword.html?token=' . $user->reset_token;

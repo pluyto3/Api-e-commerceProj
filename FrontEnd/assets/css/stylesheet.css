@@ -15,7 +15,7 @@ html,
 body {
   width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: clip;
   margin: 0;
   padding: 0;
 }
@@ -23,6 +23,19 @@ body {
 body {
   font-family: Arial, sans-serif;
   background-color: silver;
+}
+
+.cart-panel .shopLogo {
+  width: 150px;
+  height: auto;
+  display: block;
+  margin: 0 auto 20px auto;
+}
+
+.logo {
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .loginform {
@@ -35,12 +48,16 @@ body {
 }
 
 .loginform img {
-  width: 50%;
-  aspect-ratio: 1 / 1;
-  object-fit: cover;
+  width: 250px;
+  height: 250px;
   border-radius: 50%;
-  display: block;
-  margin: 7px auto;
+  overflow: hidden;
+  background-color: #fff;
+  margin: 0 auto;
+  display: flex;
+  justify-content: center;
+  border: 4px solid #fff;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 
 /* Header Here */
@@ -963,6 +980,14 @@ footer {
   margin-left: 0;
   margin-right: auto;
   display: block;
+}
+
+.cart-panel {
+  width: auto;
+  background-color: #fff;
+  margin: 26px 24px;
+  min-height: calc(100vh - 50px);
+  padding: 20px;
 }
 
 .bg-orange-g {

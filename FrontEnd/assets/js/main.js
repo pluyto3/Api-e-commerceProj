@@ -269,7 +269,7 @@ $(document).ready(() => {
   });
 
   /* -----------------------------
-     LOAD DAILY PRODUCTS (Shopee Style)
+     LOAD DAILY PRODUCTS
   ----------------------------- */
   $.ajax({
     url: `${ip}/api/products`,
@@ -294,7 +294,7 @@ $(document).ready(() => {
                 <p class="card-title mb-1" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 0.85rem; line-height: 1.2;">${p.product_name}</p>
                 <div class="mt-auto d-flex justify-content-between align-items-center pt-2">
                     <span style="color: #ee4d2d; font-size: 1.1rem; font-weight: 500;">₱${p.product_price ?? ""}</span>
-                    <small class="text-muted" style="font-size: 0.7rem;">Sold 88</small>
+                    <small class="text-muted" style="font-size: 0.7rem;">Sold ${p.sold}</small>
                 </div>
               </div>
             </div>

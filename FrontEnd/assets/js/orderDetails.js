@@ -82,6 +82,10 @@ function load_user() {
   const $navbarProfileImage = $("#navbarProfileImage");
   const $defaultProfileIcon = $("#defaultProfileIcon");
   const $sidebarAccounts = $("#sidebarAccounts");
+  const $sidebarDashboard = $("#dashboard");
+  const $sidebarBrand = $("#brand");
+  const $sidebarCategory = $("#category");
+  const $sidebarProduct = $("#product");
 
   // No session → show login/register
   if (!usr || !token) {
@@ -96,6 +100,10 @@ function load_user() {
     $navbarProfileImage.hide();
     $defaultProfileIcon.show();
     $sidebarAccounts.hide();
+    $sidebarDashboard.hide();
+    $sidebarBrand.hide();
+    $sidebarCategory.hide();
+    $sidebarProduct.hide();
     return;
   }
 
@@ -116,13 +124,31 @@ function load_user() {
     $cartNavMobile.hide();
   }
 
-  // Role-based access for admin dashboard and sidebar accounts link
-  if (role === "admin" || role === "seller") {
-    $adminDashboard.show();
+  // Hide account manage if seller or user
+  if (role === "seller" || role === "user") {
     $sidebarAccounts.hide();
   } else {
-    $adminDashboard.hide();
     $sidebarAccounts.show();
+  }
+
+  // Hide specific sidebar menus for regular user
+  if (role === "user") {
+    $sidebarDashboard.hide();
+    $sidebarBrand.hide();
+    $sidebarCategory.hide();
+    $sidebarProduct.hide();
+  } else {
+    $sidebarDashboard.show();
+    $sidebarBrand.show();
+    $sidebarCategory.show();
+    $sidebarProduct.show();
+  }
+
+  // Role-based access for admin dashboard
+  if (role === "admin" || role === "seller") {
+    $adminDashboard.show();
+  } else {
+    $adminDashboard.hide();
   }
 }
 

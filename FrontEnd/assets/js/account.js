@@ -27,6 +27,10 @@ function load_user() {
   const $navbarProfileImage = $("#navbarProfileImage");
   const $defaultProfileIcon = $("#defaultProfileIcon");
   const $sidebarAccounts = $("#sidebarAccounts");
+  const $sidebarDashboard = $("#dashboard");
+  const $sidebarBrand = $("#brand");
+  const $sidebarCategory = $("#category");
+  const $sidebarProduct = $("#product");
 
   if (!usr || !token) {
     // No session → show login/register, hide logout & cart
@@ -41,6 +45,10 @@ function load_user() {
     $navbarProfileImage.hide();
     $defaultProfileIcon.show();
     $sidebarAccounts.hide();
+    $sidebarDashboard.hide();
+    $sidebarBrand.hide();
+    $sidebarCategory.hide();
+    $sidebarProduct.hide();
     return;
   }
 
@@ -64,8 +72,25 @@ function load_user() {
   // Hide account manage if seller or user
   if (role === "seller" || role === "user") {
     $sidebarAccounts.hide();
+    $(".role-choice #role").prop("disabled", true);
+    $(".email-field input").prop("disabled", true);
   } else {
     $sidebarAccounts.show();
+    $(".role-choice #role").prop("disabled", false);
+    $(".email-field input").prop("disabled", false);
+  }
+
+  // Hide specific sidebar menus for regular user
+  if (role === "user") {
+    $sidebarDashboard.hide();
+    $sidebarBrand.hide();
+    $sidebarCategory.hide();
+    $sidebarProduct.hide();
+  } else {
+    $sidebarDashboard.show();
+    $sidebarBrand.show();
+    $sidebarCategory.show();
+    $sidebarProduct.show();
   }
 
   // Show admin dashboard for admin/seller only
@@ -322,6 +347,19 @@ $(document).ready(function () {
   } else {
     console.error("No username found in cookie.");
   }
+
+  // --- Profile Image Preview ---
+  $("#image").on("change", function (e) {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function (event) {
+        $("#profileImg").attr("src", event.target.result).show();
+        $("#defaultIcon").hide();
+      };
+      reader.readAsDataURL(file);
+    }
+  });
 
   // --- Upload Profile Image ---
   $("#account-form").on("submit", function (e) {
