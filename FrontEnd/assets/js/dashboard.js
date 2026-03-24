@@ -655,11 +655,11 @@ $(document).ready(function () {
       type: "POST",
       url: ip + "/api/logout",
       data: { token: token },
-      success: function (res) {
+      success: function () {
         Swal.fire({
           icon: "success",
           title: "Logout Successful",
-        }).then((result) => {
+        }).then(() => {
           var cookies = $.cookie();
           for (var cookie in cookies) {
             $.removeCookie(cookie);

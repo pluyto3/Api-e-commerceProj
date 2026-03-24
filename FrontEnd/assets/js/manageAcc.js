@@ -438,4 +438,35 @@ $(document).ready(() => {
       },
     });
   }
+
+  // --- Logout Functionality ---
+  $("#logout").click(function () {
+    $.ajax({
+      beforeSend: function (xhr) {
+        xhr.setRequestHeader("Authorization", "Bearer " + token);
+      },
+      type: "POST",
+      url: ip + "/api/logout",
+      data: { token: token },
+      success: function () {
+        Swal.fire({
+          icon: "success",
+          title: "Logout Successful",
+        }).then(() => {
+          var cookies = $.cookie();
+          for (var cookie in cookies) {
+            $.removeCookie(cookie);
+          }
+          window.location.replace("login.html");
+        });
+      },
+      error: function (res) {
+        let msg =
+          res.responseJSON && res.responseJSON.msg
+            ? res.responseJSON.msg
+            : "Logout failed. Please try again.";
+        alert(msg);
+      },
+    });
+  });
 });

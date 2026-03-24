@@ -1233,7 +1233,7 @@ $(document).ready(function () {
       success: () => {
         Swal.fire({ icon: "success", title: "Logout Successful" }).then(() => {
           Object.keys($.cookie()).forEach((cookie) => $.removeCookie(cookie));
-          window.location.replace("index.html");
+          window.location.replace("login.html");
         });
       },
       error: (res) => {

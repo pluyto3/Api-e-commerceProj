@@ -1015,7 +1015,7 @@ $(document).ready(function () {
         Swal.fire({ icon: "success", title: "Logout Successful" }).then(() => {
           // Clear all cookies
           Object.keys($.cookie()).forEach((cookie) => $.removeCookie(cookie));
-          window.location.replace("index.html");
+          window.location.replace("login.html");
         });
       },
       error: (res) => {

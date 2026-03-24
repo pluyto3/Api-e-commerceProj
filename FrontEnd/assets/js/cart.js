@@ -72,11 +72,9 @@ function loadCartItems() {
       Accept: "application/json",
     },
     success: function (response) {
-      console.log("Cart Response:", response);
-
       const cartItems = response.cart || response.data || [];
-      const $tableBody = $("#cart-table tbody");
-      $tableBody.empty();
+      const $container = $("#cart-items-container");
+      $container.empty();
 
       let totalAmount = 0;
 
@@ -84,133 +82,67 @@ function loadCartItems() {
         const id = item.addTocart_id;
         const name = item.product?.product_name ?? "Unnamed Product";
         const price = item.product?.product_price ?? 0;
-        const quantity = item.quantity ?? 0;
+        const quantity = item.quantity ?? 1;
         const subtotal = item.subtotal ?? price * quantity;
         totalAmount += subtotal;
-        const productId = item.product?.product_id;
 
-        const row = `
-          <tr>
-            <td><input type="checkbox" class="select-item" data-id="${id}" data-product-id="${productId}" data-price="${subtotal}"></td>
-            <td>
-              <img src="${ip}/FrontEnd/assets/img/product/${item.product.image}"
-                   alt="${name}" width="50"><br>${name}
-            </td>
-            <td class="selling-price">₱${price.toLocaleString()}</td>
-            <td>
-              <button class="btn btn-sm btn-secondary changeQuantity" data-id="${id}">+</button>
-              <span class="mx-2 quantity">${quantity}</span>
-              <button class="btn btn-sm btn-secondary changeQuantity" data-id="${id}">-</button>
-            </td>
-            <td class="total_price">₱${subtotal.toLocaleString()}</td>
-            <td>
-              <a href="#" data-id="${id}" class="text-danger mx-1 deleteBtn">
-                <i class="fas fa-trash fa-2x"></i>
-              </a>
-            </td>
-          </tr>
+        // Note: Included the checkbox to maintain your "selected checkout" logic
+        const cardHtml = `
+          <div class="cart-item-card">
+            <div class="checkbox me-3 d-flex align-items-center justify-content-center">
+               <input type="checkbox" class="select-item form-check-input m-0" style="transform: scale(1.2);" data-id="${id}" data-price="${subtotal}">
+            </div>
+
+            <div class="me-4">
+               <img src="${ip}/FrontEnd/assets/img/product/${item.product.image}" alt="${name}" class="cart-item-img">
+            </div>
+
+            <div class="flex-grow-1">
+               <h5 class="fw-bold mb-1" style="color: #2c3e50;">${name}</h5>
+               <p class="mb-0 text-dark">Price: <span class="fw-bold">₱${price.toLocaleString()}</span></p>
+            </div>
+
+            <div class="mx-4">
+                <div class="quantity-pill-container">
+                    <button class="changeQuantity" data-id="${id}" data-action="minus">-</button>
+                    <span class="quantity">${quantity}</span>
+                    <button class="changeQuantity" data-id="${id}" data-action="plus">+</button>
+                </div>
+            </div>
+
+            <div class="text-end" style="min-width: 150px;">
+                <p class="small text-muted mb-0">Item Total:</p>
+                <h5 class="fw-bold total_price mb-2">₱${subtotal.toLocaleString()}</h5>
+                <button class="delete-btn-custom deleteBtn" data-id="${id}">
+                    <i class="far fa-trash-alt"></i>
+                </button>
+            </div>
+          </div>
         `;
-        $tableBody.append(row);
+        $container.append(cardHtml);
       });
 
-      // Update total amount display (overall)
-      $("#total-amount").text(`Total Amount: ₱${totalAmount.toLocaleString()}`);
+      // Update the Order Summary texts
+      $("#subtotal-display").text(`₱${totalAmount.toLocaleString()}`);
+      $("#total-amount").text(`₱${totalAmount.toLocaleString()}`);
+      $("#item-count-footer").text(
+        `You have ${cartItems.length} items in your cart.`,
+      );
 
-      // Initialize DataTable
-      cartDataTable = $("#cart-table").DataTable({
-        // Your DataTable options here...
-        // Add this if your first column (checkbox) is not sortable
-        columnDefs: [
-          {
-            targets: 0, // The first column
-            orderable: false,
-          },
-        ],
-      });
-
-      // =======================================
-      // Update Selected Total Across All Pages
-      // =======================================
-      function updateSelectedTotal() {
-        let selectedTotal = 0;
-
-        // Use the DataTables API to find all checkboxes on all pages
-        cartDataTable
-          .rows()
-          .nodes()
-          .to$()
-          .find('input.select-item[type="checkbox"]:checked')
-          .each(function () {
-            let priceString = $(this).attr("data-price");
-
-            // Add a check to make sure it's a valid number
-            if (priceString) {
-              selectedTotal += parseFloat(priceString);
-            }
-          });
-
-        // Update the total on the page
-        if (selectedTotal > 0) {
-          // If items are selected, update the text and make it VISIBLE
-          $("#selected-total").text(
-            `Selected Item Total: ₱${selectedTotal.toLocaleString()}`,
-          );
-        } else {
-          // If no items are selected, make it will be HIDDEN
-          $("#selected-total").html("&nbsp;");
-        }
-      }
-
-      // Check for pre-selected item from "Buy Now" button
-      const urlParams = new URLSearchParams(window.location.search);
-      const productToSelect = urlParams.get("select_product_id");
-      if (productToSelect) {
-        // Find checkbox using datatables api to work across pages
-        const $checkbox = cartDataTable
-          .rows()
-          .nodes()
-          .to$()
-          .find(`input.select-item[data-product-id="${productToSelect}"]`)
-          .last();
-        if ($checkbox.length) {
-          $checkbox.prop("checked", true);
-        }
-        // Clean the URL to avoid re-selecting on refresh
-        history.replaceState(null, "", window.location.pathname);
-      }
-
-      // Initial calculation of selected total
-      updateSelectedTotal();
-
-      $("#select-all").on("click", function (event) {
-        // STOP the click from bubbling up to the <th> and triggering a sort
-        event.stopPropagation();
-
-        // Get the checked state of the "Select All" box
-        var isChecked = $(this).is(":checked");
-
-        // Set all checkboxes in the DataTable to match the "Select All" box
-        cartDataTable
-          .rows()
-          .nodes()
-          .to$()
-          .find('input.select-item[type="checkbox"]')
-          .prop("checked", isChecked);
-
-        // Now, update the total
-        updateSelectedTotal();
-      });
-
-      $("#cart-table tbody").on("click", "input.select-item", function () {
-        // Just recalculate the total whenever any box is clicked
-        updateSelectedTotal();
-      });
+      // Checkboxes unchecked by default
+      $(".select-item").prop("checked", false);
     },
     error: function (xhr) {
       console.error("Error fetching cart items:", xhr.responseText);
     },
   });
 }
+
+// Update the event listener for quantity buttons
+$(document).on("click", ".changeQty", function () {
+  const id = $(this).data("id");
+  const action = $(this).data("action");
+});
 
 /* ============================================================
    MAIN SCRIPT (Document Ready)
@@ -436,5 +368,36 @@ $(document).ready(function () {
       console.log("Cart Count Response:", response);
       updateCartCount(response.count);
     },
+  });
+
+  // --- Logout Functionality ---
+  $("#logout").click(function () {
+    $.ajax({
+      beforeSend: function (xhr) {
+        xhr.setRequestHeader("Authorization", "Bearer " + token);
+      },
+      type: "POST",
+      url: ip + "/api/logout",
+      data: { token: token },
+      success: function () {
+        Swal.fire({
+          icon: "success",
+          title: "Logout Successful",
+        }).then(() => {
+          var cookies = $.cookie();
+          for (var cookie in cookies) {
+            $.removeCookie(cookie);
+          }
+          window.location.replace("index.html");
+        });
+      },
+      error: function (res) {
+        let msg =
+          res.responseJSON && res.responseJSON.msg
+            ? res.responseJSON.msg
+            : "Logout failed. Please try again.";
+        alert(msg);
+      },
+    });
   });
 });

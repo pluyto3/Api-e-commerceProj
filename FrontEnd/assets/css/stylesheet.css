@@ -25,11 +25,111 @@ body {
   background-color: silver;
 }
 
-.cart-panel .shopLogo {
-  width: 150px;
-  height: auto;
-  display: block;
-  margin: 0 auto 20px auto;
+/* Main Page Background */
+.cart-page-bg {
+  background-color: #f4f5f7; /* Light grey matching the mockup */
+  min-height: calc(100vh - 70px);
+  padding-bottom: 50px;
+}
+
+/* Cart Header Banner */
+.cart-header-banner {
+  background-color: #fdfdfd;
+  border-bottom: 1px solid #eaeaea;
+}
+
+/* Cart Item Card Styling */
+.cart-item-card {
+  background-color: #fff;
+  border-radius: 8px;
+  border: 1px solid #eaeaea;
+  padding: 20px;
+  margin-bottom: 15px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
+  display: flex;
+  align-items: center;
+  transition: box-shadow 0.2s;
+}
+
+.cart-item-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.cart-item-img {
+  width: 90px;
+  height: 90px;
+  object-fit: contain;
+}
+
+/* Modern Pill Quantity Selector */
+.quantity-pill-container {
+  display: inline-flex;
+  align-items: center;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 50px;
+  overflow: hidden;
+  height: 40px;
+  width: 120px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.quantity-pill-container button {
+  background: transparent;
+  border: none;
+  width: 35px;
+  font-size: 1.2rem;
+  color: #333;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  outline: none;
+}
+
+.quantity-pill-container button:hover {
+  background: #f0f0f0;
+}
+
+.quantity-pill-container span {
+  flex-grow: 1;
+  text-align: center;
+  font-weight: bold;
+  border-left: 1px solid #eaeaea;
+  border-right: 1px solid #eaeaea;
+  line-height: 40px;
+}
+
+/* Order Summary Sidebar */
+.order-summary-card {
+  border-radius: 10px;
+  position: sticky;
+  top: 90px; /* Keeps it visible when scrolling down */
+}
+
+.checkout-btn-custom {
+  background-color: #28a745;
+  border: none;
+  border-radius: 6px;
+  font-size: 1.1rem;
+}
+
+.checkout-btn-custom:hover {
+  background-color: #218838;
+}
+
+/* Trash Icon Button */
+.delete-btn-custom {
+  background: none;
+  border: none;
+  color: #6c757d;
+  font-size: 1.3rem;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.delete-btn-custom:hover {
+  color: #dc3545; /* Turns red on hover */
 }
 
 .logo {
@@ -98,9 +198,11 @@ input[type="submit"] {
 
 .navbar {
   font-size: 16px;
+  font-weight: 200;
   top: 0;
   left: 0;
   box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+  background-color: #1d1c36;
 }
 
 #displayUsername {
@@ -191,8 +293,8 @@ input[type="submit"] {
 
 /* Main Here */
 main {
-  min-height: 45vh;
-  margin-top: 5vh;
+  min-height: 100vh;
+  margin-top: 2vh;
 }
 
 /* Section Starts Here */
@@ -984,10 +1086,8 @@ footer {
 
 .cart-panel {
   width: auto;
-  background-color: #fff;
-  margin: 26px 24px;
-  min-height: calc(100vh - 50px);
-  padding: 20px;
+  margin: 10px 24px;
+  min-height: calc(100vh - 56px);
 }
 
 .bg-orange-g {

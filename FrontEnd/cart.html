@@ -2,8 +2,8 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>My Cart</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Orders</title>
     <link rel="stylesheet" href="assets/css/all.min.css" />
     <link rel="stylesheet" href="assets/css/bootstrap.min.css" />
 
@@ -18,9 +18,6 @@
 
     <!-- jQuery -->
     <script src="assets/js/jquery-3.5.1.min.js"></script>
-
-    <!-- jQuery Cookie Plugin -->
-    <script src="assets/js/jquery.cookie.min.js"></script>
 
     <!-- DataTables -->
     <script src="assets/js/datatables.min.js"></script>
@@ -39,36 +36,17 @@
   </head>
   <body onload="load_user()">
     <!--Navbar-->
-    <nav class="navbar navbar-expand-lg bg-dark navbar-dark sticky-top">
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
       <div class="container-fluid">
         <!-- Brand -->
         <a class="navbar-brand d-flex align-items-center" href="index.html">
           <img src="assets/img/hanz-goLogo.png" alt="" style="height: 40px" />
         </a>
-        <div class="toggle-btns">
-          <!-- Menu Button -->
-          <i class="fas fa-bars text-white menu-btn"></i>
-          <!-- Close Button -->
-          <i
-            class="fas fa-arrow-right text-white close-btn"
-            style="display: none"></i>
-          <!-- Toggler/collapsibe Button -->
-        </div>
-        <button
-          class="navbar-toggler"
-          type="button"
-          data-toggle="collapse"
-          data-target="#collapsibleNavbar"
-          aria-controls="collapsibleNavbar"
-          aria-expanded="false"
-          aria-label="Toggle navigation">
-          <span class="navbar-toggler-icon"></span>
-        </button>
         <!-- Navbar links -->
         <div
           class="collapse navbar-collapse navbar-buttons"
           id="collapsibleNavbar">
-          <ul class="navbar-nav mr-auto">
+          <ul class="navbar-nav mr-auto fw-bold">
             <li class="nav-item">
               <a class="nav-link" href="index.html" style="margin-left: 29px"
                 >Home</a
@@ -190,51 +168,68 @@
       </div>
     </nav>
 
-    <main>
-      <!--Cart-->
-      <section class="cart-panel">
-        <div class="container-fluid">
-          <div class="container mt-3">
-            <div class="d-flex align-items-center mb-3">
+    <main class="cart-page-bg">
+      <div class="cart-header-banner shadow-sm">
+        <div class="container-fluid px-lg-5">
+          <div class="d-flex align-items-center py-3">
+            <a
+              href="index.html"
+              class="d-flex align-items-center text-decoration-none">
               <img
                 src="assets/img/hanz-goLogo.png"
-                alt="Logo"
-                class="shopLogo m-0 mr-4" />
-              <h2 class="shoppingCart display-5 mb-0">Shopping Cart</h2>
-            </div>
-            <hr class="admin-hr" />
-          </div>
-
-          <!-- Cart Table -->
-          <table
-            id="cart-table"
-            class="table table-striped table-sm text-center table-hover justify-content-center"
-            style="padding: 15px 50px; width: 80%">
-            <thead>
-              <tr>
-                <th><input type="checkbox" id="select-all" /> All</th>
-                <th>Product</th>
-                <th>Price</th>
-                <th>Quantity</th>
-                <th>Total</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              <!-- Cart items will be dynamically inserted here -->
-            </tbody>
-          </table>
-
-          <!-- Cart Total Section & CheckOut Button -->
-          <div class="float-right pt-3">
-            <p id="selected-total" class="h5 fw-bold"></p>
-            <span id="total-amount" class="fw-bold h5"></span>
-            <a class="btn btn-success w-100 mt-2" href="#" id="checkout-btn"
-              >Check Out</a
-            >
+                alt="HG Logo"
+                style="height: 45px" />
+              <div
+                class="mx-3"
+                style="border-left: 2px solid #ccc; height: 35px"></div>
+              <h3 class="mb-0 text-dark" style="font-weight: 400">
+                Shopping Cart
+              </h3>
+            </a>
           </div>
         </div>
-      </section>
+      </div>
+
+      <div class="container-fluid px-lg-5 py-4">
+        <div class="row">
+          <div class="col-lg-8 mb-4" id="cart-items-container"></div>
+
+          <div class="col-lg-4">
+            <div class="card order-summary-card shadow-sm border-0">
+              <div class="card-body p-4">
+                <h5 class="card-title fw-bold mb-4">Order Summary</h5>
+                <div class="d-flex justify-content-between mb-2">
+                  <span class="text-muted">Subtotal:</span>
+                  <span id="subtotal-display" class="fw-bold">₱0</span>
+                </div>
+                <!-- <div class="d-flex justify-content-between mb-3">
+                  <span class="text-muted">Shipping:</span>
+                  <span class="small text-muted">(Calculated at checkout)</span>
+                </div> -->
+                <hr />
+                <div
+                  class="d-flex justify-content-between align-items-center mb-4">
+                  <span class="h5 fw-bold mb-0">Total Amount:</span>
+                  <span id="total-amount" class="h4 fw-bold mb-0 text-dark"
+                    >₱0</span
+                  >
+                </div>
+                <button
+                  class="btn btn-success w-100 py-3 fw-bold checkout-btn-custom"
+                  id="checkout-btn">
+                  Proceed to Checkout
+                </button>
+              </div>
+            </div>
+
+            <div class="text-center mt-4">
+              <p class="text-muted fst-italic" id="item-count-footer">
+                You have 0 items in your cart.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
     </main>
 
     <!--Footer-->
