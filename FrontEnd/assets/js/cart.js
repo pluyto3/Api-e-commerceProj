@@ -79,16 +79,37 @@ function loadCartItems() {
       let totalAmount = 0;
 
       cartItems.forEach((item) => {
+        // Debugging: Look at this in your browser console to find your actual stock property name
+        console.log("Cart Item Data:", item);
+
         const id = item.addTocart_id;
         const name = item.product?.product_name ?? "Unnamed Product";
         const price = item.product?.product_price ?? 0;
         const quantity = item.quantity ?? 1;
+
+        // Safely parse the stock value from various common API property names
+        let stock = parseInt(
+          item.product?.product_quantity ||
+            item.product?.product_stock ||
+            item.product?.stocks ||
+            item.product?.quantity ||
+            item.product?.stock ||
+            item.product?.qty ||
+            item.stock,
+          10,
+        );
+
+        // Fallback to 999 only if the stock is completely missing or Not-a-Number
+        if (isNaN(stock)) {
+          stock = 999;
+        }
+
         const subtotal = item.subtotal ?? price * quantity;
         totalAmount += subtotal;
 
         // Note: Included the checkbox to maintain your "selected checkout" logic
         const cardHtml = `
-          <div class="cart-item-card">
+          <div class="cart-item-card" data-price="${price}" data-stock="${stock}">
             <div class="checkbox me-3 d-flex align-items-center justify-content-center">
                <input type="checkbox" class="select-item form-check-input m-0" style="transform: scale(1.2);" data-id="${id}" data-price="${subtotal}">
             </div>
@@ -104,9 +125,9 @@ function loadCartItems() {
 
             <div class="mx-4">
                 <div class="quantity-pill-container">
-                    <button class="changeQuantity" data-id="${id}" data-action="minus">-</button>
+                    <button class="changeQuantity minus-btn" data-id="${id}" data-action="minus" ${quantity <= 1 ? "disabled" : ""}>-</button>
                     <span class="quantity">${quantity}</span>
-                    <button class="changeQuantity" data-id="${id}" data-action="plus">+</button>
+                    <button class="changeQuantity plus-btn" data-id="${id}" data-action="plus" ${quantity >= stock ? "disabled" : ""}>+</button>
                 </div>
             </div>
 
@@ -137,12 +158,6 @@ function loadCartItems() {
     },
   });
 }
-
-// Update the event listener for quantity buttons
-$(document).on("click", ".changeQty", function () {
-  const id = $(this).data("id");
-  const action = $(this).data("action");
-});
 
 /* ============================================================
    MAIN SCRIPT (Document Ready)
@@ -293,30 +308,49 @@ $(document).ready(function () {
   ------------------------------ */
   $(document).on("click", ".changeQuantity", function () {
     const $btn = $(this);
-    const $row = $btn.closest("tr");
-    const $quantity = $row.find(".quantity");
-    const $price = $row.find(".selling-price");
-    const $subtotal = $row.find(".total_price");
+    const $card = $btn.closest(".cart-item-card");
+    const $quantity = $card.find(".quantity");
+    const $subtotal = $card.find(".total_price");
 
     const cartId = $btn.data("id");
-    let quantity = parseInt($quantity.text());
-    const price = parseFloat($price.text().replace(/[^0-9.]/g, ""));
+    const action = $btn.data("action");
+    let quantity = parseInt($quantity.text(), 10);
+    const price = parseFloat($card.data("price"));
 
-    if ($btn.text() === "+") quantity++;
-    else if ($btn.text() === "-" && quantity > 1) quantity--;
-    else return;
+    let maxStock = parseInt($card.attr("data-stock"), 10);
+    if (isNaN(maxStock)) {
+      maxStock = 999;
+    }
 
-    // Update UI immediately
-    $quantity.text(quantity);
+    // Prevent spam clicking
+    if ($card.data("loading")) return;
+    $card.data("loading", true);
 
-    const newTotal = price * quantity;
-    const formattedTotal = `₱${newTotal.toLocaleString("en-PH", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
-    $subtotal.text(formattedTotal);
+    let newQuantity = quantity;
 
-    // Send update to backend
+    if (action === "plus") {
+      if (quantity >= maxStock) {
+        Swal.fire(
+          "Stock Limit",
+          `Only ${maxStock} items available.`,
+          "warning",
+        );
+        $card.data("loading", false);
+        return;
+      }
+      newQuantity = quantity + 1;
+    } else if (action === "minus") {
+      if (quantity <= 1) {
+        $card.data("loading", false);
+        return;
+      }
+      newQuantity--;
+    } else {
+      $card.data("loading", false);
+      return;
+    }
+
+    // SEND FIRST, UPDATE UI AFTER SUCCESS
     $.ajax({
       url: `${ip}/api/cart/${cartId}`,
       method: "POST",
@@ -325,13 +359,43 @@ $(document).ready(function () {
         Accept: "application/json",
         "Content-Type": "application/json",
       },
-      data: JSON.stringify({ cart_id: cartId, quantity }),
+      data: JSON.stringify({ cart_id: cartId, quantity: newQuantity }),
+
       success: function (response) {
-        console.log("🧮 Cart Updated:", response);
-        if (response.status === 200) updateTotalAmount();
+        if (response.status === 200) {
+          // ✅ NOW update UI safely
+          $quantity.text(newQuantity);
+
+          const newTotal = price * newQuantity;
+          $subtotal.text(
+            `₱${newTotal.toLocaleString("en-PH", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}`,
+          );
+
+          $card.find(".minus-btn").prop("disabled", newQuantity <= 1);
+          $card.find(".plus-btn").prop("disabled", newQuantity >= maxStock);
+
+          $card.find(".select-item").data("price", newTotal);
+
+          updateTotalAmount();
+        }
       },
+
       error: function (xhr) {
-        console.error("❌ Error updating cart item:", xhr.responseText);
+        console.error("Error updating cart:", xhr.responseText);
+
+        Swal.fire(
+          "Error",
+          "Unable to update quantity. Please try again.",
+          "error",
+        );
+      },
+
+      complete: function () {
+        //  Re-enable clicks
+        $card.data("loading", false);
       },
     });
   });
@@ -341,12 +405,13 @@ $(document).ready(function () {
   ------------------------------ */
   function updateTotalAmount() {
     let total = 0;
-    $("#cart-table tbody tr").each(function () {
+    $(".cart-item-card").each(function () {
       const subtotalText = $(this).find(".total_price").text().trim();
       const subtotal = parseFloat(subtotalText.replace(/[^0-9.]/g, ""));
       total += subtotal;
     });
-    $("#total-amount").text(`Total: ₱${total.toLocaleString()}`);
+    $("#subtotal-display").text(`₱${total.toLocaleString()}`);
+    $("#total-amount").text(`₱${total.toLocaleString()}`);
   }
 
   /* ------------------------------
