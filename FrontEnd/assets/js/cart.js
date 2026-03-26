@@ -88,20 +88,25 @@ function loadCartItems() {
         const quantity = item.quantity ?? 1;
 
         // Safely parse the stock value from various common API property names
-        let stock = parseInt(
-          item.product?.product_quantity ||
-            item.product?.product_stock ||
-            item.product?.stocks ||
-            item.product?.quantity ||
-            item.product?.stock ||
-            item.product?.qty ||
-            item.stock,
-          10,
-        );
+        let stock = 999; // Fallback
+        const possibleStocks = [
+          item.product?.product_quantity,
+          item.product?.product_stock,
+          item.product?.stocks,
+          item.product?.quantity,
+          item.product?.stock,
+          item.product?.qty,
+          item.stock,
+        ];
 
-        // Fallback to 999 only if the stock is completely missing or Not-a-Number
-        if (isNaN(stock)) {
-          stock = 999;
+        for (const s of possibleStocks) {
+          if (s !== undefined && s !== null && s !== "") {
+            const parsed = parseInt(s, 10);
+            if (!isNaN(parsed)) {
+              stock = parsed;
+              break;
+            }
+          }
         }
 
         const subtotal = item.subtotal ?? price * quantity;
@@ -362,7 +367,56 @@ $(document).ready(function () {
       data: JSON.stringify({ cart_id: cartId, quantity: newQuantity }),
 
       success: function (response) {
-        if (response.status === 200) {
+        // Catch cases where the API returns 200 OK but contains a stock error flag/message
+        const isErrorPayload =
+          response.status === 400 ||
+          response.status === 422 ||
+          response.status === "error" ||
+          response.status === "failed" ||
+          response.success === false ||
+          response.error;
+        if (isErrorPayload) {
+          Swal.fire(
+            "Stock Limit",
+            response.message ||
+              response.msg ||
+              response.error ||
+              "Cannot increase quantity further. Limit reached.",
+            "warning",
+          );
+          if (action === "plus") {
+            $card.find(".plus-btn").prop("disabled", true);
+            $card.attr("data-stock", quantity); // Lock the frontend maxStock to the current successful quantity
+          }
+          return;
+        }
+
+        // If the backend implicitly capped the quantity to the available limit, catch it here
+        let confirmedQuantity = newQuantity;
+        if (response && response.data && response.data.quantity !== undefined) {
+          confirmedQuantity = parseInt(response.data.quantity, 10);
+        } else if (
+          response &&
+          response.cart &&
+          response.cart.quantity !== undefined
+        ) {
+          confirmedQuantity = parseInt(response.cart.quantity, 10);
+        } else if (response && response.quantity !== undefined) {
+          confirmedQuantity = parseInt(response.quantity, 10);
+        }
+
+        if (action === "plus" && confirmedQuantity < newQuantity) {
+          Swal.fire(
+            "Stock Limit",
+            response.message || `Only ${confirmedQuantity} items available.`,
+            "warning",
+          );
+          $card.find(".plus-btn").prop("disabled", true);
+          $card.attr("data-stock", confirmedQuantity);
+          newQuantity = confirmedQuantity; // Fallback the UI update to the allowed amount
+        }
+
+        if (response.status === 200 || response.success || !response.status) {
           // ✅ NOW update UI safely
           $quantity.text(newQuantity);
 
@@ -375,9 +429,16 @@ $(document).ready(function () {
           );
 
           $card.find(".minus-btn").prop("disabled", newQuantity <= 1);
-          $card.find(".plus-btn").prop("disabled", newQuantity >= maxStock);
 
-          $card.find(".select-item").data("price", newTotal);
+          let updatedMaxStock = parseInt($card.attr("data-stock"), 10);
+          $card
+            .find(".plus-btn")
+            .prop("disabled", newQuantity >= updatedMaxStock);
+
+          $card
+            .find(".select-item")
+            .data("price", newTotal)
+            .attr("data-price", newTotal);
 
           updateTotalAmount();
         }
@@ -386,11 +447,31 @@ $(document).ready(function () {
       error: function (xhr) {
         console.error("Error updating cart:", xhr.responseText);
 
-        Swal.fire(
-          "Error",
-          "Unable to update quantity. Please try again.",
-          "error",
-        );
+        let errorMsg = "Unable to update quantity. Please try again.";
+        // Extract the exact error message from the backend if it sends one
+        if (
+          xhr.responseJSON &&
+          (xhr.responseJSON.message ||
+            xhr.responseJSON.msg ||
+            xhr.responseJSON.error)
+        ) {
+          if (xhr.responseJSON.errors && xhr.responseJSON.errors.quantity) {
+            errorMsg = xhr.responseJSON.errors.quantity[0];
+          } else {
+            errorMsg =
+              xhr.responseJSON.message ||
+              xhr.responseJSON.msg ||
+              xhr.responseJSON.error;
+          }
+        }
+
+        Swal.fire("Stock Limit", errorMsg, "warning");
+
+        // Forcefully disable the plus button since the backend rejected the increment
+        if (action === "plus") {
+          $card.find(".plus-btn").prop("disabled", true);
+          $card.attr("data-stock", quantity);
+        }
       },
 
       complete: function () {
