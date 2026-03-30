@@ -27,6 +27,7 @@ class CheckoutController extends Controller
                     'barangay'       => 'required|string|max:100',
                     'city'           => 'required|string|max:100',
                     'province'       => 'required|string|max:100',
+                    'zipcode'        => 'required|string|max:10',
                     'phone'   => 'required|string|max:20',
                     'total_amount'   => 'required|numeric|min:0',
                     'item_ids'       => 'required|array|min:1',
@@ -40,6 +41,7 @@ class CheckoutController extends Controller
                 $checkout->barangay = $request->barangay;
                 $checkout->city = $request->city;
                 $checkout->province = $request->province;
+                $checkout->zipcode = $request->zipcode;
                 $checkout->phone_number = $request->phone;
                 $checkout->total_amount = $request->total_amount;
                 $checkout->status = 'pending'; 

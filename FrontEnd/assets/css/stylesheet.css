@@ -22,7 +22,7 @@ body {
 
 body {
   font-family: Arial, sans-serif;
-  background-color: silver;
+  background-color: rgb(235, 243, 243);
 }
 
 /* Main Page Background */
@@ -287,6 +287,100 @@ input[type="submit"] {
 .navbar-dark .navbar-nav .nav-link.active,
 .navbar i:hover {
   color: coral;
+}
+
+/* Styles for the checkout stepper */
+.checkout-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 0;
+  font-size: 1rem;
+}
+.checkout-stepper .step {
+  color: #6c757d; /* Muted gray for non-active steps */
+  text-decoration: none;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid transparent;
+  transition: all 0.3s ease;
+  margin: 0 15px;
+}
+.checkout-stepper .step:hover:not(.disabled) {
+  color: #343a40; /* Darker on hover */
+  text-decoration: none;
+}
+.checkout-stepper .step.active {
+  color: #000;
+  font-weight: bold;
+  border-bottom: 2px solid #000;
+}
+.checkout-stepper .step.disabled {
+  color: #adb5bd; /* Lighter gray for disabled */
+  pointer-events: none; /* Make it unclickable */
+  cursor: not-allowed;
+}
+.checkout-stepper i.fa-chevron-right {
+  color: #ced4da; /* Light gray for arrows */
+}
+/* Smooth page transition effect */
+body {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Card UI Upgrades */
+.ui-card {
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  background: #fff;
+  padding: 25px;
+}
+.ui-card-gray {
+  background-color: #f8fafc;
+  border: none;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+}
+
+/* Form Styling */
+.form-control {
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background-color: #fff !important;
+  padding: 10px 15px;
+}
+.form-control:focus {
+  border-color: #0284c7;
+  box-shadow: 0 0 0 0.2rem rgba(2, 132, 199, 0.25);
+}
+.form-group label {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin-bottom: 5px;
+}
+
+/* Primary Button */
+.btn-primary-custom {
+  background-color: #0275d8;
+  color: white;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 1.1rem;
+  transition: all 0.3s;
+}
+.btn-primary-custom:hover {
+  background-color: #025aa5;
+  color: white;
 }
 
 /* Header Ends Here */

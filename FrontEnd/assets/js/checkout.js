@@ -84,6 +84,9 @@ $(document).ready(function () {
   }
 
   let totalAmount = 0;
+  let defaultAddressInfo = null;
+  let defaultAccountInfo = null;
+  let allCartItems = []; // Declare here to make it accessible later
 
   $(document)
     .ajaxStart(() => $("#wait").show())
@@ -125,68 +128,161 @@ $(document).ready(function () {
     console.error("No username found in cookie.");
   }
 
-  // Display Information in CheckOut Page
-  $.ajax({
+  // Combine AJAX calls for user info and address
+  const accountRequest = $.ajax({
     url: `${ip}/api/getAccount_username/${usr}`,
     method: "GET",
     headers: {
       Authorization: "Bearer " + token,
       Accept: "application/json",
     },
-    success: function (response) {
-      console.log("User response:", response);
-      $("#name").val(response.fullname || "");
-      $("#phone").val(response.phone_number || "");
-    },
   });
 
-  // Populate Address Fields with the DEFAULT address
-  $.ajax({
+  const locationRequest = $.ajax({
     url: `${ip}/api/location`,
     method: "GET",
     headers: {
       Accept: "application/json",
       Authorization: `Bearer ${token}`,
     },
-    success: function (response) {
-      // console.log("Full location response:", response);
+  });
 
-      // (This logic assumes your API returns { data: [...] } like your previous function)
+  $.when(accountRequest, locationRequest)
+    .done(function (accountAjax, locationAjax) {
+      const accountResponse = accountAjax[0];
+      const locationResponse = locationAjax[0];
+
+      // Store default account info
+      defaultAccountInfo = {
+        fullname: accountResponse.fullname || "",
+        phone_number: accountResponse.phone_number || "",
+      };
+
+      // Find and store default address info
       let locations = [];
-      if (response && response.data && Array.isArray(response.data)) {
-        locations = response.data;
-      } else if (Array.isArray(response)) {
-        locations = response; // In case the API just returns the array
-      } else {
-        console.error(
-          "Unexpected response format. Expected an array or { data: [...] }",
-        );
-        return;
+      if (
+        locationResponse &&
+        locationResponse.data &&
+        Array.isArray(locationResponse.data)
+      ) {
+        locations = locationResponse.data;
+      } else if (Array.isArray(locationResponse)) {
+        locations = locationResponse;
       }
 
-      //Find the default address from the array
-      const defaultAddress = locations.find((addr) => addr.is_default == 1);
+      defaultAddressInfo = locations.find(
+        (addr) =>
+          addr.is_default == 1 ||
+          addr.is_default === true ||
+          addr.is_default === "1",
+      );
 
-      // Populate fields IF a default was found
-      if (defaultAddress) {
-        // console.log("Default address found:", defaultAddress);
-        $("#purok").val(defaultAddress.purok || "");
-        $("#barangay").val(defaultAddress.barangay || "");
-        $("#city").val(defaultAddress.city || "");
-        $("#province").val(defaultAddress.province || "");
+      if (!defaultAddressInfo && locations.length > 0) {
+        defaultAddressInfo = locations[0];
+      }
+
+      // Initially, check the box if we have a default address, otherwise uncheck and disable it
+      if (defaultAddressInfo) {
+        $("#sameAddress").prop("checked", true);
       } else {
-        console.log("No default address found in the list.");
-        // Clear fields if no default is set
+        $("#sameAddress").prop("checked", false).prop("disabled", true);
+      }
+      // Trigger change to set the initial state of the form
+      handleAddressCheckbox();
+    })
+    .fail(function (xhr) {
+      console.error(
+        "Error fetching account or location details:",
+        xhr.responseText,
+      );
+      // If requests fail, uncheck box, disable it, and enable fields for manual input
+      $("#sameAddress").prop("checked", false).prop("disabled", true);
+      handleAddressCheckbox();
+    });
+
+  // Function to validate form fields
+  function validateForm() {
+    let isValid = true;
+    const requiredFields = [
+      "#name",
+      "#phone",
+      "#purok",
+      "#barangay",
+      "#city",
+      "#province",
+    ];
+
+    requiredFields.forEach(function (fieldSelector) {
+      const $field = $(fieldSelector);
+      if ($field.val().trim() === "") {
+        $field.addClass("is-invalid");
+        isValid = false;
+      } else {
+        $field.removeClass("is-invalid");
+      }
+    });
+
+    if (!isValid) {
+      Swal.fire(
+        "Validation Error",
+        "Please fill in all required billing and shipping address fields.",
+        "error",
+      );
+    }
+    return isValid;
+  }
+
+  // Checkbox change handler
+  $("#sameAddress").on("change", handleAddressCheckbox);
+
+  function handleAddressCheckbox() {
+    const isChecked = $("#sameAddress").is(":checked");
+    $("#sameAddress").prop("disabled", false);
+    // Select all input fields in the form, EXCEPT the 'sameAddress' checkbox
+    const formFields = $("#checkoutform input");
+
+    if (isChecked) {
+      // If checkbox is checked, fill with default info and disable fields
+      if (defaultAccountInfo) {
+        $("#name").val(defaultAccountInfo.fullname || "");
+        $("#phone").val(defaultAccountInfo.phone_number || "");
+      } else {
+        // If no default account info, clear name/phone and warn
+        $("#name").val("");
+        $("#phone").val("");
+        console.warn("No default account info found to pre-fill name/phone.");
+      }
+
+      if (defaultAddressInfo) {
+        $("#purok").val(defaultAddressInfo.purok || "");
+        $("#barangay").val(defaultAddressInfo.barangay || "");
+        $("#city").val(defaultAddressInfo.city || "");
+        $("#province").val(defaultAddressInfo.province || "");
+        $("#zipcode").val(defaultAddressInfo.zipcode || "");
+      } else {
+        // If no default address, clear address fields and warn
         $("#purok").val("");
         $("#barangay").val("");
         $("#city").val("");
         $("#province").val("");
+        console.warn("No default address found to pre-fill address fields.");
       }
-    },
-    error: function (xhr) {
-      console.error("Error fetching location:", xhr.responseText);
-    },
-  });
+
+      formFields.prop("disabled", true);
+      $("#sameAddress").prop("disabled", false);
+    } else {
+      // If checkbox is unchecked, enable fields and clear them for manual entry
+      formFields.prop("disabled", false);
+      $("#name").val("");
+      $("#phone").val("");
+      $("#purok").val("");
+      $("#barangay").val("");
+      $("#city").val("");
+      $("#sameAddress").prop("disabled", false);
+      $("#province").val("");
+      $("#zipcode").val("");
+    }
+  }
 
   // Display Cart Items in CheckOut Page
   $.ajax({
@@ -199,7 +295,7 @@ $(document).ready(function () {
     success: function (response) {
       console.log("Cart response:", response);
 
-      const allCartItems = response.cart || response.data || [];
+      allCartItems = response.cart || response.data || []; // Assign to the higher-scoped variable
 
       const cartItems = allCartItems.filter((item) =>
         selectedIds.includes(item.addTocart_id),
@@ -221,28 +317,33 @@ $(document).ready(function () {
         console.log("Cart item:", item);
 
         const listCartItems = `
-        <li class="list-group-item d-flex align-items-center" style="text-align: start">
-            <div>
-                <img src="${ip}/FrontEnd/assets/img/product/${
-                  item.product.image
-                }" alt="${name}" width="80px" height="90px">
-            </div>
-            <div class="flex-grow-1 cart-item-details" >
-              <p class="fw-bold">${name}</p>
-              <p>Price: ₱${price.toLocaleString()}</p>
-              <p>Quantity: ${quantity}</p>
-            </div>
-          <div class="cart-item-subtotal fw-bold ms-auto">
-            Total: ₱${subtotal.toLocaleString()}
+          <div class="d-flex align-items-center mb-3">
+              <img src="${ip}/FrontEnd/assets/img/product/${item.product.image}" alt="${name}" style="width: 65px; height: 65px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0;">
+              <div class="flex-grow-1 ml-3" style="line-height: 1.2;">
+                  <h6 class="font-weight-bold mb-1" style="font-size: 0.95rem;">${name}</h6>
+                  <small class="text-muted d-block">Price: ₱${price.toLocaleString()}</small>
+                  <small class="text-muted d-block">Qty: ${quantity}</small>
+              </div>
+              <div class="font-weight-bold ml-2">
+                  ₱${subtotal.toLocaleString()}
+              </div>
           </div>
-        </li>
         `;
 
         $(".cartItems").append(listCartItems);
-        $(".cartTotalPrice").text(
-          `Total Price: ₱${totalAmount.toLocaleString()}`,
-        );
       });
+
+      // Update Subtotal and Total calculations
+      const subtotal = totalAmount;
+      const shippingFee = 50; // This can be made dynamic based on address later.
+      const finalTotal = subtotal + shippingFee;
+
+      $("#ui-subtotal").text(`₱${subtotal.toLocaleString()}`);
+      $("#ui-shipping").text(`₱${shippingFee.toLocaleString()}`);
+      $("#ui-total").text(`₱${finalTotal.toLocaleString()}`);
+
+      // Update your global totalAmount variable so the correct final price is sent to your backend
+      totalAmount = finalTotal; // The backend expects the grand total.
     },
     error: function (xhr) {
       console.error("Error fetching cart items:", xhr.responseText);
@@ -251,6 +352,19 @@ $(document).ready(function () {
 
   $("#placeOrder").on("click", function (e) {
     e.preventDefault();
+
+    // Get the current cart items for confirmation page display
+    // This assumes cartItems is populated from the earlier AJAX call
+    const currentCartItems = $(".cartItems")
+      .children()
+      .map(function () {
+        return $(this).data("item-details"); // Assuming you store item details with .data()
+      })
+      .get();
+    // Validate form fields before proceeding
+    if (!validateForm()) {
+      return; // Stop execution if validation fails
+    }
 
     // Get the selected item IDs from sessionStorage
     const selectedItemsJSON = sessionStorage.getItem("selectedCartItems");
@@ -292,17 +406,25 @@ $(document).ready(function () {
     const barangay = $("#barangay").val();
     const city = $("#city").val();
     const province = $("#province").val();
+    const zipcode = $("#zipcode").val();
     const paymentMethod = $("input[name='paymentMethod']:checked").val();
 
     const checkoutData = {
+      // Include name for the backend if needed, but for confirmation page, we'll use the form value
+      // name: $("#name").val(),
+      // email: $("#email").val(), // If you add an email field
+      fullname: $("#name").val(), // Assuming name is for recipient
+      username: usr, // Pass username for backend association
       phone: phone,
       purok: purok,
       barangay: barangay,
       city: city,
       province: province,
+      zipcode: zipcode,
       payment_method: paymentMethod,
       total_amount: totalAmount,
       item_ids: selectedItemIDs,
+      shipping_fee: 50, // Assuming fixed shipping fee for now
     };
 
     console.log("Checkout Data:", checkoutData);
@@ -319,21 +441,58 @@ $(document).ready(function () {
       success: function (response) {
         console.log("Checkout response:", response);
 
+        // Prepare data for the confirmation page
+        const confirmedOrderDetails = {
+          orderId: response.order_id || "N/A", // Assuming backend returns order_id
+          customerName: $("#name").val(),
+          totalAmount: totalAmount,
+          paymentMethod: paymentMethod,
+          shippingFee: 50, // Consistent with calculation
+          shipping: {
+            name: $("#name").val(),
+            phone: $("#phone").val(),
+            purok: $("#purok").val(),
+            barangay: $("#barangay").val(),
+            city: $("#city").val(),
+            province: $("#province").val(),
+            zipcode: $("#zipcode").val(),
+          },
+          // Filter cart items to only include those that were selected for this order
+          orderedItems: allCartItems
+            .filter((item) => selectedItemIDs.includes(item.addTocart_id))
+            .map((item) => ({
+              name: item.product.product_name,
+              price: item.product.product_price,
+              quantity: item.quantity,
+              subtotal: item.subtotal,
+              image: item.product.image,
+            })),
+        };
+        sessionStorage.setItem(
+          "lastConfirmedOrder",
+          JSON.stringify(confirmedOrderDetails),
+        );
+
         Swal.fire({
           icon: "success",
           title: "Order Placed Successfully",
           text: "Thank you for your purchase!",
           showConfirmButton: true,
         }).then(() => {
-          // Clear selected cart items from sessionStorage
-          sessionStorage.removeItem("selectedCartItems");
-          window.location.href = "cart.html";
+          sessionStorage.removeItem("selectedCartItems"); // Clear selected items
+          window.location.href = "orderConfirmation.html"; // Redirect to confirmation page
         });
-        // window.location.href = "index.html"; // Redirect to homepage or order confirmation page
       },
       error: function (xhr) {
         console.error("Error during checkout:", xhr.responseText);
-        alert("Failed to place order. Please try again.");
+        Swal.fire({
+          icon: "error",
+          title: "Checkout Failed",
+          text: "An error occurred while processing your order. Please try again.",
+          showConfirmButton: true,
+        }).then(() => {
+          window.location.href = "checkout.html";
+        });
       },
     });
   });
@@ -355,5 +514,36 @@ $(document).ready(function () {
       console.log("Cart items fetched successfully:", response);
       updateCartCount(response.count);
     },
+  });
+
+  // --- Logout Functionality ---
+  $("#logout").click(function () {
+    $.ajax({
+      beforeSend: function (xhr) {
+        xhr.setRequestHeader("Authorization", "Bearer " + token);
+      },
+      type: "POST",
+      url: ip + "/api/logout",
+      data: { token: token },
+      success: function () {
+        Swal.fire({
+          icon: "success",
+          title: "Logout Successful",
+        }).then(() => {
+          var cookies = $.cookie();
+          for (var cookie in cookies) {
+            $.removeCookie(cookie);
+          }
+          window.location.replace("index.html");
+        });
+      },
+      error: function (res) {
+        let msg =
+          res.responseJSON && res.responseJSON.msg
+            ? res.responseJSON.msg
+            : "Logout failed. Please try again.";
+        alert(msg);
+      },
+    });
   });
 });

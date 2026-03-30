@@ -32,7 +32,7 @@
     <script src="assets/js/jquery.cookie.min.js"></script>
 
     <!-- 3. Your Custom Script LAST -->
-    <script src="assets/js/checkout.js"></script>
+    <script src="assets/js/orderConfirmation.js"></script>
   </head>
   <body onload="load_user()">
     <!--Navbar-->
@@ -187,196 +187,114 @@
       </div>
     </nav>
 
-    <!-- CheckOut -->
+    <!-- Confirmation -->
     <section class="my-2 py-2">
-      <div class="container">
-        <!-- Navigation Tab -->
-        <div class="checkout-stepper">
-          <a href="cart.html" class="step">Shopping Cart</a>
-          <i class="fas fa-chevron-right"></i>
-          <a href="checkout.html" class="step active">CheckOut</a>
-          <i class="fas fa-chevron-right"></i>
-          <a href="orderConfirmation.html" class="step">Confirmation</a>
-        </div>
+      <!-- Navigation Tab -->
+      <div class="checkout-stepper">
+        <a href="cart.html" class="step">Shopping Cart</a>
+        <i class="fas fa-chevron-right"></i>
+        <a href="checkout.html" class="step">CheckOut</a>
+        <i class="fas fa-chevron-right"></i>
+        <a href="orderConfirmation.html" class="step active">Confirmation</a>
+      </div>
 
-        <hr style="border-top: 1px solid #9e9898" />
+      <hr style="border-top: 1px solid #9e9898" />
 
-        <!-- Main Content -->
-        <div class="row">
-          <!-- Billing & Shipping Address -->
-          <div class="col-7 mb-4">
-            <div class="ui-card">
-              <!-- Billing & Shipping Address Form -->
-              <h4 class="font-weight-bold text-center mb-4">
-                BILLING & SHIPPING ADDRESS
-              </h4>
-              <form action="#" id="checkoutform">
-                <div class="row">
-                  <!-- FullName -->
-                  <div class="form-group col-md-6">
-                    <label for="name">Enter Fullname</label>
-                    <input
-                      type="text"
-                      class="form-control"
-                      name="name"
-                      id="name"
-                      placeholder="Name"
-                      required />
-                  </div>
+      <!-- Confirmation Content -->
+      <div class="container d-flex justify-content-center">
+        <div class="row w-100 justify-content-center">
+          <div class="col-md-6">
+            <div
+              class="card shadow-sm border-0 text-center p-4"
+              style="border-radius: 15px; position: relative; overflow: hidden">
+              <div
+                style="
+                  position: absolute;
+                  top: 10px;
+                  right: 10px;
+                  font-size: 2rem;
+                "></div>
 
-                  <!-- Phone Number -->
-                  <div class="form-group col-md-6">
-                    <label for="phone">Enter Phone Number</label>
-                    <input
-                      type="text"
-                      class="form-control"
-                      name="phone"
-                      id="phone"
-                      placeholder="Phone Number"
-                      required />
-                  </div>
-
-                  <!-- Purok -->
-                  <div class="form-group col-md-6 mt-2">
-                    <label for="purok">Purok</label>
-                    <input
-                      type="text"
-                      class="form-control"
-                      name="purok"
-                      id="purok"
-                      placeholder="Purok"
-                      required />
-                  </div>
-
-                  <!-- Barangay -->
-                  <div class="form-group col-md-6 mt-2">
-                    <label for="barangay">Barangay</label>
-                    <input
-                      type="text"
-                      class="form-control"
-                      name="barangay"
-                      id="barangay"
-                      placeholder="Barangay"
-                      required />
-                  </div>
-
-                  <!-- City -->
-                  <div class="form-group col-md-6 mt-2">
-                    <label for="city">City</label>
-                    <input
-                      type="text"
-                      class="form-control"
-                      name="city"
-                      id="city"
-                      placeholder="City"
-                      required />
-                  </div>
-
-                  <!-- Province -->
-                  <div class="form-group col-md-6 mt-2">
-                    <label for="province">Province</label>
-                    <input
-                      type="text"
-                      class="form-control"
-                      name="province"
-                      id="province"
-                      placeholder="Province"
-                      required />
-                  </div>
-
-                  <!-- Zipcode -->
-                  <div class="form-group col-md-6 mt-2">
-                    <label for="zipcode">Zipcode</label>
-                    <input
-                      type="text"
-                      class="form-control"
-                      name="zipcode"
-                      id="zipcode"
-                      placeholder="Zipcode"
-                      required />
-                  </div>
-                </div>
-
-                <!-- Same Address Checkbox -->
-                <div class="custom-control custom-checkbox mt-3">
-                  <input
-                    type="checkbox"
-                    class="custom-control-input"
-                    id="sameAddress" />
-                  <label
-                    class="custom-control-label"
-                    for="sameAddress"
-                    style="color: #000"
-                    >Shipping address is the same as billing address</label
-                  >
-                </div>
-              </form>
-            </div>
-          </div>
-          <!-- Order Summary -->
-          <div class="col-5">
-            <div class="ui-card ui-card-gray">
-              <h4 class="font-weight-bold text-center mb-4">ORDER SUMMARY</h4>
-
-              <div class="cartItems mb-4"></div>
-
-              <hr style="border-color: #cbd5e1" />
-
-              <div class="d-flex justify-content-between mb-2">
-                <span class="text-muted">Subtotal</span>
-                <span class="font-weight-bold" id="ui-subtotal">₱0</span>
+              <div class="mb-3">
+                <i
+                  class="fas fa-check-circle text-success"
+                  style="font-size: 4rem"></i>
               </div>
-              <div class="d-flex justify-content-between mb-3">
-                <span class="text-muted">Shipping</span>
-                <span class="font-weight-bold" id="ui-shipping">₱0</span>
-              </div>
+
+              <h2 class="font-weight-bold mb-1">ORDER CONFIRMED!</h2>
+              <p class="text-muted mb-4">Thank You for Your Order, Eljun!</p>
+
+              <p class="small mb-4">
+                Your order ID is <strong id="confirmationOrderId"></strong>. We
+                have sent a confirmation email to your registered address.
+              </p>
 
               <div
-                class="d-flex justify-content-between mb-4 align-items-center">
-                <h5 class="font-weight-bold mb-0">Total</h5>
-                <h4 class="font-weight-bold mb-0" id="ui-total">₱0</h4>
+                class="text-left bg-light p-3 rounded mb-4"
+                style="font-size: 0.9rem">
+                <div class="d-flex justify-content-between mb-1">
+                  <strong>Order Summary</strong>
+                </div>
+                <div id="confirmationOrderItems" class="mb-2">
+                  <!-- Dynamic items will be inserted here by JS -->
+                </div>
+                <div
+                  class="d-flex justify-content-between border-bottom pb-1 mb-1">
+                  <span class="text-muted">Shipping Fee:</span>
+                  <span class="font-weight-bold" id="confirmationShippingFee"
+                    >₱0</span
+                  >
+                </div>
+                <div
+                  class="d-flex justify-content-between border-bottom pb-1 mb-1">
+                  <span class="text-muted">Order Total:</span>
+                  <span class="font-weight-bold" id="confirmationOrderTotal"
+                    >₱0</span
+                  >
+                </div>
+                <div class="d-flex justify-content-between">
+                  <span class="text-muted">Payment Method:</span>
+                  <span id="confirmationPaymentMethod"
+                    >Cash on Delivery (COD)
+                    <i class="fas fa-money-bill-wave ml-1"></i
+                  ></span>
+                </div>
+
+                <div class="mt-3"><strong>Shipping Details</strong></div>
+                <div class="d-flex justify-content-between">
+                  <span class="text-muted">Recipient:</span>
+                  <span id="confirmationRecipientName"></span>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <span class="text-muted">Phone:</span>
+                  <span id="confirmationRecipientPhone"></span>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <span class="text-muted">Address:</span>
+                  <span
+                    class="text-right"
+                    id="confirmationRecipientAddress"></span>
+                </div>
+                <div
+                  class="d-flex justify-content-between text-primary font-weight-bold">
+                  <span>Estimated Delivery:</span>
+                  <span id="confirmationEstimatedDelivery"></span>
+                </div>
               </div>
 
-              <h6 class="font-weight-bold mb-3">SELECT A PAYMENT METHOD</h6>
+              <a
+                href="shop.html"
+                class="btn btn-primary btn-block py-2 font-weight-bold"
+                style="background-color: #0076ad; border: none">
+                Continue Shopping
+              </a>
 
-              <div class="custom-control custom-radio mb-2">
-                <input
-                  type="radio"
-                  id="cod"
-                  name="paymentMethod"
-                  value="cod"
-                  class="custom-control-input"
-                  checked />
-                <label
-                  class="custom-control-label d-flex align-items-center"
-                  for="cod">
-                  Cash on Delivery
-                </label>
-              </div>
-
-              <div class="custom-control custom-radio mb-4">
-                <input
-                  type="radio"
-                  id="gcash"
-                  name="paymentMethod"
-                  value="gcash"
-                  class="custom-control-input"
-                  disabled />
-                <label
-                  class="custom-control-label d-flex align-items-center"
-                  for="gcash">
-                  GCash
-                </label>
-              </div>
-
-              <button
-                id="placeOrder"
-                class="btn btn-primary-custom btn-block font-weight-bold d-flex justify-content-center align-items-center">
-                PLACE ORDER
-                <i
-                  class="fas fa-chevron-right ml-2"
-                  style="font-size: 0.8rem"></i>
-              </button>
+              <p class="mt-3 small">
+                Need help?
+                <a href="contact.html" class="text-info"
+                  >Contact our support.</a
+                >
+              </p>
             </div>
           </div>
         </div>

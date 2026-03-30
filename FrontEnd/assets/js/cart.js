@@ -148,15 +148,13 @@ function loadCartItems() {
         $container.append(cardHtml);
       });
 
-      // Update the Order Summary texts
-      $("#subtotal-display").text(`₱${totalAmount.toLocaleString()}`);
-      $("#total-amount").text(`₱${totalAmount.toLocaleString()}`);
       $("#item-count-footer").text(
         `You have ${cartItems.length} items in your cart.`,
       );
 
-      // Checkboxes unchecked by default
+      // Checkboxes unchecked by default and update selected total
       $(".select-item").prop("checked", false);
+      updateSelectedTotal();
     },
     error: function (xhr) {
       console.error("Error fetching cart items:", xhr.responseText);
@@ -175,6 +173,13 @@ $(document).ready(function () {
   ------------------------------ */
   load_user();
   loadCartItems();
+
+  /* ------------------------------
+     Select Item Checkbox
+  ------------------------------ */
+  $(document).on("change", ".select-item", function () {
+    updateSelectedTotal();
+  });
 
   $(document)
     .ajaxStart(() => $("#wait").show())
@@ -440,7 +445,7 @@ $(document).ready(function () {
             .data("price", newTotal)
             .attr("data-price", newTotal);
 
-          updateTotalAmount();
+          updateSelectedTotal();
         }
       },
 
@@ -484,15 +489,27 @@ $(document).ready(function () {
   /* ------------------------------
      Update Total Amount
   ------------------------------ */
-  function updateTotalAmount() {
-    let total = 0;
-    $(".cart-item-card").each(function () {
-      const subtotalText = $(this).find(".total_price").text().trim();
-      const subtotal = parseFloat(subtotalText.replace(/[^0-9.]/g, ""));
-      total += subtotal;
+  function updateSelectedTotal() {
+    let selectedTotal = 0;
+    const $selectedItems = $("input.select-item:checked");
+
+    $selectedItems.each(function () {
+      selectedTotal += parseFloat($(this).data("price"));
     });
-    $("#subtotal-display").text(`₱${total.toLocaleString()}`);
-    $("#total-amount").text(`₱${total.toLocaleString()}`);
+
+    if ($selectedItems.length > 0) {
+      $("#subtotal-display").text(`₱${selectedTotal.toLocaleString()}`);
+      $("#total-amount").text(`₱${selectedTotal.toLocaleString()}`);
+      $("#subtotal-row").show();
+      $("#total-row").show();
+      $("#summary-hr").show();
+    } else {
+      $("#subtotal-display").text("₱0");
+      $("#total-amount").text("₱0");
+      $("#subtotal-row").hide();
+      $("#total-row").hide();
+      $("#summary-hr").hide();
+    }
   }
 
   /* ------------------------------

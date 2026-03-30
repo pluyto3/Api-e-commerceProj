@@ -18,6 +18,7 @@ class Checkout extends Model
         'barangay',
         'city',
         'province',
+        'zipcode',
         'phone_number',
         'total_amount',
         'status',
