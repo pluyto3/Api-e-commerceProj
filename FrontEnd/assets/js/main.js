@@ -22,6 +22,7 @@ function load_user() {
   const $logout = $("#logout");
   const $cartCount = $("#cart-count");
   const $adminDashboard = $("#adminDashboard");
+  const $productUi = $("#productUi");
   const $navbarProfileImage = $("#navbarProfileImage");
   const $defaultProfileIcon = $("#defaultProfileIcon");
 
@@ -33,6 +34,7 @@ function load_user() {
     $logout.hide();
     $cartCount.hide();
     $adminDashboard.hide();
+    $productUi.hide();
     $navbarProfileImage.hide();
     $defaultProfileIcon.show();
     return;
@@ -55,6 +57,8 @@ function load_user() {
   role === "admin" || role === "seller"
     ? $adminDashboard.show()
     : $adminDashboard.hide();
+
+  role === "admin" || role === "seller" ? $productUi.show() : $productUi.hide();
 }
 
 /* ==========================================

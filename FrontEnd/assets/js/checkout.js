@@ -333,17 +333,14 @@ $(document).ready(function () {
         $(".cartItems").append(listCartItems);
       });
 
-      // Update Subtotal and Total calculations
+      // Update subtotal and total without adding shipping to the order summary.
       const subtotal = totalAmount;
-      const shippingFee = 50; // This can be made dynamic based on address later.
-      const finalTotal = subtotal + shippingFee;
 
       $("#ui-subtotal").text(`₱${subtotal.toLocaleString()}`);
-      $("#ui-shipping").text(`₱${shippingFee.toLocaleString()}`);
-      $("#ui-total").text(`₱${finalTotal.toLocaleString()}`);
+      $("#ui-total").text(`₱${subtotal.toLocaleString()}`);
 
-      // Update your global totalAmount variable so the correct final price is sent to your backend
-      totalAmount = finalTotal; // The backend expects the grand total.
+      // Keep the checkout payload aligned with the order summary.
+      totalAmount = subtotal;
     },
     error: function (xhr) {
       console.error("Error fetching cart items:", xhr.responseText);

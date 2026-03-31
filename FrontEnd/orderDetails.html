@@ -19,9 +19,6 @@
     <!-- jQuery -->
     <script src="assets/js/jquery-3.5.1.min.js"></script>
 
-    <!-- jQuery Cookie Plugin -->
-    <script src="assets/js/jquery.cookie.min.js"></script>
-
     <!-- DataTables -->
     <script src="assets/js/datatables.min.js"></script>
 
@@ -32,7 +29,7 @@
     <script src="assets/js/sweetalert2.all.js"></script>
     <script src="assets/js/owl.carousel.min.js"></script>
     <script src="assets/js/jquery.bxslider.min.js"></script>
-
+    <script src="assets/js/jquery.cookie.min.js"></script>
     <!-- 3. Your Custom Script LAST -->
     <script src="assets/js/orderDetails.js"></script>
   </head>
@@ -148,7 +145,7 @@
                   <i class="fa fa-user user-icon" aria-hidden="true"></i>
                   Profile
                 </a>
-                <a class="dropdown-item" href="account.html">
+                <a class="dropdown-item" href="orderDetails.html">
                   <i
                     class="fab fa-first-order user-orders"
                     aria-hidden="true"></i>
@@ -247,60 +244,35 @@
         </ul>
       </section>
 
-      <section class="working-panel">
+      <!-- Admin/Seller Working Panel -->
+      <section class="working-panel" id="adminWorkingPanel">
         <div class="container-fluid">
           <div class="d-flex justify-content-between align-items-center mb-3">
             <h1 class="display-4 mb-0">Order Management</h1>
           </div>
           <hr class="admin-hr" />
 
-          <!-- Search Bar -->
-          <!-- <div class="d-flex align-items-center mb-3">
-            <input
-              type="text"
-              class="form-control"
-              placeholder="Search your orders…" />
-          </div> -->
-
-          <!-- Order Management Section -->
-          <!-- Tabs -->
-          <!-- <div class="d-flex justify-content-between border-bottom mb-3 pb-2">
-            <button class="btn order-tab-btn active" data-status="All">
-              All
-            </button>
-            <button class="btn order-tab-btn" data-status="Unpaid">
-              Unpaid
-            </button>
-            <button class="btn order-tab-btn" data-status="To Ship">
-              To Ship
-            </button>
-            <button class="btn order-tab-btn" data-status="Shipped">
-              Shipped
-            </button>
-            <button class="btn order-tab-btn" data-status="To Review">
-              To Review
-            </button>
-          </div> -->
-
-          <!-- Orders List -->
-          <!-- <div id="buyerOrders"> -->
-          <!-- Orders will be dynamically inserted here -->
-          <!-- </div> -->
           <div class="card">
             <div
               class="card-header d-flex justify-content-between align-items-center">
               <h2 class="mb-0">Order List</h2>
-              <!-- Status Filter Dropdown -->
-              <select
-                id="statusFilter"
-                class="form-control ml-2"
-                style="width: 150px">
-                <option value="all">All</option>
-                <option value="pending">Pending</option>
-                <option value="to ship">To Ship</option>
-                <option value="shipped">Shipped</option>
-                <option value="completed">Completed</option>
-              </select>
+              <div class="d-flex align-items-center">
+                <input
+                  type="date"
+                  id="adminDateFilter"
+                  class="form-control ml-2"
+                  style="width: 170px" />
+                <select
+                  id="statusFilter"
+                  class="form-control ml-2"
+                  style="width: 150px">
+                  <option value="all">All</option>
+                  <option value="pending">Pending</option>
+                  <option value="to ship">To Ship</option>
+                  <option value="shipped">Shipped</option>
+                  <option value="completed">Completed</option>
+                </select>
+              </div>
             </div>
             <div class="card-body table-responsive">
               <table
@@ -436,6 +408,60 @@
           </div>
         </div>
       </div>
+
+      <!-- User Working Panel -->
+      <section
+        class="working-panel"
+        id="userWorkingPanel"
+        style="display: none">
+        <div class="container-fluid">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h1 class="display-4 mb-0">My Orders</h1>
+            <div class="d-flex flex-wrap">
+              <select
+                id="userSellerFilter"
+                class="form-control mr-2"
+                style="width: 180px">
+                <option value="">Filter by Seller</option>
+              </select>
+              <input
+                type="date"
+                id="userDateFilter"
+                class="form-control mr-2"
+                style="width: 180px" />
+              <input
+                type="text"
+                id="userOrderSearch"
+                class="form-control"
+                placeholder="Search Orders..."
+                style="width: 250px" />
+            </div>
+          </div>
+          <hr class="admin-hr" />
+
+          <div class="card shadow-sm">
+            <div class="card-body table-responsive p-0">
+              <table
+                class="table table-hover align-middle mb-0"
+                id="userOrdersTable">
+                <thead class="bg-light">
+                  <tr>
+                    <th class="text-center">Order ID</th>
+                    <th>Seller</th>
+                    <th class="text-center">Qty</th>
+                    <th class="text-right">Total</th>
+                    <th class="text-center">Status</th>
+                    <th class="text-center">Date</th>
+                    <th class="text-center">Tracking Number</th>
+                    <th class="text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="userOrderListBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
 
     <!--Footer-->

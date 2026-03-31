@@ -113,7 +113,7 @@ $(document).ready(function () {
   $("#confirmationCustomerName").text(order.customerName);
   $("#confirmationOrderId").text(`#${order.orderId}`);
   $("#confirmationOrderTotal").text(`₱${order.totalAmount.toLocaleString()}`);
-  $("#confirmationShippingFee").text(`₱${order.shippingFee.toLocaleString()}`);
+  // $("#confirmationShippingFee").text(`₱${order.shippingFee.toLocaleString()}`);
   $("#confirmationPaymentMethod").html(
     `${order.paymentMethod} <i class="fas fa-money-bill-wave ml-1"></i>`,
   ); // Assuming COD is the only one with icon

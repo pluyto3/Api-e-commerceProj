@@ -111,27 +111,33 @@ class CheckoutController extends Controller
         }
 
         // Load all checkouts with their items and product details
-        $orders = Checkout::with('items.product.brand')
+        $orders = Checkout::with(['items.product.brand', 'items.product.seller', 'items.seller'])
             ->where('user_id', $user->user_id)
             ->orderBy('checkout_id', 'DESC')
             ->get();
 
         $formattedOrders = $orders->map(function ($order) {
 
-            // Determine shop name (brand name)
-            $firstItem = $order->items->first();
-            $shopName = 'Unknown Shop';
+            $sellerNames = $order->items
+                ->map(function ($item) {
+                    return $item->seller?->username
+                        ?? $item->product?->seller?->username
+                        ?? null;
+                })
+                ->filter()
+                ->unique()
+                ->values();
 
-            if ($firstItem && $firstItem->product && $firstItem->product->brand) {
-                // Brand name as shop name
-                $shopName = $firstItem->product->brand->name;
-            }
+            $shopName = $sellerNames->isNotEmpty()
+                ? $sellerNames->implode(', ')
+                : 'Unknown Shop';
 
             return [
                 'checkout_id'  => $order->checkout_id,
                 'status'       => $order->status,
                 'total_amount' => $order->total_amount,
                 'tracking_number' => $order->tracking_number,
+                'created_date' => Carbon::parse($order->created_at)->toDateString(),
                 'created_at'   => Carbon::parse($order->created_at)->format('M d'),
 
                 // Additional summary
@@ -153,6 +159,7 @@ class CheckoutController extends Controller
                         'quantity'     => $item->quantity,
                         'price'        => $item->price,
                         'subtotal'     => $item->subtotal,
+                        'seller_name'  => $item->seller?->username ?? $item->product?->seller?->username,
                         'image'        => $imagePath
                     ];
                 }),
@@ -193,6 +200,11 @@ class CheckoutController extends Controller
             'tracking_number' => $order->tracking_number,
             'total_amount' => $order->total_amount,
             'created_at'   => Carbon::parse($order->created_at)->format('M d, Y'),
+            'purok'        => $order->purok,
+            'barangay'     => $order->barangay,
+            'city'         => $order->city,
+            'province'     => $order->province,
+            'zipcode'      => $order->zipcode,
             'item_count'   => $order->items->count(),
             'shop_name'    => $order->items->first()?->product?->brand?->name ?? "Unknown Shop",
 

@@ -10,57 +10,6 @@ let globalOrders = [];
 let ordersTable = null;
 let currentUserProfile = null;
 
-// Fallback for jquery.cookie if the plugin fails to load
-if (
-  typeof window.jQuery !== "undefined" &&
-  typeof window.jQuery.cookie !== "function"
-) {
-  window.jQuery.cookie = function (name, value, options) {
-    if (arguments.length > 1) {
-      const opts = options || {};
-      let cookie = `${encodeURIComponent(name)}=${encodeURIComponent(value)}`;
-      if (typeof opts.expires === "number") {
-        const date = new Date();
-        date.setTime(date.getTime() + opts.expires * 864e5);
-        cookie += `; expires=${date.toUTCString()}`;
-      } else if (opts.expires instanceof Date) {
-        cookie += `; expires=${opts.expires.toUTCString()}`;
-      }
-      cookie += `; path=${opts.path || "/"}`;
-      if (opts.domain) cookie += `; domain=${opts.domain}`;
-      if (opts.secure) cookie += "; secure";
-      document.cookie = cookie;
-      return cookie;
-    }
-
-    if (!name) {
-      const result = {};
-      const parts = document.cookie ? document.cookie.split("; ") : [];
-      parts.forEach((part) => {
-        const idx = part.indexOf("=");
-        const key = decodeURIComponent(idx >= 0 ? part.slice(0, idx) : part);
-        const val = idx >= 0 ? decodeURIComponent(part.slice(idx + 1)) : "";
-        result[key] = val;
-      });
-      return result;
-    }
-
-    const encoded = encodeURIComponent(name).replace(/[-.+*]/g, "\\$&");
-    const match = document.cookie.match(
-      new RegExp(`(?:^|; )${encoded}=([^;]*)`),
-    );
-    return match ? decodeURIComponent(match[1]) : null;
-  };
-
-  window.jQuery.removeCookie = function (name, options) {
-    window.jQuery.cookie(name, "", {
-      expires: -1,
-      path: (options && options.path) || "/",
-    });
-    return true;
-  };
-}
-
 // =======================================
 // User Session Handling
 // =======================================
@@ -86,6 +35,8 @@ function load_user() {
   const $sidebarBrand = $("#brand");
   const $sidebarCategory = $("#category");
   const $sidebarProduct = $("#product");
+  const $adminWorkingPanel = $("#adminWorkingPanel");
+  const $userWorkingPanel = $("#userWorkingPanel");
 
   // No session → show login/register
   if (!usr || !token) {
@@ -104,6 +55,8 @@ function load_user() {
     $sidebarBrand.hide();
     $sidebarCategory.hide();
     $sidebarProduct.hide();
+    $adminWorkingPanel.hide();
+    $userWorkingPanel.hide();
     return;
   }
 
@@ -113,8 +66,11 @@ function load_user() {
   $register.hide();
   $logout.show();
 
+  const isRegularUser =
+    !!usr && !!token && role !== "admin" && role !== "seller";
+
   // Match dashboard behavior: show cart for user/seller, hide for admin
-  if (role === "user" || role === "seller") {
+  if (isRegularUser || role === "seller") {
     $cartCount.show();
     $cartNav.show();
     $cartNavMobile.show();
@@ -125,14 +81,14 @@ function load_user() {
   }
 
   // Hide account manage if seller or user
-  if (role === "seller" || role === "user") {
+  if (role === "seller" || isRegularUser) {
     $sidebarAccounts.hide();
   } else {
     $sidebarAccounts.show();
   }
 
   // Hide specific sidebar menus for regular user
-  if (role === "user") {
+  if (isRegularUser) {
     $sidebarDashboard.hide();
     $sidebarBrand.hide();
     $sidebarCategory.hide();
@@ -150,6 +106,14 @@ function load_user() {
   } else {
     $adminDashboard.hide();
   }
+
+  if (isRegularUser) {
+    $adminWorkingPanel.hide();
+    $userWorkingPanel.show();
+  } else {
+    $adminWorkingPanel.show();
+    $userWorkingPanel.hide();
+  }
 }
 
 // =======================================
@@ -157,6 +121,10 @@ function load_user() {
 // =======================================
 function isAdminView() {
   return role === "admin" || role === "seller";
+}
+
+function isUserView() {
+  return !!usr && !!token && !isAdminView();
 }
 
 function normalizeStatus(status) {
@@ -201,12 +169,48 @@ function formatDate(value) {
   });
 }
 
+function toDateInputValue(value) {
+  const parsed = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "";
+
+  const year = parsed.getFullYear();
+  const month = String(parsed.getMonth() + 1).padStart(2, "0");
+  const day = String(parsed.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function getOrderDateFilterValue(order = {}) {
+  const explicitDate = String(order.created_date || "").trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(explicitDate)) {
+    return explicitDate;
+  }
+
+  const candidates = [
+    order.created_at,
+    order.createdAt,
+    order.updated_at,
+    order.updatedAt,
+    order.date,
+  ].filter(Boolean);
+
+  for (const candidate of candidates) {
+    const normalizedDate = toDateInputValue(candidate);
+    if (normalizedDate) {
+      return normalizedDate;
+    }
+  }
+
+  return "";
+}
+
 function formatAddress(order = {}, user = {}) {
   const parts = [
     order.purok,
     order.barangay,
     order.city,
     order.province,
+    order.zipcode,
   ].filter(Boolean);
   if (parts.length) return parts.join(", ");
   return order.address || user.address || "N/A";
@@ -240,10 +244,7 @@ function getOrderItems(order, itemsOverride) {
 
 function getItemSellerName(item = {}, order = {}) {
   return (
-    item?.product?.seller?.username ||
-    item?.seller?.username ||
-    item?.seller_username ||
-    item?.seller_name ||
+    getDirectItemSellerName(item) ||
     order?.seller?.username ||
     order?.seller?.fullname ||
     order?.seller_username ||
@@ -251,6 +252,25 @@ function getItemSellerName(item = {}, order = {}) {
     order?.shop_name ||
     "N/A"
   );
+}
+
+function getDirectItemSellerName(item = {}) {
+  return (
+    item?.product?.seller?.username ||
+    item?.seller?.username ||
+    item?.seller_username ||
+    item?.seller_name ||
+    ""
+  );
+}
+
+function splitSellerNames(value) {
+  if (!value) return [];
+
+  return String(value)
+    .split(",")
+    .map((name) => name.trim())
+    .filter((name) => name && name.toUpperCase() !== "N/A");
 }
 
 function getItemSubtotalValue(item) {
@@ -286,6 +306,7 @@ function getOrderQuantityFallback(order) {
     order.total_quantity ||
     order.total_qty ||
     order.total_items ||
+    order.item_count ||
     order.quantity ||
     0;
   const qty = Number(raw);
@@ -311,41 +332,45 @@ function groupItemsBySeller(order) {
 }
 
 function getOrderSellerDisplayName(order) {
-  if (!order) return "N/A";
+  const sellerNames = getOrderSellerNames(order);
+  return sellerNames.length ? sellerNames.join(", ") : "N/A";
+}
 
-  const directSeller =
-    order.seller?.username ||
-    order.seller?.fullname ||
-    order.seller_username ||
-    order.seller_name ||
-    order.shop_name;
+function getOrderSellerNames(order) {
+  if (!order) return [];
 
-  if (directSeller) return directSeller;
+  const sellerSet = new Set();
+  const items = Array.isArray(order.items) ? order.items : [];
 
-  const items = order.items || [];
-  if (Array.isArray(items) && items.length > 0) {
-    const sellerSet = new Set(
-      items
-        .map(
-          (item) =>
-            item?.product?.seller?.username ||
-            item?.seller?.username ||
-            item?.seller_username ||
-            item?.seller_name,
-        )
-        .filter(Boolean),
+  items.forEach((item) => {
+    splitSellerNames(getDirectItemSellerName(item)).forEach((seller) =>
+      sellerSet.add(seller),
     );
+  });
 
-    if (sellerSet.size > 0) {
-      return [...sellerSet].join(", ");
-    }
+  if (sellerSet.size > 0) {
+    return [...sellerSet];
+  }
+
+  [
+    order.seller?.username,
+    order.seller?.fullname,
+    order.seller_username,
+    order.seller_name,
+    order.shop_name,
+  ].forEach((sellerValue) => {
+    splitSellerNames(sellerValue).forEach((seller) => sellerSet.add(seller));
+  });
+
+  if (sellerSet.size > 0) {
+    return [...sellerSet];
   }
 
   if (role === "seller" && usr) {
-    return usr;
+    return [usr];
   }
 
-  return "N/A";
+  return [];
 }
 
 function populateOrderDetails(order, itemsOverride) {
@@ -393,6 +418,149 @@ function populateOrderDetails(order, itemsOverride) {
   $("#orderTotal").text(formatCurrency(computedTotal));
 }
 
+function getUserOrderQuantity(order) {
+  const itemsQuantity = sumItemsQuantity(order?.items);
+  if (itemsQuantity > 0) return itemsQuantity;
+  return getOrderQuantityFallback(order);
+}
+
+function getUserOrderTotal(order) {
+  const fallbackTotal = Number(order?.total_amount || order?.total || 0);
+  const itemsTotal = sumItemsTotal(order?.items);
+  if (Number.isFinite(fallbackTotal) && fallbackTotal > 0) {
+    return fallbackTotal;
+  }
+  return itemsTotal;
+}
+
+function populateUserSellerFilter() {
+  const $sellerFilter = $("#userSellerFilter");
+  if ($sellerFilter.length === 0) return;
+
+  const previousValue = $sellerFilter.val() || "";
+  const sellerSet = new Set();
+
+  (globalOrders || []).forEach((order) => {
+    getOrderSellerNames(order).forEach((seller) => sellerSet.add(seller));
+  });
+
+  const sellers = [...sellerSet].sort((a, b) => a.localeCompare(b));
+
+  $sellerFilter.html(`<option value="">Filter by Seller</option>`);
+
+  sellers.forEach((seller) => {
+    $sellerFilter.append(`<option value="${seller}">${seller}</option>`);
+  });
+
+  if (sellers.includes(previousValue)) {
+    $sellerFilter.val(previousValue);
+  }
+}
+
+function renderUserOrders() {
+  const $tbody = $("#userOrderListBody");
+  $tbody.empty();
+
+  const selectedSeller = ($("#userSellerFilter").val() || "").trim();
+  const selectedDate = ($("#userDateFilter").val() || "").trim();
+  const searchTerm = ($("#userOrderSearch").val() || "").trim().toLowerCase();
+
+  const filteredOrders = (globalOrders || []).filter((order) => {
+    const sellerNames = getOrderSellerNames(order);
+    const seller = sellerNames.length ? sellerNames.join(", ") : "N/A";
+    const sellerMatches =
+      !selectedSeller || sellerNames.includes(selectedSeller);
+    const dateMatches =
+      !selectedDate || getOrderDateFilterValue(order) === selectedDate;
+
+    if (!sellerMatches || !dateMatches) {
+      return false;
+    }
+
+    if (!searchTerm) {
+      return true;
+    }
+
+    const itemNames = Array.isArray(order.items)
+      ? order.items
+          .map(
+            (item) => item?.product_name || item?.product?.product_name || "",
+          )
+          .filter(Boolean)
+          .join(" ")
+      : "";
+
+    const haystack = [
+      order.checkout_id || order.order_id || "",
+      seller,
+      formatStatusLabel(order.status),
+      order.tracking_number || "Not yet assigned",
+      formatDate(order.created_at || order.updated_at),
+      itemNames,
+    ]
+      .join(" ")
+      .toLowerCase();
+
+    return haystack.includes(searchTerm);
+  });
+
+  if (filteredOrders.length === 0) {
+    $tbody.html(
+      `<tr><td colspan="8" class="text-center text-muted py-4">No orders found.</td></tr>`,
+    );
+    return;
+  }
+
+  filteredOrders.forEach((order) => {
+    const orderId = order.checkout_id || order.order_id || "N/A";
+    const sellerNames = getOrderSellerNames(order);
+    const seller = sellerNames.length ? sellerNames.join(", ") : "N/A";
+    const quantity = getUserOrderQuantity(order);
+    const total = formatCurrency(getUserOrderTotal(order));
+    const statusKey = normalizeStatus(order.status);
+    const statusLabel = formatStatusLabel(order.status);
+    const date = formatDate(order.created_at || order.updated_at);
+    const tracking = order.tracking_number || "Not yet assigned";
+
+    const actionButtons = [
+      `
+        <button class="btn btn-info btn-sm"
+          data-toggle="modal"
+          data-target="#orderDetailsModal"
+          data-id="${orderId}">
+          <i class="fas fa-eye"></i> View
+        </button>
+      `,
+    ];
+
+    if (statusKey === "pending" || statusKey === "pending_payment") {
+      actionButtons.push(`
+        <button class="btn btn-outline-danger btn-sm btn-cancel"
+          data-id="${orderId}">
+          Cancel
+        </button>
+      `);
+    } else {
+      actionButtons.push(
+        `<button class="btn btn-secondary btn-sm" disabled>Cancel</button>`,
+      );
+    }
+
+    $tbody.append(`
+      <tr>
+        <td class="text-center">${orderId}</td>
+        <td>${seller}</td>
+        <td class="text-center">${quantity}</td>
+        <td class="text-right">&#8369;${total}</td>
+        <td class="text-center">${statusLabel}</td>
+        <td class="text-center">${date}</td>
+        <td class="text-center">${tracking}</td>
+        <td class="text-center">${actionButtons.join(" ")}</td>
+      </tr>
+    `);
+  });
+}
+
 // =======================================
 // Order Management Logic
 // =======================================
@@ -413,13 +581,23 @@ function fetchBuyerOrders() {
       console.log("Buyer Orders:", res);
       const orders = isAdminView() ? res : res.data || res;
       globalOrders = Array.isArray(orders) ? orders : [];
-      renderOrders("All");
+
+      if (isAdminView()) {
+        renderOrders($("#statusFilter").val() || "all");
+      } else if (isUserView()) {
+        populateUserSellerFilter();
+        renderUserOrders();
+      }
     },
     error: function (err) {
       console.error("Error loading orders:", err);
-      $("#buyerOrders").html(
-        `<tr><td colspan="8" class="text-center text-danger py-4">Failed to load orders.</td></tr>`,
-      );
+      const errorRow = `<tr><td colspan="8" class="text-center text-danger py-4">Failed to load orders.</td></tr>`;
+
+      if (isAdminView()) {
+        $("#buyerOrders").html(errorRow);
+      } else {
+        $("#userOrderListBody").html(errorRow);
+      }
     },
   });
 }
@@ -428,13 +606,25 @@ function fetchBuyerOrders() {
 // Render Orders Based on Status
 // =======================================
 function renderOrders(filter = "All") {
+  if (!isAdminView()) {
+    return;
+  }
+
   const $table = $("#ordersTable");
   const $tbody = $("#buyerOrders");
+  const selectedDate = ($("#adminDateFilter").val() || "").trim();
   $tbody.empty();
 
   // Status Mapping
   const filterKey = normalizeStatus(filter || "all");
   const filteredOrders = (globalOrders || []).filter((o) => {
+    const dateMatches =
+      !selectedDate || getOrderDateFilterValue(o) === selectedDate;
+
+    if (!dateMatches) {
+      return false;
+    }
+
     const statusKey = normalizeStatus(o.status);
     switch (filterKey) {
       case "unpaid":
@@ -769,6 +959,22 @@ $(document).ready(function () {
     renderOrders($(this).val());
   });
 
+  $("#adminDateFilter").on("change", function () {
+    renderOrders($("#statusFilter").val());
+  });
+
+  $("#userSellerFilter").on("change", function () {
+    renderUserOrders();
+  });
+
+  $("#userDateFilter").on("change", function () {
+    renderUserOrders();
+  });
+
+  $("#userOrderSearch").on("input", function () {
+    renderUserOrders();
+  });
+
   // -------------------------------
   // Cancel Button Logic
   // -------------------------------
@@ -812,7 +1018,7 @@ $(document).ready(function () {
         Swal.fire({ icon: "success", title: "Logout Successful" }).then(() => {
           // Clear all cookies
           Object.keys($.cookie()).forEach((cookie) => $.removeCookie(cookie));
-          window.location.replace("index.html");
+          window.location.replace("login.html");
         });
       },
       error: (res) => {

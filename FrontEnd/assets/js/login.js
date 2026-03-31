@@ -2,7 +2,8 @@ var ip = "http://localhost:8000";
 
 function load_user() {
   var usr = $.cookie("username");
-  if (usr != undefined) {
+  var token = $.cookie("token");
+  if (usr != undefined && token != undefined) {
     window.location.replace("index.html");
   }
 }
