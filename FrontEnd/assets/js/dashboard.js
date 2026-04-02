@@ -285,73 +285,88 @@ function loadOrderStatus() {
 // Iinitial function call
 // =======================================
 function initCharts() {
-  if (role !== "admin" && role !== "seller") {
-    return;
-  }
+  if (role !== "admin" && role !== "seller") return;
 
   const $dashboard = getDashboardRoot();
-  const orderCanvasSelector =
-    role === "seller" ? "#sellerOrderChart" : "#orderChart";
-  const statusCanvasSelector =
-    role === "seller" ? "#sellerStatusChart" : "#orderStatusChart";
-  const orderCanvas = $dashboard.find(orderCanvasSelector)[0];
-  const statusCanvas = $dashboard.find(statusCanvasSelector)[0];
+  const orderCanvas = $dashboard.find(
+    role === "seller" ? "#sellerOrderChart" : "#orderChart",
+  )[0];
+  const statusCanvas = $dashboard.find(
+    role === "seller" ? "#sellerStatusChart" : "#orderStatusChart",
+  )[0];
 
   if (!orderCanvas || !statusCanvas) return;
 
-  // Destroy charts if they exist
-  if (orderChart) {
-    orderChart.destroy();
-    orderChart = null;
-  }
-  if (statusChart) {
-    statusChart.destroy();
-    statusChart = null;
-  }
+  if (orderChart) orderChart.destroy();
+  if (statusChart) statusChart.destroy();
 
+  // 1. Orders Over Time (Doughnut with Center Text)
   orderChart = new Chart(orderCanvas.getContext("2d"), {
-    type: "pie",
+    type: "doughnut",
     data: {
-      labels: [],
+      labels: ["Oct 2025", "Nov 2025"], // These will be overwritten by loadMonthlyOrders
       datasets: [
         {
-          data: [],
-          backgroundColor: [
-            "#4f46e5",
-            "#06b6d4",
-            "#22c55e",
-            "#f59e0b",
-            "#ef4444",
-            "#8b5cf6",
-          ],
-          borderColor: "#fff",
+          data: [0, 0],
+          backgroundColor: ["#4f46e5", "#3b82f6"], // Design uses shades of blue/purple
           borderWidth: 2,
+          cutout: "70%", // Makes it a thin ring like the photo
         },
       ],
     },
-    options: { responsive: true, plugins: { legend: { position: "bottom" } } },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: "bottom" },
+        // Custom plugin to draw the number '4' (Total) in the center
+        beforeDraw: function (chart) {
+          var width = chart.width,
+            height = chart.height,
+            ctx = chart.ctx;
+          ctx.restore();
+          var fontSize = (height / 114).toFixed(2);
+          ctx.font = fontSize + "em sans-serif";
+          ctx.textBaseline = "middle";
+          var text = chart.data.datasets[0].data.reduce((a, b) => a + b, 0),
+            textX = Math.round((width - ctx.measureText(text).width) / 2),
+            textY = height / 2;
+          ctx.fillText(text, textX, textY);
+          ctx.save();
+        },
+      },
+    },
   });
 
+  // 2. Orders by Status (Pie Chart with Specific Colors)
   statusChart = new Chart(statusCanvas.getContext("2d"), {
     type: "pie",
     data: {
-      labels: [],
+      labels: ["Completed", "Shipped", "To Ship", "Cancelled"],
       datasets: [
         {
-          data: [],
+          data: [0, 0, 0, 0],
           backgroundColor: [
-            "#f97316",
-            "#84cc16",
-            "#3b82f6",
-            "#ec4899",
-            "#6366f1",
+            "#84cc16", // Completed - Green
+            "#3b82f6", // Shipped - Blue
+            "#f59e0b", // To Ship - Yellow/Orange
+            "#ef4444", // Cancelled - Red
           ],
           borderColor: "#fff",
           borderWidth: 2,
         },
       ],
     },
-    options: { responsive: true, plugins: { legend: { position: "bottom" } } },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: "bottom",
+          labels: { usePointStyle: true, padding: 20 },
+        },
+      },
+    },
   });
 }
 

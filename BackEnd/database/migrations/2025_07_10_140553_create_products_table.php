@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('product_name');
             $table->double('product_price', 8, 2);
             $table->string('product_description');
-            $table->integer('amount');
+            $table->integer('stock_quantity');
             $table->string('image');
 
             $table->timestamps();
