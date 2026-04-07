@@ -245,43 +245,36 @@ class AuthController extends Controller
      * User login
      */
     public function login(Request $request){
-        $username = $request->username;
-        if (!User::where('username', $username)->exists()) {
+        $request->validate([
+            'username' => 'required|string',
+            'password' => 'required|string',
+        ]);
+
+        $user = User::where('username', $request->username)->first();
+
+        if (!$user) {
+            return response()->json(['msg' => 'Username does not exist.'], 400);
+        }
+
+        if (!Hash::check($request->password, $user->password)) {
+            return response()->json(['msg' => 'Invalid password.'], 401);
+        }
+
+        if (is_null($user->email_verified_at)) {
             return response()->json([
-            'msg' => 'Username does not exist.'
+                'msg' => 'Please verify your email before logging in.'
             ], 400);
         }
-        $password = $request->password;
-        $user = User::where('username', $username)->first();
-        if($user){
-            if (!$user || !Hash::check($request->password, $user->password)) {
-                return response()->json([
-                    'msg' => 'Invalid Password.'
-                ], 401);
-            }
-            
-            // Check if email is verified
-            if (is_null($user->email_verified_at)) {
-                return response()->json([
-                    'msg' => 'Please verify your email before logging in.'
-                ], 400);
-            }
-             
-            $token = bin2hex(random_bytes(8));
-            $user->token = $token;
-            $user->save();
-            return response()->json([
-                'token' => $token,
-                'username' => $user->username,
-                'role'  => $user->role,
-                'user_id' => $user->user_id,
-            ], 200);
-        }
-        else {
-            return response()->json([
-                'msg' => 'Access Denied.'
-            ], 400);
-        }
+
+        $user->token = bin2hex(random_bytes(16));
+        $user->save();
+
+        return response()->json([
+            'token' => $user->token,
+            'username' => $user->username,
+            'role' => $user->role,
+            'user_id' => $user->user_id,
+        ], 200);
     }
 
     /**

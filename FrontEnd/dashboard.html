@@ -219,7 +219,7 @@
             <h1 class="display-4">Admin Dashboard</h1>
             <hr class="admin-hr">
 
-            <!-- ===== (FINANCIAL ROW) ===== -->
+            <!-- FINANCIAL ROW -->
             <div class="row mb-4">
 
               <!-- Users -->
@@ -334,24 +334,24 @@
             </div>
             
             <!-- ===== Graphs ===== -->
-            <div class="card">
-              <div class="row mb-4">
-                <!-- ===== Orders Over Time ===== -->
-                <div class="col-md-6">
-                  <div class="card-header">
+            <div class="row mb-4">
+              <div class="col-md-6 mb-4 mb-md-0">
+                <div class="card h-100 shadow-sm">
+                  <div class="card-header bg-white">
                     <h2 class="mb-0">Orders Over Time</h2>
                   </div>
-                  <div class="card-body">
+                  <div class="card-body" style="height: 300px;">
                     <canvas id="orderChart"></canvas>
                   </div>
                 </div>
+              </div>
 
-                <!-- ===== Order by Status ===== -->
-                <div class="col-md-6">
-                  <div class="card-header">
+              <div class="col-md-6">
+                <div class="card h-100 shadow-sm">
+                  <div class="card-header bg-white">
                     <h2 class="mb-0">Orders by Status</h2>
                   </div>
-                  <div class="card-body">
+                  <div class="card-body" style="height: 300px;">
                     <canvas id="orderStatusChart"></canvas>
                   </div>
                 </div>
@@ -497,32 +497,33 @@
 
               </div>
               
-              <!-- ===== Graphs ===== -->
-              <div class="card">
-                <div class="row mb-4">
-                  <!-- ===== Orders Over Time ===== -->
-                  <div class="col-md-6">
-                    <div class="card-header">
-                      <h2 class="mb-0">My Orders by Month</h2>
+              <!-- Graphs -->
+              <div class="row mb-4">
+                <div class="col-md-6 mb-4 mb-md-0">
+                  <div class="card h-100 shadow-sm">
+                    <div class="card-header bg-white">
+                      <h5 class="mb-0 text-muted">Orders Over Time</h5>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body" style="height: 300px;">
                       <canvas id="sellerOrderChart"></canvas>
                     </div>
                   </div>
+                </div>
 
-                  <!-- ===== Order by Status ===== -->
-                  <div class="col-md-6">
-                    <div class="card-header">
-                      <h2 class="mb-0">My Orders by Status</h2>
+                <div class="col-md-6">
+                  <div class="card h-100 shadow-sm">
+                    <div class="card-header bg-white">
+                      <h5 class="mb-0 text-muted">Order by Status</h5>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body" style="height: 300px;">
                       <canvas id="sellerStatusChart"></canvas>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <!-- ===== RECENT ORDERS TABLE ===== -->
+
+              <!-- RECENT ORDERS TABLE -->
               <div class="card">
                 <div class="card-header">
                   <h2 class="mb-0">My Orders</h2>
