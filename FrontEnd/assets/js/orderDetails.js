@@ -458,105 +458,85 @@ function populateUserSellerFilter() {
 }
 
 function renderUserOrders() {
-  const $tbody = $("#userOrderListBody");
-  $tbody.empty();
+  const $container = $("#userOrderListCards");
+  $container.empty();
 
-  const selectedSeller = ($("#userSellerFilter").val() || "").trim();
-  const selectedDate = ($("#userDateFilter").val() || "").trim();
-  const searchTerm = ($("#userOrderSearch").val() || "").trim().toLowerCase();
-
-  const filteredOrders = (globalOrders || []).filter((order) => {
-    const sellerNames = getOrderSellerNames(order);
-    const seller = sellerNames.length ? sellerNames.join(", ") : "N/A";
-    const sellerMatches =
-      !selectedSeller || sellerNames.includes(selectedSeller);
-    const dateMatches =
-      !selectedDate || getOrderDateFilterValue(order) === selectedDate;
-
-    if (!sellerMatches || !dateMatches) {
-      return false;
-    }
-
-    if (!searchTerm) {
-      return true;
-    }
-
-    const itemNames = Array.isArray(order.items)
-      ? order.items
-          .map(
-            (item) => item?.product_name || item?.product?.product_name || "",
-          )
-          .filter(Boolean)
-          .join(" ")
-      : "";
-
-    const haystack = [
-      order.checkout_id || order.order_id || "",
-      seller,
-      formatStatusLabel(order.status),
-      order.tracking_number || "Not yet assigned",
-      formatDate(order.created_at || order.updated_at),
-      itemNames,
-    ]
-      .join(" ")
-      .toLowerCase();
-
-    return haystack.includes(searchTerm);
-  });
-
-  if (filteredOrders.length === 0) {
-    $tbody.html(
-      `<tr><td colspan="8" class="text-center text-muted py-4">No orders found.</td></tr>`,
+  if (!globalOrders || globalOrders.length === 0) {
+    $container.html(
+      `<div class="text-center text-muted py-5">No orders found.</div>`,
     );
     return;
   }
 
-  filteredOrders.forEach((order) => {
+  globalOrders.forEach((order, index) => {
     const orderId = order.checkout_id || order.order_id || "N/A";
-    const sellerNames = getOrderSellerNames(order);
-    const seller = sellerNames.length ? sellerNames.join(", ") : "N/A";
-    const quantity = getUserOrderQuantity(order);
+    const seller = getOrderSellerDisplayName(order);
     const total = formatCurrency(getUserOrderTotal(order));
-    const statusKey = normalizeStatus(order.status);
-    const statusLabel = formatStatusLabel(order.status);
+    const statusLabel = formatStatusLabel(order.status).toLowerCase();
     const date = formatDate(order.created_at || order.updated_at);
-    const tracking = order.tracking_number || "Not yet assigned";
+    const tracking = order.tracking_number || "Not available";
+    const items = getOrderItems(order);
 
-    const actionButtons = [
-      `
-        <button class="btn btn-info btn-sm"
-          data-toggle="modal"
-          data-target="#orderDetailsModal"
-          data-id="${orderId}">
-          <i class="fas fa-eye"></i> View
-        </button>
-      `,
-    ];
+    // Color Logic
+    const statusClass =
+      statusLabel === "completed" ? "bg-completed" : "bg-pending";
+    const collapseId = `collapseOrder${orderId}`;
 
-    if (statusKey === "pending" || statusKey === "pending_payment") {
-      actionButtons.push(`
-        <button class="btn btn-outline-danger btn-sm btn-cancel"
-          data-id="${orderId}">
-          Cancel
-        </button>
-      `);
-    } else {
-      actionButtons.push(
-        `<button class="btn btn-secondary btn-sm" disabled>Cancel</button>`,
-      );
-    }
+    let itemsHtml = items
+      .map(
+        (item) => `
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <div class="text-secondary">${item.productName} (x${item.quantity})</div>
+        <div class="fw-bold">₱${formatCurrency(item.subtotal)}</div>
+      </div>
+    `,
+      )
+      .join("");
 
-    $tbody.append(`
-      <tr>
-        <td class="text-center">${orderId}</td>
-        <td>${seller}</td>
-        <td class="text-center">${quantity}</td>
-        <td class="text-right">&#8369;${total}</td>
-        <td class="text-center">${statusLabel}</td>
-        <td class="text-center">${date}</td>
-        <td class="text-center">${tracking}</td>
-        <td class="text-center">${actionButtons.join(" ")}</td>
-      </tr>
+    $container.append(`
+      <div class="order-card mb-3">
+        <div class="order-header d-flex justify-content-between align-items-center" 
+             data-bs-toggle="collapse" 
+             data-bs-target="#${collapseId}" 
+             style="cursor: pointer;">
+          
+          <div class="d-flex flex-column">
+            <span class="fw-bold h5 mb-0">Order #${orderId}</span>
+            <small class="text-muted">${seller}</small>
+          </div>
+
+          <div class="d-flex align-items-center gap-4">
+            <div class="text-end">
+              <div class="fw-bold h5 mb-1">₱${total}</div>
+              <span class="status-badge ${statusClass}">${statusLabel}</span>
+            </div>
+            <i class="fas fa-chevron-down text-muted small"></i>
+          </div>
+        </div>
+
+        <div class="collapse" id="${collapseId}">
+          <div class="order-body border-top p-3">
+            <div class="mb-3">${itemsHtml}</div>
+            <div class="small text-muted mb-3">
+              <div>Date: ${date}</div>
+              <div>Tracking: ${tracking}</div>
+            </div>
+            <div class="d-flex gap-2">
+              <button class="btn btn-dark btn-sm rounded-2 px-3" data-toggle="modal" data-target="#orderDetailsModal" data-id="${orderId}">
+                View Details
+              </button>
+              ${
+                statusLabel === "pending"
+                  ? `
+                <button class="btn btn-danger btn-sm rounded-2 px-3 btn-cancel" data-id="${orderId}">
+                  Cancel
+                </button>`
+                  : ""
+              }
+            </div>
+          </div>
+        </div>
+      </div>
     `);
   });
 }

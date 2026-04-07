@@ -1534,4 +1534,64 @@ th:last-child {
 .seller-only {
   display: none;
 }
+
+/* Container for the whole card */
+.order-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Header style */
+.order-header {
+  padding: 1.25rem 1.5rem;
+  transition: background 0.2s;
+}
+
+.order-header:hover {
+  background-color: #f8fafc;
+}
+
+/* Status Badges */
+.status-badge {
+  display: inline-block;
+  padding: 2px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-transform: lowercase;
+}
+
+.bg-pending {
+  background-color: #fef9c3; /* Light yellow */
+  color: #854d0e;
+}
+
+.bg-completed {
+  background-color: #dcfce7; /* Light green */
+  color: #166534;
+}
+
+/* Typography and Buttons */
+.h5 {
+  font-size: 1.1rem;
+}
+
+.btn-dark {
+  background-color: #0f172a !important;
+  border: none;
+}
+
+.btn-danger {
+  background-color: #ff0000 !important;
+  border: none;
+}
+
+/* Smooth arrow rotation when open (Optional) */
+.order-header[aria-expanded="true"] i {
+  transform: rotate(180deg);
+  transition: 0.3s;
+}
 /* Order End */
