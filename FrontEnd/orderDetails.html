@@ -164,7 +164,9 @@
                   <i class="fas fa-home"></i> Dashboard
                 </a>
                 <hr class="user-menu" />
-                <span class="dropdown-item-text text-muted small"
+                <span
+                  id="registerHint"
+                  class="dropdown-item-text text-muted small"
                   >If new user please Register.</span
                 >
                 <a
@@ -416,35 +418,62 @@
         id="userWorkingPanel"
         style="display: none">
         <div class="container-fluid">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <h1 class="display-4 mb-0">My Orders</h1>
-            <div class="d-flex flex-wrap">
-              <select
-                id="userSellerFilter"
-                class="form-control mr-2"
-                style="width: 180px">
-                <option value="">Filter by Seller</option>
-              </select>
-              <input
-                type="date"
-                id="userDateFilter"
-                class="form-control mr-2"
-                style="width: 180px" />
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h2 mb-0">My Orders</h1>
+            <div class="search-box">
               <input
                 type="text"
                 id="userOrderSearch"
                 class="form-control"
-                placeholder="Search Orders..."
-                style="width: 250px" />
+                placeholder="Search orders..."
+                style="width: 350px" />
             </div>
           </div>
-          <hr class="admin-hr" />
 
-          <div class="card shadow-sm">
-            <div class="card-body table-responsive p-0">
-              <div id="userOrderListCards" class="container py-3"></div>
-            </div>
+          <div class="order-status-tabs mb-4">
+            <ul class="nav nav-tabs nav-fill bg-white shadow-sm rounded">
+              <li class="nav-item">
+                <a class="nav-link active" href="#" data-status="all">All</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="#" data-status="pending">To Pay</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="#" data-status="to-ship">To Ship</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="#" data-status="shipped"
+                  >To Receive</a
+                >
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="#" data-status="completed"
+                  >Completed</a
+                >
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="#" data-status="cancelled"
+                  >Cancelled</a
+                >
+              </li>
+            </ul>
           </div>
+
+          <div class="d-flex justify-content-end mb-3">
+            <select
+              id="userSellerFilter"
+              class="form-control mr-2"
+              style="width: 180px">
+              <option value="">Filter by Seller</option>
+            </select>
+            <input
+              type="date"
+              id="userDateFilter"
+              class="form-control"
+              style="width: 180px" />
+          </div>
+
+          <div id="userOrderListCards" class="pb-5"></div>
         </div>
       </section>
     </div>

@@ -11,6 +11,20 @@ use Illuminate\Support\Facades\DB;
 
 class ProductController extends Controller
 {
+    private function getAuthenticatedUser(Request $request): ?User
+    {
+        $token = $request->bearerToken();
+        if (!$token) {
+            return null;
+        }
+
+        return User::where('token', $token)->first();
+    }
+
+    private function canViewAllProducts(?User $user): bool
+    {
+        return $user && in_array($user->role, ['admin', 'seller'], true);
+    }
 
     /**
      * Display a listing of the products in pagination.
@@ -18,57 +32,47 @@ class ProductController extends Controller
      * 
      */
     public function index(Request $request) {
-        $token = request()->bearerToken();
-        if($token){
-            $user = User::where('token', $token)->first();
-            if($user){ 
+        $user = $this->getAuthenticatedUser($request);
 
-                $soldSubquery = DB::table('checkout_items as ci')
-                    ->join('checkouts as c', 'ci.checkout_id', '=', 'c.checkout_id')
-                    ->where('c.status', 'completed')
-                    ->whereColumn('ci.product_id', 'products.product_id')
-                    ->selectRaw('COALESCE(SUM(ci.quantity), 0)');
+        $soldSubquery = DB::table('checkout_items as ci')
+            ->join('checkouts as c', 'ci.checkout_id', '=', 'c.checkout_id')
+            ->where('c.status', 'completed')
+            ->whereColumn('ci.product_id', 'products.product_id')
+            ->selectRaw('COALESCE(SUM(ci.quantity), 0)');
 
-                // Fetch all products along with their related category, brand, seller and the total items sold
-                $products = Product::select('products.*')
-                    ->selectSub($soldSubquery, 'sold')
-                    ->get();
+        $productsQuery = Product::select('products.*')
+            ->selectSub($soldSubquery, 'sold');
 
-                $products->load(['category', 'brand', 'seller']);
-
-                // Format the response to include category, brand and seller info plus approval fields
-                $data = $products->map(function ($p) {
-                    return [
-                        'product_id' => $p->product_id,
-                        'product_name' => $p->product_name,
-                        'product_price' => $p->product_price,
-                        'product_description' => $p->product_description,
-                        'stock_quantity' => $p->stock_quantity,
-                        'sold' => $p->sold ?? 0,
-                        'image' => $p->image,
-                        'status' => $p->status,
-                        'category' => $p->category?->name,
-                        'brand' => $p->brand?->name,
-                        'seller' => $p->seller ? ['user_id' => $p->seller->user_id, 'username' => $p->seller->username] : null,
-                        'approval_status' => $p->approval_status ?? 'pending',
-                        'approval_reason' => $p->approval_reason ?? null,
-                        'approved_at' => $p->approved_at ?? null,
-                        'approved_by' => $p->approved_by ?? null,
-                        'created_at' => $p->created_at?->format('M d, Y'),
-                    ];
-                });
-
-                return response()->json(['data' => $data], 200);
-            } else {
-                return response()->json([
-                    'msg' => 'No products.'
-                ], 400);
-            }
-        } else {
-            return response()->json([
-                'msg' => 'No Token Provided.'
-            ], 400);
+        if (!$this->canViewAllProducts($user)) {
+            $productsQuery->where('approval_status', 'approved');
         }
+
+        $products = $productsQuery->get();
+        $products->load(['category', 'brand', 'seller']);
+
+        // Format the response to include category, brand and seller info plus approval fields
+        $data = $products->map(function ($p) {
+            return [
+                'product_id' => $p->product_id,
+                'product_name' => $p->product_name,
+                'product_price' => $p->product_price,
+                'product_description' => $p->product_description,
+                'stock_quantity' => $p->stock_quantity,
+                'sold' => $p->sold ?? 0,
+                'image' => $p->image,
+                'status' => $p->status,
+                'category' => $p->category?->name,
+                'brand' => $p->brand?->name,
+                'seller' => $p->seller ? ['user_id' => $p->seller->user_id, 'username' => $p->seller->username] : null,
+                'approval_status' => $p->approval_status ?? 'pending',
+                'approval_reason' => $p->approval_reason ?? null,
+                'approved_at' => $p->approved_at ?? null,
+                'approved_by' => $p->approved_by ?? null,
+                'created_at' => $p->created_at?->format('M d, Y'),
+            ];
+        });
+
+        return response()->json(['data' => $data], 200);
     }
    
     /**
@@ -135,49 +139,42 @@ class ProductController extends Controller
      * Product read by id
      */
     public function getProduct_id(Request $request, $id){
-        $token = $request->bearerToken();
-        if($token){
-            $user = User::where('token', $token)->first();
-            if($user){
-                $product = Product::with(['category', 'brand', 'seller'])->find($id);
-                if($product){
-                    // include approval fields and related info
-                    $result = [
-                        'product_id' => $product->product_id,
-                        'product_name' => $product->product_name,
-                        'product_price' => $product->product_price,
-                        'product_description' => $product->product_description,
-                        'stock_quantity' => $product->stock_quantity,
-                        'image' => $product->image,
-                        'status' => $product->status,
-                        'category' => $product->category?->name,
-                        'brand' => $product->brand?->name,
-                        'seller' => $product->seller ? ['user_id' => $product->seller->user_id, 'username' => $product->seller->username] : null,
-                        'approval_status' => $product->approval_status ?? 'pending',
-                        'approval_reason' => $product->approval_reason ?? null,
-                        'approved_at' => $product->approved_at ?? null,
-                        'approved_by' => $product->approved_by ?? null,
-                        'created_at' => $product->created_at?->format('M d, Y'),
-                    ];
-                    return response()->json(['product' => $result], 200);
-                }
-                else {
-                    return response()->json([
-                        'msg' => 'Product not found.'
-                    ], 400);
-                }
-            }
-            else {
-                return response()->json([
-                    'msg' => 'Invalid Token.'
-                ], 400);
-            }
+        $user = $this->getAuthenticatedUser($request);
+
+        $productQuery = Product::with(['category', 'brand', 'seller'])
+            ->where('product_id', $id);
+
+        if (!$this->canViewAllProducts($user)) {
+            $productQuery->where('approval_status', 'approved');
         }
-        else {
+
+        $product = $productQuery->first();
+        if(!$product){
             return response()->json([
-                'msg' => 'No Token Provided.'
-            ], 400);
+                'msg' => 'Product not found.'
+            ], 404);
         }
+
+        // include approval fields and related info
+        $result = [
+            'product_id' => $product->product_id,
+            'product_name' => $product->product_name,
+            'product_price' => $product->product_price,
+            'product_description' => $product->product_description,
+            'stock_quantity' => $product->stock_quantity,
+            'image' => $product->image,
+            'status' => $product->status,
+            'category' => $product->category?->name,
+            'brand' => $product->brand?->name,
+            'seller' => $product->seller ? ['user_id' => $product->seller->user_id, 'username' => $product->seller->username] : null,
+            'approval_status' => $product->approval_status ?? 'pending',
+            'approval_reason' => $product->approval_reason ?? null,
+            'approved_at' => $product->approved_at ?? null,
+            'approved_by' => $product->approved_by ?? null,
+            'created_at' => $product->created_at?->format('M d, Y'),
+        ];
+
+        return response()->json(['product' => $result], 200);
     }
 
     /**

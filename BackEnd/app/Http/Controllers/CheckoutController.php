@@ -111,7 +111,7 @@ class CheckoutController extends Controller
         }
 
         // Load all checkouts with their items and product details
-        $orders = Checkout::with(['items.product.brand', 'items.product.seller', 'items.seller'])
+        $orders = Checkout::with(['user', 'items.product.brand', 'items.product.seller', 'items.seller'])
             ->where('user_id', $user->user_id)
             ->orderBy('checkout_id', 'DESC')
             ->get();
@@ -134,11 +134,18 @@ class CheckoutController extends Controller
 
             return [
                 'checkout_id'  => $order->checkout_id,
+                'user_id'      => $order->user_id,
+                'user'         => $order->user ? [
+                    'user_id' => $order->user->user_id,
+                    'username' => $order->user->username,
+                    'fullname' => $order->user->fullname,
+                    'email' => $order->user->email,
+                ] : null,
                 'status'       => $order->status,
                 'total_amount' => $order->total_amount,
                 'tracking_number' => $order->tracking_number,
                 'created_date' => Carbon::parse($order->created_at)->toDateString(),
-                'created_at'   => Carbon::parse($order->created_at)->format('M d'),
+                'created_at'   => Carbon::parse($order->created_at)->format('M d, Y'),
 
                 // Additional summary
                 'item_count'   => $order->items->count(),
@@ -185,7 +192,7 @@ class CheckoutController extends Controller
         }
 
         // Fetch checkout with related items, products, and user
-        $order = Checkout::with('items.product.brand')
+        $order = Checkout::with(['user', 'items.product.brand'])
             ->where('checkout_id', $checkout_id)
             ->where('user_id', $user->user_id)
             ->first();
@@ -196,6 +203,13 @@ class CheckoutController extends Controller
 
         $formatted = [
             'checkout_id'  => $order->checkout_id,
+            'user_id'      => $order->user_id,
+            'user'         => $order->user ? [
+                'user_id' => $order->user->user_id,
+                'username' => $order->user->username,
+                'fullname' => $order->user->fullname,
+                'email' => $order->user->email,
+            ] : null,
             'status'       => $order->status,
             'tracking_number' => $order->tracking_number,
             'total_amount' => $order->total_amount,

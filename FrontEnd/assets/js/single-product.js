@@ -7,6 +7,14 @@ let usr = null;
 let role = null;
 let profileImage = null;
 
+function getApiHeaders(extraHeaders = {}) {
+  return {
+    Accept: "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...extraHeaders,
+  };
+}
+
 // =======================================
 // User Session Handling
 // =======================================
@@ -76,14 +84,11 @@ $(document).ready(function () {
   // -------------------------------
   // Load Navbar Profile Image
   // -------------------------------
-  if (usr) {
+  if (usr && token) {
     $.ajax({
       url: `${ip}/api/getAccount_username/${usr}`,
       type: "GET",
-      headers: {
-        Accept: "application/json",
-        Authorization: `Bearer ${token}`,
-      },
+      headers: getApiHeaders(),
       dataType: "json",
       success: function (response) {
         const $navbarProfileImage = $("#navbarProfileImage");
@@ -124,10 +129,7 @@ $(document).ready(function () {
   $.ajax({
     url: `${ip}/api/products/${productId}`,
     method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: "application/json",
-    },
+    headers: getApiHeaders(),
     success: function (response) {
       console.log(" Product Response:", response);
 
@@ -203,10 +205,7 @@ $(document).ready(function () {
     $.ajax({
       url: `${ip}/api/products`,
       method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/json",
-      },
+      headers: getApiHeaders(),
       success: function (response) {
         const allProducts = response.data || response || [];
         const $container = $("#sameShop-products").empty();
@@ -275,6 +274,21 @@ $(document).ready(function () {
   $(".product-add-to-cart-btn").on("click", function () {
     const quantity =
       $("#product-quantity-input").val() || $("input[type=number]").val();
+
+    if (!token) {
+      Swal.fire({
+        title: "Login Required",
+        text: "Please login to add this item to your cart.",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Login",
+      }).then((result) => {
+        if (result.isConfirmed) {
+          window.location.href = "login.html";
+        }
+      });
+      return;
+    }
 
     $.ajax({
       url: `${ip}/api/cart`,
@@ -345,16 +359,17 @@ $(document).ready(function () {
   });
 
   // --- Fetch Cart Count on Page Load ---
-  $.ajax({
-    url: `${ip}/api/cart`,
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: "application/json",
-    },
-    success: function (response) {
-      console.log(" Cart Count:", response);
-      updateCartCount(response.count);
-    },
-  });
+  if (token) {
+    $.ajax({
+      url: `${ip}/api/cart`,
+      method: "GET",
+      headers: getApiHeaders(),
+      success: function (response) {
+        console.log(" Cart Count:", response);
+        updateCartCount(response.count);
+      },
+    });
+  } else {
+    updateCartCount(0);
+  }
 });

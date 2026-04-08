@@ -19,6 +19,11 @@ class BrandsController extends Controller
         return User::where('token', $token)->first();
     }
 
+    private function canViewAllBrands(?User $user): bool
+    {
+        return $user && in_array($user->role, ['admin', 'seller'], true);
+    }
+
     private function formatBrand(Brands $brand): array
     {
         return [
@@ -53,11 +58,13 @@ class BrandsController extends Controller
     public function index(Request $request)
     {
         $user = $this->getAuthenticatedUser($request);
-        if (!$user) {
-            return response()->json(['msg' => 'No Token Provided or Invalid Token.'], 400);
+
+        $brandsQuery = Brands::with(['seller', 'approver']);
+        if (!$this->canViewAllBrands($user)) {
+            $brandsQuery->where('status', 'approved');
         }
 
-        $brands = Brands::with(['seller', 'approver'])->get();
+        $brands = $brandsQuery->get();
         $data = $brands->map(fn($brand) => $this->formatBrand($brand));
 
         return response()->json(['data' => $data], 200);
@@ -115,11 +122,14 @@ class BrandsController extends Controller
     public function getBrands_id(Request $request, $id)
     {
         $user = $this->getAuthenticatedUser($request);
-        if (!$user) {
-            return response()->json(['msg' => 'No Token Provided or Invalid Token.'], 400);
+
+        $brandQuery = Brands::with(['seller', 'approver'])
+            ->where('brand_id', $id);
+        if (!$this->canViewAllBrands($user)) {
+            $brandQuery->where('status', 'approved');
         }
 
-        $brand = Brands::with(['seller', 'approver'])->find($id);
+        $brand = $brandQuery->first();
         if (!$brand) {
             return response()->json(['message' => 'Brand not found'], 404);
         }

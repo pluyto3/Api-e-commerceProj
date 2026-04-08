@@ -9,6 +9,7 @@ let profileImage = null;
 let globalOrders = [];
 let ordersTable = null;
 let currentUserProfile = null;
+let currentUserId = null;
 
 // =======================================
 // User Session Handling
@@ -28,6 +29,8 @@ function load_user() {
   const $cartNav = $("#cartNav");
   const $cartNavMobile = $("#cartNavMobile");
   const $adminDashboard = $("#adminDashboard");
+  const $productUi = $("#productUi");
+  const $registerHint = $("#registerHint");
   const $navbarProfileImage = $("#navbarProfileImage");
   const $defaultProfileIcon = $("#defaultProfileIcon");
   const $sidebarAccounts = $("#sidebarAccounts");
@@ -44,10 +47,12 @@ function load_user() {
     $login.show();
     $register.show();
     $logout.hide();
+    $registerHint.show();
     $cartCount.hide();
     $cartNav.hide();
     $cartNavMobile.hide();
     $adminDashboard.hide();
+    $productUi.hide();
     $navbarProfileImage.hide();
     $defaultProfileIcon.show();
     $sidebarAccounts.hide();
@@ -65,6 +70,7 @@ function load_user() {
   $login.hide();
   $register.hide();
   $logout.show();
+  $registerHint.hide();
 
   const isRegularUser =
     !!usr && !!token && role !== "admin" && role !== "seller";
@@ -103,8 +109,10 @@ function load_user() {
   // Role-based access for admin dashboard
   if (role === "admin" || role === "seller") {
     $adminDashboard.show();
+    $productUi.show();
   } else {
     $adminDashboard.hide();
+    $productUi.hide();
   }
 
   if (isRegularUser) {
@@ -125,6 +133,27 @@ function isAdminView() {
 
 function isUserView() {
   return !!usr && !!token && !isAdminView();
+}
+
+function filterOrdersForLoggedInUser(orders = []) {
+  if (!isUserView()) return Array.isArray(orders) ? orders : [];
+
+  return (Array.isArray(orders) ? orders : []).filter((order) => {
+    const orderUserId = order?.user_id || order?.user?.user_id || null;
+    const orderUsername = order?.user?.username || "";
+
+    if (currentUserId && orderUserId) {
+      return String(orderUserId) === String(currentUserId);
+    }
+
+    if (usr && orderUsername) {
+      return String(orderUsername).toLowerCase() === String(usr).toLowerCase();
+    }
+
+    // If the backend already returned only the logged-in user's orders,
+    // keep the record rather than hiding valid results.
+    return true;
+  });
 }
 
 function normalizeStatus(status) {
@@ -433,6 +462,82 @@ function getUserOrderTotal(order) {
   return itemsTotal;
 }
 
+function getUserStatusBadgeClass(statusLabel) {
+  const normalized = String(statusLabel || "").toLowerCase();
+
+  if (normalized === "completed") return "status-completed";
+  if (normalized === "shipped") return "status-shipped";
+  if (normalized === "cancelled") return "status-cancelled";
+  return "status-pending";
+}
+
+function getActiveUserStatusFilter() {
+  return $(".order-status-tabs .nav-link.active").data("status") || "all";
+}
+
+function matchesUserStatusFilter(order, filterValue) {
+  const selectedFilter = normalizeStatus(filterValue || "all");
+  const orderStatus = normalizeStatus(order?.status);
+
+  switch (selectedFilter) {
+    case "pending":
+    case "pending_payment":
+      return orderStatus === "pending" || orderStatus === "pending_payment";
+    case "to_ship":
+    case "to-ship":
+    case "processing":
+      return orderStatus === "to_ship" || orderStatus === "processing";
+    case "shipped":
+      return orderStatus === "shipped";
+    case "completed":
+      return orderStatus === "completed" || orderStatus === "delivered";
+    case "cancelled":
+      return orderStatus === "cancelled";
+    case "all":
+    default:
+      return true;
+  }
+}
+
+function getUserOrderSearchText(order) {
+  const orderId = order?.checkout_id || order?.order_id || "N/A";
+  const sellerDisplay = getOrderSellerDisplayName(order);
+  const sellerNames = getOrderSellerNames(order).join(" ");
+  const tracking = order?.tracking_number || "Not available";
+  const items = getOrderItems(order);
+  const itemNames = items.map((item) => item.productName).join(" ");
+  const headerTitle =
+    items.length > 0
+      ? `${items[0].productName}${items.length > 1 ? ` +${items.length - 1} more` : ""}`
+      : `Order #${orderId}`;
+  const total = formatCurrency(getUserOrderTotal(order));
+  const rawTotal = Number(order?.total_amount || order?.total || 0);
+  const rawDate = order?.created_at || order?.updated_at || "";
+  const formattedDate = formatDate(rawDate);
+  const filterDate = getOrderDateFilterValue(order);
+  const formattedStatus = formatStatusLabel(order?.status);
+
+  return [
+    orderId,
+    `order #${orderId}`,
+    `order ${orderId}`,
+    headerTitle,
+    sellerDisplay,
+    sellerNames,
+    tracking,
+    order?.status || "",
+    formattedStatus,
+    itemNames,
+    total,
+    rawTotal,
+    rawDate,
+    formattedDate,
+    filterDate,
+  ]
+    .join(" ")
+    .toLowerCase();
+}
+
 function populateUserSellerFilter() {
   const $sellerFilter = $("#userSellerFilter");
   if ($sellerFilter.length === 0) return;
@@ -468,7 +573,33 @@ function renderUserOrders() {
     return;
   }
 
-  globalOrders.forEach((order, index) => {
+  const selectedSeller = ($("#userSellerFilter").val() || "").trim();
+  const selectedDate = ($("#userDateFilter").val() || "").trim();
+  const searchTerm = ($("#userOrderSearch").val() || "").trim().toLowerCase();
+  const activeStatus = getActiveUserStatusFilter();
+
+  const filteredOrders = (globalOrders || []).filter((order) => {
+    const sellerNames = getOrderSellerNames(order);
+    const dateValue = getOrderDateFilterValue(order);
+    const searchHaystack = getUserOrderSearchText(order);
+
+    const statusMatches = matchesUserStatusFilter(order, activeStatus);
+    const sellerMatches =
+      !selectedSeller || sellerNames.includes(selectedSeller);
+    const dateMatches = !selectedDate || dateValue === selectedDate;
+    const searchMatches = !searchTerm || searchHaystack.includes(searchTerm);
+
+    return statusMatches && sellerMatches && dateMatches && searchMatches;
+  });
+
+  if (filteredOrders.length === 0) {
+    $container.html(
+      `<div class="text-center text-muted py-5">No matching orders found.</div>`,
+    );
+    return;
+  }
+
+  filteredOrders.forEach((order) => {
     const orderId = order.checkout_id || order.order_id || "N/A";
     const seller = getOrderSellerDisplayName(order);
     const total = formatCurrency(getUserOrderTotal(order));
@@ -476,18 +607,24 @@ function renderUserOrders() {
     const date = formatDate(order.created_at || order.updated_at);
     const tracking = order.tracking_number || "Not available";
     const items = getOrderItems(order);
+    const headerTitle =
+      items.length > 0
+        ? `${items[0].productName}${items.length > 1 ? ` +${items.length - 1} more` : ""}`
+        : `Order #${orderId}`;
+    const headerImage =
+      items.length > 0
+        ? resolveImageSrc(items[0].image)
+        : "assets/img/back.jpg";
 
-    // Color Logic
-    const statusClass =
-      statusLabel === "completed" ? "bg-completed" : "bg-pending";
+    const statusClass = getUserStatusBadgeClass(statusLabel);
     const collapseId = `collapseOrder${orderId}`;
 
     let itemsHtml = items
       .map(
         (item) => `
-      <div class="d-flex justify-content-between align-items-center mb-2">
-        <div class="text-secondary">${item.productName} (x${item.quantity})</div>
-        <div class="fw-bold">₱${formatCurrency(item.subtotal)}</div>
+      <div class="order-item-row d-flex justify-content-between align-items-center">
+        <div class="order-item-name text-dark">${item.productName} (x${item.quantity})</div>
+        <div class="order-item-price">₱${formatCurrency(item.subtotal)}</div>
       </div>
     `,
       )
@@ -495,44 +632,54 @@ function renderUserOrders() {
 
     $container.append(`
       <div class="order-card mb-3">
-        <div class="order-header d-flex justify-content-between align-items-center" 
-             data-bs-toggle="collapse" 
-             data-bs-target="#${collapseId}" 
+        <div class="order-header d-flex align-items-start" 
+             data-toggle="collapse" 
+             data-target="#${collapseId}" 
              style="cursor: pointer;">
-          
-          <div class="d-flex flex-column">
-            <span class="fw-bold h5 mb-0">Order #${orderId}</span>
-            <small class="text-muted">${seller}</small>
+          <div class="order-header-product d-flex align-items-center">
+            <img
+              src="${headerImage}"
+              alt="${headerTitle}"
+              class="order-header-thumb"
+              onerror="this.onerror=null;this.src='assets/img/back.jpg';" />
+            <div class="order-header-meta d-flex flex-column">
+              <span class="order-card-title">${headerTitle}</span>
+              <small class="order-card-seller text-muted">${seller}</small>
+            </div>
           </div>
 
-          <div class="d-flex align-items-center gap-4">
-            <div class="text-end">
-              <div class="fw-bold h5 mb-1">₱${total}</div>
+          <div class="order-header-summary text-center">
+            <div class="order-card-total">₱${total}</div>
               <span class="status-badge ${statusClass}">${statusLabel}</span>
-            </div>
-            <i class="fas fa-chevron-down text-muted small"></i>
+          </div>
+
+          <div class="order-header-icon">
+            <i class="fas fa-chevron-down order-chevron" aria-hidden="true"></i>
           </div>
         </div>
 
         <div class="collapse" id="${collapseId}">
-          <div class="order-body border-top p-3">
-            <div class="mb-3">${itemsHtml}</div>
-            <div class="small text-muted mb-3">
-              <div>Date: ${date}</div>
-              <div>Tracking: ${tracking}</div>
-            </div>
-            <div class="d-flex gap-2">
-              <button class="btn btn-dark btn-sm rounded-2 px-3" data-toggle="modal" data-target="#orderDetailsModal" data-id="${orderId}">
-                View Details
-              </button>
-              ${
-                statusLabel === "pending"
-                  ? `
-                <button class="btn btn-danger btn-sm rounded-2 px-3 btn-cancel" data-id="${orderId}">
-                  Cancel
-                </button>`
-                  : ""
-              }
+          <div class="order-body">
+            <div class="order-body-divider"></div>
+            <div class="order-items-list">${itemsHtml}</div>
+            <div class="order-card-footer d-flex flex-column flex-md-row justify-content-between align-items-start">
+              <div class="small text-muted order-card-meta mb-3 mb-md-0">
+                <div>Date: ${date}</div>
+                <div>Tracking: ${tracking}</div>
+              </div>
+              <div class="d-flex">
+                <button class="btn btn-dark btn-sm rounded px-3 mr-2" data-toggle="modal" data-target="#orderDetailsModal" data-id="${orderId}">
+                  View Details
+                </button>
+                ${
+                  statusLabel === "pending"
+                    ? `
+                  <button class="btn btn-danger btn-sm rounded px-3 btn-cancel" data-id="${orderId}">
+                    Cancel
+                  </button>`
+                    : ""
+                }
+              </div>
             </div>
           </div>
         </div>
@@ -560,7 +707,11 @@ function fetchBuyerOrders() {
     success: function (res) {
       console.log("Buyer Orders:", res);
       const orders = isAdminView() ? res : res.data || res;
-      globalOrders = Array.isArray(orders) ? orders : [];
+      const normalizedOrders = Array.isArray(orders) ? orders : [];
+
+      globalOrders = isUserView()
+        ? filterOrdersForLoggedInUser(normalizedOrders)
+        : normalizedOrders;
 
       if (isAdminView()) {
         renderOrders($("#statusFilter").val() || "all");
@@ -872,6 +1023,7 @@ $(document).ready(function () {
       dataType: "json",
       success: function (response) {
         currentUserProfile = response || null;
+        currentUserId = response?.user_id || response?.id || null;
         const $navbarProfileImage = $("#navbarProfileImage");
         const $defaultProfileIcon = $("#defaultProfileIcon");
 
@@ -884,10 +1036,17 @@ $(document).ready(function () {
           $navbarProfileImage.hide();
           $defaultProfileIcon.show();
         }
+
+        if (isUserView() && globalOrders.length > 0) {
+          globalOrders = filterOrdersForLoggedInUser(globalOrders);
+          populateUserSellerFilter();
+          renderUserOrders();
+        }
       },
       error: function (xhr) {
         console.error("Error loading profile:", xhr.responseText);
         currentUserProfile = null;
+        currentUserId = null;
         $("#navbarProfileImage").hide();
         $("#defaultProfileIcon").show();
       },
@@ -922,14 +1081,11 @@ $(document).ready(function () {
   // -------------------------------
   // Tab Filtering Logic
   // -------------------------------
-  document.querySelectorAll(".order-tab-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      document
-        .querySelector(".order-tab-btn.active")
-        .classList.remove("active");
-      btn.classList.add("active");
-      renderOrders(btn.dataset.status);
-    });
+  $(".order-status-tabs .nav-link").on("click", function (e) {
+    e.preventDefault();
+    $(".order-status-tabs .nav-link").removeClass("active");
+    $(this).addClass("active");
+    renderUserOrders();
   });
 
   // -------------------------------
@@ -948,10 +1104,6 @@ $(document).ready(function () {
   });
 
   $("#userDateFilter").on("change", function () {
-    renderUserOrders();
-  });
-
-  $("#userOrderSearch").on("input", function () {
     renderUserOrders();
   });
 
@@ -1007,4 +1159,32 @@ $(document).ready(function () {
       },
     });
   });
+});
+
+$(document).on(
+  "show.bs.collapse",
+  "#userOrderListCards .collapse",
+  function () {
+    $(this)
+      .closest(".order-card")
+      .find(".order-chevron")
+      .removeClass("fa-chevron-down")
+      .addClass("fa-chevron-up");
+  },
+);
+
+$(document).on(
+  "hide.bs.collapse",
+  "#userOrderListCards .collapse",
+  function () {
+    $(this)
+      .closest(".order-card")
+      .find(".order-chevron")
+      .removeClass("fa-chevron-up")
+      .addClass("fa-chevron-down");
+  },
+);
+
+$(document).on("input keyup search change", "#userOrderSearch", function () {
+  renderUserOrders();
 });

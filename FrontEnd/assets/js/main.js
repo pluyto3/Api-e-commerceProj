@@ -7,6 +7,14 @@ let usr = null;
 let role = null;
 let profileImage = null;
 
+function getApiHeaders(extraHeaders = {}) {
+  return {
+    Accept: "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...extraHeaders,
+  };
+}
+
 // =======================================
 // User Session Handling
 // =======================================
@@ -70,14 +78,11 @@ $(document).ready(() => {
   /* -----------------------------
      LOAD NAVBAR PROFILE IMAGE
   ----------------------------- */
-  if (usr) {
+  if (usr && token) {
     $.ajax({
       url: `${ip}/api/getAccount_username/${usr}`,
       type: "GET",
-      headers: {
-        Accept: "application/json",
-        Authorization: `Bearer ${token}`,
-      },
+      headers: getApiHeaders(),
       success: (response) => {
         const $navbarProfileImage = $("#navbarProfileImage");
         const $defaultProfileIcon = $("#defaultProfileIcon");
@@ -120,10 +125,7 @@ $(document).ready(() => {
   $.ajax({
     url: `${ip}/api/brands`,
     method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: "application/json",
-    },
+    headers: getApiHeaders(),
     success: (response) => {
       const brands = Array.isArray(response) ? response : response.data || [];
       const $brandCarousel = $("#brand-carousel").empty();
@@ -171,10 +173,7 @@ $(document).ready(() => {
   $.ajax({
     url: `${ip}/api/products`,
     method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: "application/json",
-    },
+    headers: getApiHeaders(),
     success: (response) => {
       const products = Array.isArray(response) ? response : response.data;
       const $carousel = $("#product-carousel").empty();
@@ -237,10 +236,7 @@ $(document).ready(() => {
   $.ajax({
     url: `${ip}/api/products`, // Change this if you have a specific /api/featured-products endpoint
     method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: "application/json",
-    },
+    headers: getApiHeaders(),
     success: (response) => {
       const products = Array.isArray(response) ? response : response.data;
       const $featuredContainer = $("#featured-container").empty();
@@ -278,10 +274,7 @@ $(document).ready(() => {
   $.ajax({
     url: `${ip}/api/products`,
     method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: "application/json",
-    },
+    headers: getApiHeaders(),
     success: (response) => {
       const products = Array.isArray(response) ? response : response.data;
       const $dailyProductsContainer = $("#dailyProducts-container").empty();
@@ -315,16 +308,17 @@ $(document).ready(() => {
   ----------------------------- */
   const updateCartCount = (count) => $("#cart-count").text(count);
 
-  $.ajax({
-    url: `${ip}/api/cart`,
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: "application/json",
-    },
-    success: (res) => updateCartCount(res.count || 0),
-    error: (xhr) => console.error("Error fetching cart:", xhr.responseText),
-  });
+  if (token) {
+    $.ajax({
+      url: `${ip}/api/cart`,
+      method: "GET",
+      headers: getApiHeaders(),
+      success: (res) => updateCartCount(res.count || 0),
+      error: (xhr) => console.error("Error fetching cart:", xhr.responseText),
+    });
+  } else {
+    updateCartCount(0);
+  }
 
   /* -----------------------------
      ADD TO CART HANDLER
