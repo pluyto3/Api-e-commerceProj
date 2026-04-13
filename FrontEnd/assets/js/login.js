@@ -51,11 +51,23 @@ $(document).ready(function () {
           }
         });
       },
-      error: function (res) {
+      error: function (xhr) {
+        // Default error message
+        let errorMessage = "Access Denied: Invalid username or password.";
+
+        // Check if the backend sent a specific error message
+        if (xhr.responseJSON) {
+          errorMessage =
+            xhr.responseJSON.msg ||
+            xhr.responseJSON.message ||
+            xhr.responseJSON.error ||
+            errorMessage;
+        }
+
         Swal.fire({
           icon: "error",
           title: "Error",
-          text: "Access Denied: Invalid username or password.",
+          text: errorMessage,
           footer: '<a href="forgot.html">Forgot Password?</a>',
         });
       },

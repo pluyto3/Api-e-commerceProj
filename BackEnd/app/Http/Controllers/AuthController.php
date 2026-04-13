@@ -257,7 +257,7 @@ class AuthController extends Controller
         }
 
         if (!Hash::check($request->password, $user->password)) {
-            return response()->json(['msg' => 'Invalid password.'], 401);
+            return response()->json(['msg' => 'Wrong password.'], 401);
         }
 
         if (is_null($user->email_verified_at)) {

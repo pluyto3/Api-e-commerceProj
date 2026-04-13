@@ -384,7 +384,7 @@ $(document).ready(function () {
         if (res.status === 200) {
           Swal.fire({
             icon: "success",
-            title: "Profile Updated Successfully",
+            title: "Profile Saved",
             text: "Your account has been updated.",
             showConfirmButton: false,
           }).then(() => location.reload());
@@ -393,7 +393,7 @@ $(document).ready(function () {
       error: function (xhr) {
         Swal.fire({
           icon: "error",
-          title: "Error Updating Account",
+          title: "Error Updating Profile",
           text: xhr.responseText,
         });
       },
