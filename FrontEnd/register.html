@@ -21,6 +21,13 @@
     <script src="assets/js/owl.carousel.min.js"></script>
     <script src="assets/js/jquery.bxslider.min.js"></script>
     <script src="assets/js/registration.js"></script>
+
+    <script>
+      // Redirect to login if user is not authenticated
+      if ($.cookie("username") === undefined) {
+        window.location.replace("login.html");
+      }
+    </script>
   </head>
   <body>
     <!--Navbar-->

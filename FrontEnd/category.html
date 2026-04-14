@@ -35,13 +35,10 @@
     <!-- 3. Your Custom Script LAST -->
     <script src="assets/js/category.js"></script>
     <script>
-      // function load_user() {
-      //   var usr = $.cookie("username");
-      //   if (usr === undefined) {
-      //     window.location.replace("login.html");
-      //   }
-      //   $("#username").html("<b>" + usr + "</b>");
-      // }
+      // Redirect to login if user is not authenticated
+      if ($.cookie("username") === undefined) {
+        window.location.replace("login.html");
+      }
     </script>
     
   <body onload="load_user()">

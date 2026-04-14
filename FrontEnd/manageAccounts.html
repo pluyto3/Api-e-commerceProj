@@ -34,7 +34,13 @@
 
     <!-- Your Custom Script LAST -->
     <script src="assets/js/manageAcc.js"></script>
-    
+        <script>
+      // Redirect to login if user is not authenticated
+      if ($.cookie("username") === undefined) {
+        window.location.replace("login.html");
+      }
+    </script>
+  </head>
   <body onload="load_user()">
     <!--Navbar-->
     <nav class="navbar navbar-expand-lg navbar-dark sticky-top">

@@ -38,6 +38,13 @@
 
     <!-- 3. Your Custom Script LAST -->
     <script src="assets/js/dashboard.js"></script>
+    
+    <script>
+      // Redirect to login if user is not authenticated
+      if ($.cookie("username") === undefined) {
+        window.location.replace("login.html");
+      }
+    </script>
 
   <body onload="load_user()">
     <!--Navbar-->

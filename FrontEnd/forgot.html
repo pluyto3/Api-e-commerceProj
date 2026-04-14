@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <title>Forgot Password</title>
@@ -21,6 +21,12 @@
     <script src="assets/js/owl.carousel.min.js"></script>
     <script src="assets/js/jquery.bxslider.min.js"></script>
     <script src="assets/js/forgotpwd.js"></script>
+    <script>
+      // Redirect to login if user is not authenticated
+      if ($.cookie("username") === undefined) {
+        window.location.replace("login.html");
+      }
+    </script>
   </head>
   <body onload="load_user()">
     <div class="login-container">
