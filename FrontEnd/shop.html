@@ -4,21 +4,37 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Shop</title>
+    <link rel="stylesheet" href="assets/css/all.min.css" />
     <link rel="stylesheet" href="assets/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="assets/css/stylesheet.css" />
-    <link rel="stylesheet" href="assets/css/all.css" />
+
+    <!-- Additional CSS Files -->
     <link rel="stylesheet" href="assets/css/sweetalert2.css" />
     <link rel="stylesheet" href="assets/css/borderless.css" />
-    <script src="assets/js/jquery.min.js"></script>
+    <link rel="stylesheet" href="assets/css/owl.carousel.min.css" />
+    <link rel="stylesheet" href="assets/css/owl.theme.default.min.css" />
+    <link rel="stylesheet" href="assets/css/jquery.bxslider.min.css" />
+    <link rel="stylesheet" href="assets/css/datatables.min.css" />
+    <link rel="stylesheet" href="assets/css/stylesheet.css" />
+
+    <!-- jQuery -->
+    <script src="assets/js/jquery-3.5.1.min.js"></script>
+
+    <!-- DataTables -->
+    <script src="assets/js/datatables.min.js"></script>
+
+    <!-- Bootstrap JS + Others -->
     <script src="assets/js/popper.min.js"></script>
-    <script src="assets/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/js/bootstrap.min.js"></script>
+    <script src="assets/js/fontawesome.min.js"></script>
     <script src="assets/js/sweetalert2.all.js"></script>
-    <script src="assets/js/jquery.cookie.js"></script>
+    <script src="assets/js/owl.carousel.min.js"></script>
+    <script src="assets/js/jquery.bxslider.min.js"></script>
+    <script src="assets/js/jquery.cookie.min.js"></script>
     <script>
       // Redirect to login if user is not authenticated
-      if ($.cookie("username") === undefined) {
-        window.location.replace("login.html");
-      }
+      // if ($.cookie("username") === undefined) {
+      //   window.location.replace("login.html");
+      // }
     </script>
   </head>
   <body>
@@ -104,29 +120,120 @@
       </div>
     </nav>
 
-    <main>
-      <!--Featured-->
-      <section id="featured" class="my-5 pb-5">
-        <div class="container text-center mt-5 pt-5">
-          <h3>Our Products</h3>
-          <hr />
-          <p>Here you can check out our products</p>
+    <main class="bg-light pb-5">
+      <div class="container mt-5 pt-5">
+        <div
+          id="promoCarousel"
+          class="carousel slide shadow-sm rounded overflow-hidden mb-4"
+          data-ride="carousel">
+          <div class="carousel-inner">
+            <div class="carousel-item active">
+              <img
+                src="assets/img/banner1.jpg"
+                class="d-block w-100"
+                style="height: 250px; object-fit: cover"
+                alt="Promo 1" />
+            </div>
+            <div class="carousel-item">
+              <img
+                src="assets/img/banner2.jpg"
+                class="d-block w-100"
+                style="height: 250px; object-fit: cover"
+                alt="Promo 2" />
+            </div>
+          </div>
+          <a
+            class="carousel-control-prev"
+            href="#promoCarousel"
+            role="button"
+            data-slide="prev">
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+          </a>
+          <a
+            class="carousel-control-next"
+            href="#promoCarousel"
+            role="button"
+            data-slide="next">
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+          </a>
         </div>
-        <div class="row mx-auto container" id="shop-products-container">
-          <!-- Products will be dynamically inserted here -->
-          <nav aria-label="Page navigation example">
-            <ul class="pagination mt-5">
-              <li class="page-item">
-                <a href="#" class="page-link">Previous</a>
+      </div>
+
+      <div class="container">
+        <div class="row">
+          <aside class="col-lg-2 d-none d-lg-block">
+            <h5 class="mb-3"><i class="fa fa-list mr-2"></i>Categories</h5>
+            <ul class="list-unstyled shopee-filter-list">
+              <li>
+                <a href="#" class="text-dark py-1 d-block">Electronics</a>
               </li>
-              <li class="page-item"><a href="#" class="page-link">1</a></li>
-              <li class="page-item"><a href="#" class="page-link">2</a></li>
-              <li class="page-item"><a href="#" class="page-link">3</a></li>
-              <li class="page-item"><a href="#" class="page-link">Next</a></li>
+              <li><a href="#" class="text-dark py-1 d-block">Fashion</a></li>
+              <li>
+                <a href="#" class="text-dark py-1 d-block">Home & Living</a>
+              </li>
+              <li><a href="#" class="text-dark py-1 d-block">Gadgets</a></li>
             </ul>
-          </nav>
+            <hr />
+          </aside>
+
+          <div class="col-lg-10">
+            <div
+              class="bg-white p-2 mb-3 shadow-sm d-flex align-items-center justify-content-between rounded">
+              <span
+                class="ml-2 font-weight-bold text-uppercase small text-muted"
+                >Sort By:</span
+              >
+              <div class="btn-group btn-group-sm">
+                <button class="btn btn-light active">Relevance</button>
+                <button class="btn btn-light">Latest</button>
+                <button class="btn btn-light">Top Sales</button>
+              </div>
+            </div>
+
+            <div class="row no-gutters g-2" id="shop-products-container">
+              <div class="col-6 col-md-4 col-lg-2-4 p-1">
+                <div class="card product-card h-100 border-0 shadow-sm">
+                  <img
+                    src="assets/img/product_placeholder.jpg"
+                    class="card-img-top p-2"
+                    alt="..." />
+                  <div class="card-body p-2 d-flex flex-column">
+                    <p class="card-title text-dark small mb-2 line-clamp">
+                      Premium Wireless Bluetooth Headset with Mic
+                    </p>
+                    <div class="mt-auto">
+                      <span class="text-orange font-weight-bold">₱1,250</span>
+                      <div
+                        class="d-flex justify-content-between align-items-center mt-1"
+                        style="font-size: 10px">
+                        <span class="text-warning"
+                          ><i class="fa fa-star"></i> 4.9</span
+                        >
+                        <span class="text-muted">1.2k Sold</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <nav aria-label="Page navigation" class="mt-5">
+              <ul class="pagination justify-content-center">
+                <li class="page-item">
+                  <a class="page-link" href="#">Previous</a>
+                </li>
+                <li class="page-item active">
+                  <a class="page-link" href="#">1</a>
+                </li>
+                <li class="page-item"><a class="page-link" href="#">2</a></li>
+                <li class="page-item">
+                  <a class="page-link" href="#">Next</a>
+                </li>
+              </ul>
+            </nav>
+          </div>
         </div>
-      </section>
+      </div>
     </main>
 
     <!--Footer-->

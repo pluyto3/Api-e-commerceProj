@@ -279,8 +279,10 @@ $(document).ready(() => {
       const products = Array.isArray(response) ? response : response.data;
       const $dailyProductsContainer = $("#dailyProducts-container").empty();
 
-      // Display all products without slicing to mimic a full marketplace feed
-      products.forEach((p) => {
+      // Limit to 30 products to ensure at least 5 rows and 5 columns.
+      const dailyProducts = products.slice(0, 30);
+
+      dailyProducts.forEach((p) => {
         $dailyProductsContainer.append(`
           <div class="col-6 col-sm-4 col-md-3 col-lg-2 mb-3">
             <div class="card dailyProductCard">
