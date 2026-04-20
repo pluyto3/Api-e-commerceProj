@@ -43,13 +43,21 @@
   </head>
   <body>
     <!--Navbar-->
-    <nav class="navbar navbar-expand-lg navbar-dark fixed-top py-3">
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
       <div class="container-fluid">
         <!-- Brand -->
-        <a class="navbar-brand d-flex align-items-center" href="dashboard.html">
+        <a class="navbar-brand d-flex align-items-center" href="index.html">
           <img src="assets/img/ecomLogo.jpg" alt="" style="height: 40px" />
         </a>
-        <!-- Toggler/collapsibe Button -->
+        <div class="toggle-btns">
+          <!-- Menu Button -->
+          <i class="fas fa-bars text-white menu-btn"></i>
+          <!-- Close Button -->
+          <i
+            class="fas fa-arrow-right text-white close-btn"
+            style="display: none"></i>
+          <!-- Toggler/collapsibe Button -->
+        </div>
         <button
           class="navbar-toggler"
           type="button"
@@ -66,7 +74,9 @@
           id="collapsibleNavbar">
           <ul class="navbar-nav mr-auto">
             <li class="nav-item">
-              <a class="nav-link" href="index.html">Home</a>
+              <a class="nav-link" href="index.html" style="margin-left: 29px"
+                >Home</a
+              >
             </li>
             <li class="nav-item">
               <a class="nav-link" href="shop.html">Shop</a>
@@ -95,28 +105,96 @@
               Search
             </button>
           </form>
-          <ul class="navbar-nav ml-lg-3">
-            <li class="nav-item d-none d-lg-block">
-              <a class="nav-link" href="cart.html"
-                ><i class="fa fa-shopping-cart white-icon"></i
-              ></a>
+
+          <ul class="navbar-nav ml-lg-3 d-flex align-items-center">
+            <!-- Cart Icon -->
+            <li class="nav-item mr-3">
+              <a
+                class="nav-link position-relative d-flex align-items-center"
+                href="cart.html">
+                <i class="fa fa-shopping-cart white-icon fa-lg"></i>
+                <span
+                  id="cart-count"
+                  class="badge bg-danger rounded-pill position-absolute">
+                  0
+                </span>
+              </a>
             </li>
-            <!-- Dropdown -->
+
+            <!-- User Dropdown -->
             <li class="nav-item dropdown">
               <a
-                class="nav-link dropdown-toggle"
+                class="nav-link dropdown-toggle d-flex align-items-center"
                 href="#"
                 id="navbardrop"
                 data-toggle="dropdown"
                 aria-haspopup="true"
                 aria-expanded="false">
-                <span id="username">Username</span>
+                <!-- Profile Image -->
+                <img
+                  id="navbarProfileImage"
+                  alt="Profile"
+                  class="rounded-circle mr-2"
+                  style="
+                    width: 35px;
+                    height: 35px;
+                    object-fit: cover;
+                    display: none;
+                    background: #fff;
+                    border: 2px solid #fff;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                  " />
+
+                <!-- Username -->
+                <span
+                  id="displayUsername"
+                  class="text-white font-weight-bold"></span>
               </a>
+
+              <!-- Dropdown Menu -->
               <div
                 class="dropdown-menu dropdown-menu-right"
                 aria-labelledby="navbardrop">
-                <a class="dropdown-item" href="account.html">Profile</a>
-                <a id="logout" class="dropdown-item" href="#">Logout</a>
+                <a class="dropdown-item" href="account.html">
+                  <i class="fa fa-user user-icon" aria-hidden="true"></i>
+                  Profile
+                </a>
+                <a class="dropdown-item" href="orderDetails.html">
+                  <i
+                    class="fab fa-first-order user-orders"
+                    aria-hidden="true"></i>
+                  Your Orders
+                </a>
+                <a class="dropdown-item" href="product.html" id="productUi">
+                  <i class="fab fa-product-hunt" aria-hidden="true"></i> Your
+                  Products
+                </a>
+                <a
+                  class="dropdown-item"
+                  href="admindashboard.html"
+                  id="adminDashboard"
+                  style="display: none">
+                  <i class="fas fa-home"></i> Dashboard
+                </a>
+                <hr class="user-menu" />
+                <span class="dropdown-item-text text-muted small"
+                  >If new user please Register.</span
+                >
+                <a
+                  id="register"
+                  href="register.html"
+                  class="dropdown-item text-center"
+                  >Register</a
+                >
+                <a
+                  id="login"
+                  href="login.html"
+                  class="dropdown-item text-center"
+                  >Login</a
+                >
+                <a id="logout" class="dropdown-item text-center" href="#"
+                  >Logout</a
+                >
               </div>
             </li>
           </ul>
@@ -124,8 +202,8 @@
       </div>
     </nav>
 
-    <main class="bg-light pb-5">
-      <div class="container mt-5 pt-5">
+    <main class="bg-light pb-5 shop-main">
+      <div class="container-fluid px-4 mt-5 pt-5">
         <div
           id="promoCarousel"
           class="carousel slide shadow-sm rounded overflow-hidden mb-4"
@@ -176,24 +254,23 @@
         </div>
       </div>
 
-      <div class="container">
+      <div class="container-fluid px-4">
         <div class="row">
-          <aside class="col-lg-2 d-none d-lg-block">
+          <aside class="col-lg-2 d-none d-lg-block" id="shop-categories-panel">
             <h5 class="mb-3"><i class="fa fa-list mr-2"></i>Categories</h5>
-            <ul class="list-unstyled shopee-filter-list">
+            <ul
+              class="list-unstyled shopee-filter-list"
+              id="shop-category-list">
               <li>
-                <a href="#" class="text-dark py-1 d-block">Electronics</a>
+                <span class="text-muted py-1 d-block"
+                  >Loading categories...</span
+                >
               </li>
-              <li><a href="#" class="text-dark py-1 d-block">Fashion</a></li>
-              <li>
-                <a href="#" class="text-dark py-1 d-block">Home & Living</a>
-              </li>
-              <li><a href="#" class="text-dark py-1 d-block">Gadgets</a></li>
             </ul>
             <hr />
           </aside>
 
-          <div class="col-lg-10">
+          <div class="col-lg-10" id="shop-products-panel">
             <div
               class="bg-white p-2 mb-3 shadow-sm d-flex align-items-center justify-content-between rounded">
               <span
@@ -201,52 +278,34 @@
                 >Sort By:</span
               >
               <div class="btn-group btn-group-sm">
-                <button class="btn btn-light active">Relevance</button>
-                <button class="btn btn-light">Latest</button>
-                <button class="btn btn-light">Most Sales</button>
+                <button
+                  class="btn btn-light shop-sort-btn active"
+                  data-sort="relevance">
+                  Relevance
+                </button>
+                <button class="btn btn-light shop-sort-btn" data-sort="latest">
+                  Latest
+                </button>
+                <button class="btn btn-light shop-sort-btn" data-sort="sales">
+                  Most Sales
+                </button>
               </div>
             </div>
 
-            <div class="row no-gutters g-2" id="shop-products-container">
-              <div class="col-6 col-md-4 col-lg-2-4 p-1">
-                <div class="card product-card h-100 border-0 shadow-sm">
-                  <img
-                    src="assets/img/product_placeholder.jpg"
-                    class="card-img-top p-2"
-                    alt="..." />
-                  <div class="card-body p-2 d-flex flex-column">
-                    <p class="card-title text-dark small mb-2 line-clamp">
-                      Premium Wireless Bluetooth Headset with Mic
-                    </p>
-                    <div class="mt-auto">
-                      <span class="text-orange font-weight-bold">₱1,250</span>
-                      <div
-                        class="d-flex justify-content-between align-items-center mt-1"
-                        style="font-size: 10px">
-                        <span class="text-warning"
-                          ><i class="fa fa-star"></i> 4.9</span
-                        >
-                        <span class="text-muted">1.2k Sold</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+            <div class="container-fluid" id="shop-products-container">
+              <div class="col-12">
+                <p class="text-muted text-center py-4 mb-0">
+                  Loading products...
+                </p>
               </div>
             </div>
 
-            <nav aria-label="Page navigation" class="mt-5">
-              <ul class="pagination justify-content-center">
-                <li class="page-item">
-                  <a class="page-link" href="#">Previous</a>
-                </li>
-                <li class="page-item active">
-                  <a class="page-link" href="#">1</a>
-                </li>
-                <li class="page-item"><a class="page-link" href="#">2</a></li>
-                <li class="page-item">
-                  <a class="page-link" href="#">Next</a>
-                </li>
-              </ul>
+            <nav
+              aria-label="Page navigation"
+              class="mt-5"
+              id="shop-pagination"
+              style="display: none">
+              <ul class="pagination justify-content-center"></ul>
             </nav>
           </div>
         </div>
@@ -254,7 +313,7 @@
     </main>
 
     <!--Footer-->
-    <footer>
+    <footer class="footer-shop">
       <div class="social-share">
         <ul>
           <li><i class="fab fa-facebook"></i></li>
@@ -264,7 +323,7 @@
           <li><i class="fab fa-youtube"></i></li>
         </ul>
       </div>
-      <div class="general-info">
+      <div class="general-info-shop">
         <div class="help">
           <h3>Help</h3>
           <ul>
@@ -285,7 +344,6 @@
             <li>Mukas</li>
           </ul>
         </div>
-        `
         <div class="legal">
           <h3>Privacy</h3>
           <ul>
