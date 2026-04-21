@@ -1,18 +1,11 @@
 var ip = "http://localhost:8000";
 
-function load_user() {
-  var usr = $.cookie("username");
-  if (usr != undefined) {
-    window.location.replace("index.html");
-  }
-}
-
-// $(document).ajaxStart(function () {
-//   $("#wait").css("display", "block");
-// });
-// $(document).ajaxComplete(function () {
-//   $("#wait").css("display", "none");
-// });
+$(document).ajaxStart(function () {
+  $("#wait").css("display", "block");
+});
+$(document).ajaxComplete(function () {
+  $("#wait").css("display", "none");
+});
 
 $(document).ready(function () {
   $("#forgotPasswordForm").on("submit", function (e) {

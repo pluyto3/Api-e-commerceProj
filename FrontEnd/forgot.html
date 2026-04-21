@@ -21,14 +21,8 @@
     <script src="assets/js/owl.carousel.min.js"></script>
     <script src="assets/js/jquery.bxslider.min.js"></script>
     <script src="assets/js/forgotpwd.js"></script>
-    <script>
-      // Redirect to login if user is not authenticated
-      if ($.cookie("username") === undefined) {
-        window.location.replace("login.html");
-      }
-    </script>
   </head>
-  <body onload="load_user()">
+  <body>
     <div class="login-container">
       <div class="loginform shadow rounded p-4 mt-5 col-12">
         <div
@@ -64,7 +58,7 @@
               </div>
               <div class="mb-3 text-center">
                 Don't have an Account?
-                <a href="register.html" class="text-decoration-none"
+                <a href="register.html?v=20260421" class="text-decoration-none"
                   >Register Here</a
                 >
               </div>

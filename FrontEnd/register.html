@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <title>Register</title>
@@ -21,114 +21,22 @@
     <script src="assets/js/owl.carousel.min.js"></script>
     <script src="assets/js/jquery.bxslider.min.js"></script>
     <script src="assets/js/registration.js"></script>
-
-    <script>
-      // Redirect to login if user is not authenticated
-      if ($.cookie("username") === undefined) {
-        window.location.replace("login.html");
-      }
-    </script>
   </head>
   <body>
-    <!--Navbar-->
-    <!-- <nav class="navbar navbar-expand-lg bg-dark navbar-dark py-3 my-5">
-      <div class="container-fluid"> -->
-        <!-- Toggler/collapsibe Button -->
-        <!-- <button
-          class="navbar-toggler"
-          type="button"
-          data-toggle="collapse"
-          data-target="#collapsibleNavbar"
-          aria-controls="collapsibleNavbar"
-          aria-expanded="false"
-          aria-label="Toggle navigation">
-          <span class="navbar-toggler-icon"></span>
-        </button> -->
-        <!-- Navbar links -->
-        <!-- <div
-          class="collapse navbar-collapse navbar-buttons"
-          id="collapsibleNavbar">
-          <ul class="navbar-nav mr-auto">
-            <li class="nav-item">
-              <a class="nav-link" href="index.html">Home</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="shop.html">Shop</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="contact.html" style="width: 100px"
-                >Contact Us</a
-              >
-            </li>
-            <li class="nav-item d-lg-none">
-              <a class="nav-link" href="#"
-                ><i class="fa fa-shopping-cart white-icon"></i
-              ></a>
-            </li>
-          </ul>
-          <ul class="navbar-nav ml-lg-3">
-            <li class="nav-item d-none d-lg-block">
-              <a class="nav-link" href="cart.html">
-                <i class="fa fa-shopping-cart white-icon"></i>
-                <span
-                  id="cart-count"
-                  class="badge bg-danger position-absolute top-0 start-100 translate-middle rounded-pill">
-                  0
-                </span>
-              </a>
-            </li> -->
-            <!-- Dropdown -->
-            <!-- <li class="nav-item dropdown">
-              <a
-                class="nav-link dropdown-toggle"
-                href="#"
-                id="navbardrop"
-                data-toggle="dropdown"
-                aria-haspopup="true"
-                aria-expanded="false">
-                <span id="accountName">My Account</span>
-              </a>
-              <div
-                class="dropdown-menu dropdown-menu-right"
-                aria-labelledby="navbardrop">
-                <a class="dropdown-item" href="account.html"
-                  ><i class="fa fa-user user-icon" aria-hidden="true"></i>
-                  Profile</a
-                >
-                <a class="dropdown-item" href="account.html"
-                  ><i
-                    class="fab fa-first-order user-orders"
-                    aria-hidden="true"></i>
-                  Your Orders</a
-                >
-                <hr class="user-menu" />
-                <span>If new user please Register.</span>
-                <a id="register" class="dropdown-item text-center" href="#"
-                  >Register</a
-                >
-                <a id="login" class="dropdown-item text-center" href="#"
-                  >Login</a
-                >
-                <a id="login" class="dropdown-item text-center" href="#"
-                  >Logout</a
-                >
-              </div>
-            </li>
-          </ul>
-        </div>
-      </div>
-    </nav> -->
-
     <div class="login-container">
       <div class="loginform shadow rounded p-4 mt-5 col-12">
         <div
           class="logo mt-3 row justify-content-center"
           width="100%"
           height="100%">
-          <img src="assets/img/ecomLogo.jpg" alt="Logo" class="img-fluid" />
+          <img src="assets/img/hanz-goLogo.png" alt="Logo" class="img-fluid" />
         </div>
         <h2 class="text-center my-4">Registration</h2>
-        <form action="#" method="POST" id="signupForm" enctype="multipart/form-data">
+        <form
+          action="#"
+          method="POST"
+          id="signupForm"
+          enctype="multipart/form-data">
           <div class="row">
             <!-- Username -->
             <div class="col-md-6">
@@ -141,9 +49,7 @@
                   name="username"
                   placeholder="Enter username "
                   required />
-                <small
-                  class="text-danger error-message"
-                  id="usernameError">
+                <small class="text-danger error-message" id="usernameError">
                 </small>
               </div>
             </div>
@@ -241,7 +147,7 @@
             </div>
             <!-- Terms and Conditions -->
             <div class="col-md-12 mt-4">
-              <input type="checkbox" name="terms" id="terms" required/>
+              <input type="checkbox" name="terms" id="terms" required />
               <label for="terms"> Agree with user's terms & conditions.</label>
             </div>
             <!-- Registration Button -->
@@ -249,7 +155,7 @@
               <button
                 type="submit"
                 class="btn btn-primary btn-md signUp"
-                id="signUp"">
+                id="signUp">
                 Sign Up
               </button>
             </div>

@@ -2,169 +2,214 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use App\Models\User;
 use App\Models\addToCart;
 use App\Models\Product;
-
+use App\Models\User;
+use Illuminate\Http\Request;
 
 class AddToCartController extends Controller
 {
-    public function addToCart(Request $request)
+    private function userFromToken(Request $request): ?User
     {
         $token = $request->bearerToken();
-        if($token){
-            $user = User::where('token', $token)->first();
-        if($user){
 
-                $validated = $request->validate([
-                    'product_id' => 'required|exists:products,product_id',
-                    'quantity'   => 'required|integer|min:1',
-                ]);
-
-                $cartItem = addToCart::where('user_id', $user->user_id)
-                    ->where('product_id', $validated['product_id'])
-                    ->first();
-
-                if ($cartItem) {
-                        // if already in cart, same product in my cart
-                        $cartItem->quantity += $validated['quantity'];
-                        $cartItem->save();
-
-                    } else {
-                        // Create a new cart item
-                        $cartItem = addToCart::create([
-                            'user_id'    => $user->user_id,
-                            'product_id' => $validated['product_id'],
-                            'quantity'   => $validated['quantity'],
-                        ]);
-                    }
-
-                    // Fetch full cart with product details
-                    $cart = AddToCart::where('user_id', $user->user_id)
-                        ->join('products', 'products.product_id', '=', 'add_to_cart.product_id')
-                        ->select(
-                            'add_to_cart.addToCart_id',
-                            'products.product_name',
-                            'products.product_price',
-                            'products.image',
-                            'add_to_cart.quantity',
-                            \DB::raw('products.product_price * add_to_cart.quantity as subtotal')
-                        )
-                        ->get();
-
-                    // Calculate total amount
-                    $total = $cart->sum('subtotal');
-
-                    return response()->json([
-                        'message' => 'Cart items fetched successfully',
-                        'cart'    => $cart, 
-                        'count'   => $cart->count(),
-                        'total'   => $total 
-                    ]);
-            } else {
-                return response()->json([
-                    'msg' => 'Invalid Token.'
-                ], 400);
-            }
-        } else {
-            return response()->json([
-                'msg' => 'No Token Provided.'
-            ], 400);
-        }
-    }
-
-    // Remove item from cart
-    public function removeFromCart(Request $request, $id)
-    {
-        $token = request()->bearerToken();
         if (!$token) {
-            return response()->json(['msg' => 'Token is required.'], 401);
+            return null;
         }
-        if ($token) {
-            $user = User::where('token', $token)->first();
-            if (!$user) {
-                return response()->json(['msg' => 'Invalid Token.'], 401);
-            } else {
-                $cartItem = addToCart::find($id);
-                if (!$cartItem) {
-                    return response()->json(['msg' => 'Cart item not found.'], 404);
-                } else {
-                    $cartItem->delete();
-                    return response()->json(['message' => 'Product removed from cart', 'status' => 200]);
-                }
-            }
-        } else {
-            return response()->json(['msg' => 'No Token Provided.'], 401);
-        }
+
+        return User::where('token', $token)->first();
     }
 
-    // Update quantity
-    public function updateCart(Request $request, $id)
+    private function missingTokenResponse()
     {
-        $token = request()->bearerToken();
-        if ($token) {
-            $user = User::where('token', $token)->first();
-            if ($user) {
-                $addToCart = addToCart::find($id);
-                if (!$addToCart) {
-                    return response()->json(['msg' => 'Brand not found.'], 404);
-                }
-
-                $request->validate([
-                    'quantity' => 'required|integer|min:1',
-                ]);
-
-                $addToCart->quantity = $request->quantity;
-                $addToCart->save();
-                return response()->json(['message' => 'Cart updated successfully', 'cart' => $addToCart, 'status' => 200]);
-            } else {
-                return response()->json(['msg' => 'Invalid Token.'], 400);
-            }
-        } else {
-            return response()->json(['msg' => 'No Token Provided.'], 400);
-        }
-
-        // $request->validate([
-        //     'quantity' => 'required|integer|min:1',
-        // ]);
-
-        // $cartItem = Cart::where('user_id', Auth::id())->findOrFail($id);
-        // $cartItem->quantity = $request->quantity;
-        // $cartItem->save();
-
-        // return response()->json([
-        //     'message' => ' Cart updated',
-        //     'cart'    => $cartItem
-        // ]);
+        return response()->json(['msg' => 'No Token Provided.'], 400);
     }
 
-    // Get all cart items for the user
-    public function getCart (Request $request)
-{
-    $token = $request->bearerToken();
-    if ($token) {
-        $user = User::where('token', $token)->first();
-        if ($user) {
-            $cartItems = AddToCart::where('user_id', $user->user_id)->get();
-            $cartCount = AddToCart::where('user_id', $user->user_id)->count();
+    private function invalidTokenResponse()
+    {
+        return response()->json(['msg' => 'Invalid Token.'], 400);
+    }
 
-            $cartItems = AddToCart::with('product') // eager load product
+    private function cartResponse(User $user, string $message = 'Cart items fetched successfully', int $status = 200)
+    {
+        $cartItems = addToCart::with([
+            'product' => function ($query) {
+                $query->select(
+                    'product_id',
+                    'product_name',
+                    'product_price',
+                    'stock_quantity',
+                    'image',
+                    'approval_status'
+                );
+            },
+        ])
             ->where('user_id', $user->user_id)
             ->get();
 
+        $cartItems->each(function ($item) {
+            $item->setAttribute(
+                'subtotal',
+                $item->product ? $item->quantity * $item->product->product_price : 0
+            );
+        });
+
+        return response()->json([
+            'message' => $message,
+            'cart'    => $cartItems,
+            'count'   => $cartItems->count(),
+            'total'   => $cartItems->sum('subtotal'),
+        ], $status);
+    }
+
+    public function addToCart(Request $request)
+    {
+        if (!$request->bearerToken()) {
+            return $this->missingTokenResponse();
+        }
+
+        $user = $this->userFromToken($request);
+        if (!$user) {
+            return $this->invalidTokenResponse();
+        }
+
+        $validated = $request->validate([
+            'product_id' => 'required|exists:products,product_id',
+            'quantity'   => 'required|integer|min:1',
+        ]);
+
+        $product = Product::find($validated['product_id']);
+        if (!$product) {
+            return response()->json(['msg' => 'Product not found.'], 404);
+        }
+
+        $stock = (int) $product->stock_quantity;
+        if ($stock <= 0) {
             return response()->json([
-                'message' => 'Cart items fetched successfully',
-                'cart'    => $cartItems,
-                'count'   => $cartItems->count(),
-                'total'   => $cartItems->sum(function ($item) {
-                    return $item->quantity * $item->product->product_price;
-                }),
+                'msg' => 'This product is out of stock.',
+            ], 422);
+        }
+
+        $cartItem = addToCart::where('user_id', $user->user_id)
+            ->where('product_id', $validated['product_id'])
+            ->first();
+
+        $requestedQuantity = (int) $validated['quantity'];
+        if ($cartItem) {
+            $requestedQuantity += (int) $cartItem->quantity;
+        }
+
+        if ($requestedQuantity > $stock) {
+            return response()->json([
+                'msg' => "Only {$stock} item(s) available in stock.",
+            ], 422);
+        }
+
+        if ($cartItem) {
+            $cartItem->quantity = $requestedQuantity;
+            $cartItem->save();
+        } else {
+            addToCart::create([
+                'user_id'    => $user->user_id,
+                'product_id' => $validated['product_id'],
+                'quantity'   => $requestedQuantity,
             ]);
         }
-        return response()->json(['msg' => 'Invalid Token.'], 400);
+
+        return $this->cartResponse($user, 'Product added to cart successfully.');
     }
-    return response()->json(['msg' => 'No Token Provided.'], 400);
-}
+
+    public function removeFromCart(Request $request, $id)
+    {
+        if (!$request->bearerToken()) {
+            return response()->json(['msg' => 'Token is required.'], 401);
+        }
+
+        $user = $this->userFromToken($request);
+        if (!$user) {
+            return response()->json(['msg' => 'Invalid Token.'], 401);
+        }
+
+        $cartItem = addToCart::where('user_id', $user->user_id)
+            ->where('addTocart_id', $id)
+            ->first();
+
+        if (!$cartItem) {
+            return response()->json(['msg' => 'Cart item not found.'], 404);
+        }
+
+        $cartItem->delete();
+
+        return response()->json([
+            'msg' => 'Product removed from cart',
+            'message' => 'Product removed from cart',
+            'status' => 200,
+        ]);
+    }
+
+    public function updateCart(Request $request, $id)
+    {
+        if (!$request->bearerToken()) {
+            return $this->missingTokenResponse();
+        }
+
+        $user = $this->userFromToken($request);
+        if (!$user) {
+            return $this->invalidTokenResponse();
+        }
+
+        $validated = $request->validate([
+            'quantity' => 'required|integer|min:1',
+        ]);
+
+        $cartItem = addToCart::with('product')
+            ->where('user_id', $user->user_id)
+            ->where('addTocart_id', $id)
+            ->first();
+
+        if (!$cartItem) {
+            return response()->json(['msg' => 'Cart item not found.'], 404);
+        }
+
+        $product = $cartItem->product ?: Product::find($cartItem->product_id);
+        if (!$product) {
+            return response()->json(['msg' => 'Product not found.'], 404);
+        }
+
+        $stock = (int) $product->stock_quantity;
+        if ($stock <= 0) {
+            return response()->json([
+                'msg' => 'This product is out of stock.',
+            ], 422);
+        }
+
+        if ((int) $validated['quantity'] > $stock) {
+            return response()->json([
+                'msg' => "Only {$stock} item(s) available in stock.",
+            ], 422);
+        }
+
+        $cartItem->quantity = (int) $validated['quantity'];
+        $cartItem->save();
+
+        return response()->json([
+            'message' => 'Cart updated successfully',
+            'cart' => $cartItem->fresh('product'),
+            'status' => 200,
+        ]);
+    }
+
+    public function getCart(Request $request)
+    {
+        if (!$request->bearerToken()) {
+            return $this->missingTokenResponse();
+        }
+
+        $user = $this->userFromToken($request);
+        if (!$user) {
+            return $this->invalidTokenResponse();
+        }
+
+        return $this->cartResponse($user);
+    }
 }

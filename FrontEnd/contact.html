@@ -14,9 +14,13 @@
     <script src="assets/js/bootstrap.bundle.min.js"></script>
     <script src="assets/js/sweetalert2.all.js"></script>
     <script src="assets/js/jquery.cookie.js"></script>
+
+    <!-- Redirect to login if user is not authenticated -->
     <script>
-      // Redirect to login if user is not authenticated
-      if ($.cookie("username") === undefined) {
+      if (
+        $.cookie("username") === undefined ||
+        $.cookie("token") === undefined
+      ) {
         window.location.replace("login.html");
       }
     </script>

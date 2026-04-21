@@ -699,8 +699,8 @@ $(document).ready(function () {
     $("#cart-count").text(count);
   }
 
-  // Fetch cart count on page load
-  if (role === "user" || role === "seller") {
+  // Fetch cart count on page load for regular users.
+  if (role === "user") {
     $.ajax({
       url: `${ip}/api/cart`,
       method: "GET",

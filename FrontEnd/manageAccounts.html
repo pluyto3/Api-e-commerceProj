@@ -34,9 +34,10 @@
 
     <!-- Your Custom Script LAST -->
     <script src="assets/js/manageAcc.js"></script>
-        <script>
-      // Redirect to login if user is not authenticated
-      if ($.cookie("username") === undefined) {
+
+    <!-- Redirect to login if user is not authenticated -->
+    <script>
+      if ($.cookie("username") === undefined || $.cookie("token") === undefined) {
         window.location.replace("login.html");
       }
     </script>
@@ -155,7 +156,7 @@
                 </a>
                 <a
                   class="dropdown-item"
-                  href="admindashboard.html"
+                  href="dashboard.html"
                   id="adminDashboard"
                   style="display: none"
                 >

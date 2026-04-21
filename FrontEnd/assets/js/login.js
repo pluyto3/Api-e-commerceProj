@@ -9,6 +9,8 @@ function load_user() {
 }
 
 $(document).ready(function () {
+  load_user();
+
   $(document).ajaxStart(function () {
     $("#wait").css("display", "block");
   });
@@ -36,7 +38,7 @@ $(document).ready(function () {
         console.log("Saved profile image:", res.profile_image);
 
         Swal.fire({
-          title: "Access Granted",
+          title: "Logged in successfully",
           icon: "success",
         }).then(() => {
           if (res.role === "admin") {

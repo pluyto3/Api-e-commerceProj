@@ -34,12 +34,15 @@
 
     <!-- Your Custom Script LAST -->
     <script src="assets/js/brand.js"></script>
+    <script src="assets/js/navbar-count.js"></script>
+
+    <!-- Redirect to login if user is not authenticated -->
     <script>
-      // Redirect to login if user is not authenticated
-      if ($.cookie("username") === undefined) {
+      if ($.cookie("username") === undefined || $.cookie("token") === undefined) {
         window.location.replace("login.html");
       }
     </script>
+  </head>
     
   <body onload="load_user()">
     <!--Navbar-->
@@ -155,7 +158,7 @@
                 </a>
                 <a
                   class="dropdown-item"
-                  href="admindashboard.html"
+                  href="dashboard.html"
                   id="adminDashboard"
                   style="display: none"
                 >

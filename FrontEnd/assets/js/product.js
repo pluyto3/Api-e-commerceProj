@@ -5,17 +5,53 @@
 const ip = "http://localhost:8000";
 let token = $.cookie("token");
 let usr = $.cookie("username");
-let role = $.cookie("role");
+let role = ($.cookie("role") || "").toLowerCase();
 let currentProductId = null;
 let allProducts = [];
 let approvedOrdersCache = [];
 
 console.log("adminProductApproval.js loaded", { token, usr, role, ip });
 
+function canUseCart() {
+  return role === "user" || role === "seller";
+}
+
+function updateCartCount(count) {
+  $("#cart-count").text(count || 0);
+}
+
+function loadCartCount() {
+  if (!token || role !== "user") {
+    updateCartCount(0);
+    return;
+  }
+
+  $.ajax({
+    url: `${ip}/api/cart`,
+    method: "GET",
+    headers: {
+      Authorization: "Bearer " + token,
+      Accept: "application/json",
+    },
+    success: function (response) {
+      console.log("Cart items fetched successfully:", response);
+      updateCartCount(response.count || 0);
+    },
+    error: function (xhr) {
+      console.error("Error fetching cart count:", xhr.responseText);
+      updateCartCount(0);
+    },
+  });
+}
+
 // =======================================
 // User Session Handling
 // =======================================
 function load_user() {
+  token = $.cookie("token");
+  usr = $.cookie("username");
+  role = ($.cookie("role") || "").toLowerCase();
+
   const $displayUsername = $("#displayUsername");
   const $login = $("#login");
   const $register = $("#register");
@@ -51,7 +87,7 @@ function load_user() {
   $logout.show();
 
   // Match dashboard behavior: show cart for user/seller, hide for admin
-  if (role === "user" || role === "seller") {
+  if (canUseCart()) {
     $cartCount.show();
     $cartNav.show();
     $cartNavMobile.show();
@@ -59,13 +95,6 @@ function load_user() {
     $cartCount.hide();
     $cartNav.hide();
     $cartNavMobile.hide();
-  }
-
-  // Show cart only for regular users (not sellers/admins)
-  if (!role || (role !== "admin" && role !== "seller")) {
-    $cartCount.show();
-  } else {
-    $cartCount.hide();
   }
 
   if (["admin", "seller"].includes(role)) {
@@ -1155,18 +1184,7 @@ $(document).ready(function () {
   }
 
   // --- Fetch Cart Count ---
-  $.ajax({
-    url: `${ip}/api/cart`,
-    method: "GET",
-    headers: {
-      Authorization: "Bearer " + token,
-      Accept: "application/json",
-    },
-    success: function (response) {
-      console.log("Cart items fetched successfully:", response);
-      $("#cart-count").text(response.count || 0);
-    },
-  });
+  loadCartCount();
 
   // --- Product Filter Buttons ---
   $(".product-filter-btn").on("click", function () {

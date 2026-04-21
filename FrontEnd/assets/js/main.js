@@ -15,6 +15,282 @@ function getApiHeaders(extraHeaders = {}) {
   };
 }
 
+function getProductsFromResponse(response) {
+  return Array.isArray(response) ? response : response.data || [];
+}
+
+function getCartItemsFromResponse(response) {
+  return response.cart || response.data || [];
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function getStockQuantity(product) {
+  const stock = Number(product?.stock_quantity);
+  return Number.isFinite(stock) ? stock : 0;
+}
+
+function isHomepageProductVisible(product) {
+  const approvalStatus = product?.approval_status || "approved";
+  return approvalStatus === "approved" && getStockQuantity(product) > 0;
+}
+
+function getCartProductIds(cartItems) {
+  return new Set(
+    cartItems
+      .map((item) => item.product_id ?? item.product?.product_id)
+      .filter((productId) => productId !== undefined && productId !== null)
+      .map((productId) => String(productId)),
+  );
+}
+
+function updateCartCount(count) {
+  $("#cart-count").text(count || 0);
+}
+
+function renderHomepageCartButton(product, cartProductIds) {
+  const productId = product.product_id;
+  const isInCart = cartProductIds.has(String(productId));
+  const buttonClass = isInCart ? "already-in-cart" : "add-to-cart";
+  const iconClass = isInCart ? "fa-check" : "fa-cart-plus";
+  const label = isInCart ? "Already in Cart" : "Add to Cart";
+  const disabled = isInCart ? "disabled" : "";
+
+  return `
+    <button type="button"
+            class="btn homepage-cart-btn ${buttonClass}"
+            data-product-id="${productId}"
+            ${disabled}>
+      <i class="fas ${iconClass}"></i>
+      <span>${label}</span>
+    </button>
+  `;
+}
+
+function resetOwlCarousel($carousel) {
+  if ($carousel.hasClass("owl-loaded")) {
+    $carousel.trigger("destroy.owl.carousel");
+    $carousel.removeClass("owl-loaded owl-hidden");
+    $carousel.find(".owl-stage-outer").children().unwrap();
+  }
+
+  $carousel.empty();
+}
+
+function renderProductCarousel(products, cartProductIds) {
+  const $carousel = $("#product-carousel");
+  resetOwlCarousel($carousel);
+
+  if (!products.length) {
+    $carousel.html("<p>No products are available right now.</p>");
+    return;
+  }
+
+  products.forEach((p) => {
+    const productId = p.product_id;
+    const productName = escapeHtml(p.product_name || "Product");
+    const productImage = escapeHtml(p.image || "");
+
+    $carousel.append(`
+      <div class="product-card">
+        <a href="single-product.html?id=${productId}" class="text-decoration-none">
+          <div class="product-img">
+            <img src="${ip}/FrontEnd/assets/img/product/${productImage}"
+                 alt="${productName}" height="100px" />
+          </div>
+        </a>
+
+        <div class="card-contents d-flex align-items-center justify-content-center">
+          ${renderHomepageCartButton(p, cartProductIds)}
+        </div>
+
+        <a href="single-product.html?id=${productId}"
+           class="text-success mx-1 productDetails">
+          <div class="product-details">
+            <h5 class="product-name">${productName}</h5>
+            <p class="product-price">
+              <span class="text-success">Price: &#8369;${escapeHtml(p.product_price ?? "")}</span>
+            </p>
+          </div>
+        </a>
+      </div>
+    `);
+  });
+
+  $carousel.owlCarousel({
+    loop: products.length > 1,
+    margin: 10,
+    nav: true,
+    autoplay: products.length > 1,
+    responsive: {
+      0: { items: 1 },
+      480: { items: 2 },
+      768: { items: 3 },
+      1024: { items: 5 },
+    },
+  });
+}
+
+function renderFeaturedProducts(products, cartProductIds) {
+  const $featuredContainer = $("#featured-container").empty();
+  const featuredProducts = products.slice(0, 4);
+
+  if (!featuredProducts.length) {
+    $featuredContainer.html(
+      '<p class="text-center w-100">No featured products are available right now.</p>',
+    );
+    return;
+  }
+
+  featuredProducts.forEach((p) => {
+    const productId = p.product_id;
+    const productName = escapeHtml(p.product_name || "Product");
+    const productImage = escapeHtml(p.image || "");
+
+    $featuredContainer.append(`
+      <div class="product text-center col-lg-3 col-md-4 col-sm-12 mb-4">
+        <div class="position-relative">
+          <div class="badge badge-danger position-absolute" style="top: 10px; left: 10px; z-index: 10;">
+            Featured
+          </div>
+          <a href="single-product.html?id=${productId}">
+            <img src="${ip}/FrontEnd/assets/img/product/${productImage}"
+                 class="img-fluid mb-3"
+                 alt="${productName}"
+                 style="height: 400px; object-fit: cover; width: 100%;">
+          </a>
+        </div>
+
+        <h5 class="p-name">${productName}</h5>
+        <h4 class="p-price">&#8369;${escapeHtml(p.product_price ?? "")}</h4>
+        ${renderHomepageCartButton(p, cartProductIds)}
+      </div>
+    `);
+  });
+}
+
+function renderDailyProducts(products, cartProductIds) {
+  const $dailyProductsContainer = $("#dailyProducts-container").empty();
+  const dailyProducts = products.slice(0, 30);
+
+  if (!dailyProducts.length) {
+    $dailyProductsContainer.html(
+      '<p class="text-center w-100">No daily products are available right now.</p>',
+    );
+    return;
+  }
+
+  dailyProducts.forEach((p) => {
+    const productId = p.product_id;
+    const productName = escapeHtml(p.product_name || "Product");
+    const productImage = escapeHtml(p.image || "");
+
+    $dailyProductsContainer.append(`
+      <div class="col-6 col-sm-4 col-md-3 col-lg-2 mb-3">
+        <div class="card dailyProductCard">
+          <div class="card-body p-2 d-flex flex-column">
+            <a href="single-product.html?id=${productId}" class="text-decoration-none text-dark">
+              <img src="${ip}/FrontEnd/assets/img/product/${productImage}"
+                   class="card-img-top rounded-0"
+                   style="aspect-ratio: 1; object-fit: cover;"
+                   alt="${productName}">
+            </a>
+            <p class="card-title mb-1" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 0.85rem; line-height: 1.2;">${productName}</p>
+            <div class="mt-auto">
+              <div class="d-flex justify-content-between align-items-center pt-2">
+                <span style="color: #ee4d2d; font-size: 1.1rem; font-weight: 500;">&#8369;${escapeHtml(p.product_price ?? "")}</span>
+                <small class="text-muted" style="font-size: 0.7rem;">Sold ${escapeHtml(p.sold ?? 0)}</small>
+              </div>
+              ${renderHomepageCartButton(p, cartProductIds)}
+            </div>
+          </div>
+        </div>
+      </div>
+    `);
+  });
+}
+
+function fetchHomepageCartProductIds() {
+  if (!token) {
+    updateCartCount(0);
+    return Promise.resolve(new Set());
+  }
+
+  return new Promise((resolve) => {
+    $.ajax({
+      url: `${ip}/api/cart`,
+      method: "GET",
+      headers: getApiHeaders(),
+      success: (response) => {
+        const cartItems = getCartItemsFromResponse(response);
+        updateCartCount(response.count || cartItems.length || 0);
+        resolve(getCartProductIds(cartItems));
+      },
+      error: (xhr) => {
+        console.error("Error fetching cart:", xhr.responseText);
+        updateCartCount(0);
+        resolve(new Set());
+      },
+    });
+  });
+}
+
+function loadHomepageProducts() {
+  $("#product-carousel").html("<p>Loading products...</p>");
+  $("#featured-container").html(
+    '<p class="text-center w-100">Loading featured products...</p>',
+  );
+  $("#dailyProducts-container").html(
+    '<p class="text-center w-100">Loading daily products...</p>',
+  );
+
+  const productsRequest = new Promise((resolve, reject) => {
+    $.ajax({
+      url: `${ip}/api/products`,
+      method: "GET",
+      headers: getApiHeaders(),
+      success: (response) => resolve(getProductsFromResponse(response)),
+      error: reject,
+    });
+  });
+
+  Promise.all([productsRequest, fetchHomepageCartProductIds()])
+    .then(([products, cartProductIds]) => {
+      const visibleProducts = products.filter(isHomepageProductVisible);
+
+      renderProductCarousel(visibleProducts, cartProductIds);
+      renderFeaturedProducts(visibleProducts, cartProductIds);
+      renderDailyProducts(visibleProducts, cartProductIds);
+    })
+    .catch((xhr) => {
+      console.error("Error fetching products:", xhr.responseText || xhr);
+      $("#product-carousel").html("<p>Unable to load products.</p>");
+      $("#featured-container").html(
+        '<p class="text-center w-100">Unable to load featured products.</p>',
+      );
+      $("#dailyProducts-container").html(
+        '<p class="text-center w-100">Unable to load daily products.</p>',
+      );
+    });
+}
+
+function markProductAsInCart(productId) {
+  $(`.add-to-cart[data-product-id="${productId}"]`).each(function () {
+    $(this)
+      .removeClass("add-to-cart")
+      .addClass("already-in-cart")
+      .prop("disabled", true)
+      .html('<i class="fas fa-check"></i><span>Already in Cart</span>');
+  });
+}
+
 // =======================================
 // User Session Handling
 // =======================================
@@ -167,160 +443,9 @@ $(document).ready(() => {
   });
 
   /* -----------------------------
-     LOAD PRODUCTS (for Carousel)
+     LOAD HOMEPAGE PRODUCTS + CART STATE
   ----------------------------- */
-  $("#product-carousel").html("<p>Loading products...</p>");
-  $.ajax({
-    url: `${ip}/api/products`,
-    method: "GET",
-    headers: getApiHeaders(),
-    success: (response) => {
-      const products = Array.isArray(response) ? response : response.data;
-      const $carousel = $("#product-carousel").empty();
-
-      products.forEach((p) => {
-        $carousel.append(`
-          <div class="product-card">
-            <div class="product-img">
-              <img src="${ip}/FrontEnd/assets/img/product/${p.image}" 
-                   alt="${p.product_name}" height="100px" />
-            </div>
-
-            <a href="single-product.html?id=${p.product_id}" 
-               class="text-success mx-1 productDetails">
-              <div class="card-contents">
-                <button type="button" class="btn btn-warning cart-btn add-to-cart" data-product-id="${p.product_id}">
-                  <i class="fas fa-cart-plus"></i>
-                </button>
-              </div>
-              <div class="product-details">
-                <h5 class="product-name">${p.product_name}</h5>
-                <p class="product-price">
-                  <span class="text-success">Price: ₱${
-                    p.product_price ?? ""
-                  }</span>
-                </p>
-              </div>
-            </a>
-          </div>
-        `);
-      });
-
-      // Reinitialize Owl Carousel
-      if ($carousel.hasClass("owl-loaded")) {
-        $carousel.trigger("destroy.owl.carousel").removeClass("owl-loaded");
-        $carousel.find(".owl-stage-outer").children().unwrap();
-      }
-
-      $carousel.owlCarousel({
-        loop: true,
-        margin: 10,
-        nav: true,
-        autoplay: true,
-        responsive: {
-          0: { items: 1 },
-          480: { items: 2 },
-          768: { items: 3 },
-          1024: { items: 5 },
-        },
-      });
-    },
-    error: (xhr) => {
-      console.error("Error fetching products:", xhr.responseText);
-    },
-  });
-
-  /* -----------------------------
-     LOAD FEATURED PRODUCTS
-  ----------------------------- */
-  $.ajax({
-    url: `${ip}/api/products`, // Change this if you have a specific /api/featured-products endpoint
-    method: "GET",
-    headers: getApiHeaders(),
-    success: (response) => {
-      const products = Array.isArray(response) ? response : response.data;
-      const $featuredContainer = $("#featured-container").empty();
-
-      // Slice the array to only show the first 4 products as "Featured"
-      const featuredProducts = products.slice(0, 4);
-
-      featuredProducts.forEach((p) => {
-        $featuredContainer.append(`
-          <div class="product text-center col-lg-3 col-md-4 col-sm-12 mb-4">
-            <div class="position-relative">
-              <div class="badge badge-danger position-absolute" style="top: 10px; left: 10px; z-index: 10;">
-                Featured
-              </div>
-              <img src="${ip}/FrontEnd/assets/img/product/${p.image}" class="img-fluid mb-3" alt="${p.product_name}" style="height: 400px; object-fit: cover; width: 100%;">
-            </div>
-
-            <h5 class="p-name">${p.product_name}</h5>
-            <h4 class="p-price">₱${p.product_price ?? ""}</h4>
-
-            <a href="single-product.html?id=${p.product_id}">
-              <button class="buy-btn">Buy Now</button>
-            </a>
-          </div>
-        `);
-      });
-    },
-    error: (xhr) =>
-      console.error("Error fetching featured products:", xhr.responseText),
-  });
-
-  /* -----------------------------
-     LOAD DAILY PRODUCTS
-  ----------------------------- */
-  $.ajax({
-    url: `${ip}/api/products`,
-    method: "GET",
-    headers: getApiHeaders(),
-    success: (response) => {
-      const products = Array.isArray(response) ? response : response.data;
-      const $dailyProductsContainer = $("#dailyProducts-container").empty();
-
-      // Limit to 30 products to ensure at least 5 rows and 5 columns.
-      const dailyProducts = products.slice(0, 30);
-
-      dailyProducts.forEach((p) => {
-        $dailyProductsContainer.append(`
-          <div class="col-6 col-sm-4 col-md-3 col-lg-2 mb-3">
-            <div class="card dailyProductCard">
-              <div class="card-body p-2 d-flex flex-column">
-                <a href="single-product.html?id=${p.product_id}" class="text-decoration-none text-dark">
-                  <img src="${ip}/FrontEnd/assets/img/product/${p.image}" class="card-img-top rounded-0" style="aspect-ratio: 1; object-fit: cover;" alt="${p.product_name}">
-                </a>
-                <p class="card-title mb-1" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 0.85rem; line-height: 1.2;">${p.product_name}</p>
-                <div class="mt-auto d-flex justify-content-between align-items-center pt-2">
-                    <span style="color: #ee4d2d; font-size: 1.1rem; font-weight: 500;">₱${p.product_price ?? ""}</span>
-                    <small class="text-muted" style="font-size: 0.7rem;">Sold ${p.sold}</small>
-                </div>
-              </div>
-            </div>
-          </div>
-        `);
-      });
-    },
-    error: (xhr) =>
-      console.error("Error fetching daily products:", xhr.responseText),
-  });
-
-  /* -----------------------------
-     CART COUNT FETCHER
-  ----------------------------- */
-  const updateCartCount = (count) => $("#cart-count").text(count);
-
-  if (token) {
-    $.ajax({
-      url: `${ip}/api/cart`,
-      method: "GET",
-      headers: getApiHeaders(),
-      success: (res) => updateCartCount(res.count || 0),
-      error: (xhr) => console.error("Error fetching cart:", xhr.responseText),
-    });
-  } else {
-    updateCartCount(0);
-  }
+  loadHomepageProducts();
 
   /* -----------------------------
      ADD TO CART HANDLER
@@ -347,9 +472,8 @@ $(document).ready(() => {
       data: JSON.stringify({ product_id: productId, quantity: 1 }),
       success: function (response) {
         updateCartCount(response.count);
-
-        // Redirect seamlessly to the single product page
-        window.location.href = `single-product.html?id=${productId}`;
+        markProductAsInCart(productId);
+        Swal.fire("Added", "Product added to your cart.", "success");
       },
       error: function (xhr) {
         console.error("Error adding to cart:", xhr.responseText);

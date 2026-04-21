@@ -77,62 +77,60 @@ function loadCartItems() {
       $container.empty();
 
       let totalAmount = 0;
+      let unavailableCount = 0;
 
       cartItems.forEach((item) => {
-        // Debugging: Look at this in your browser console to find your actual stock property name
-        console.log("Cart Item Data:", item);
-
         const id = item.addTocart_id;
         const name = item.product?.product_name ?? "Unnamed Product";
         const price = item.product?.product_price ?? 0;
         const quantity = item.quantity ?? 1;
-
-        // Safely parse the stock value from various common API property names
-        let stock = 999; // Fallback
-        const possibleStocks = [
-          item.product?.product_quantity,
-          item.product?.product_stock,
-          item.product?.stocks,
-          item.product?.quantity,
-          item.product?.stock,
-          item.product?.qty,
-          item.stock,
-        ];
-
-        for (const s of possibleStocks) {
-          if (s !== undefined && s !== null && s !== "") {
-            const parsed = parseInt(s, 10);
-            if (!isNaN(parsed)) {
-              stock = parsed;
-              break;
-            }
-          }
+        let stock = parseInt(item.product?.stock_quantity ?? 0, 10);
+        if (isNaN(stock)) {
+          stock = 0;
         }
+        const isOutOfStock = stock <= 0;
+        const isOverStock = !isOutOfStock && quantity > stock;
+        const cannotCheckout = isOutOfStock || isOverStock;
+        if (cannotCheckout) {
+          unavailableCount++;
+        }
+        const stockStatusHtml = isOutOfStock
+          ? `
+              <span class="out-of-stock-badge">Out of stock</span>
+              <p class="cart-stock-warning mb-0">This item is unavailable and cannot be checked out.</p>
+            `
+          : isOverStock
+            ? `
+                <span class="stock-warning-badge">Stock changed</span>
+                <p class="cart-stock-warning mb-0">Only ${stock} available. Reduce quantity to check out.</p>
+              `
+            : `<small class="text-muted">In stock: ${stock}</small>`;
 
         const subtotal = item.subtotal ?? price * quantity;
         totalAmount += subtotal;
 
         // Note: Included the checkbox to maintain your "selected checkout" logic
         const cardHtml = `
-          <div class="cart-item-card" data-price="${price}" data-stock="${stock}">
-            <div class="checkbox me-3 d-flex align-items-center justify-content-center">
-               <input type="checkbox" class="select-item form-check-input m-0" style="transform: scale(1.2);" data-id="${id}" data-price="${subtotal}">
+          <div class="cart-item-card ${cannotCheckout ? "stock-issue" : ""}" data-price="${price}" data-stock="${stock}">
+            <div class="cart-select-cell">
+               <input type="checkbox" class="select-item form-check-input m-0" style="transform: scale(1.2);" data-id="${id}" data-price="${subtotal}" data-stock-issue="${cannotCheckout}" ${cannotCheckout ? "disabled" : ""}>
             </div>
 
-            <div class="me-4">
+            <div class="cart-image-cell">
                <img src="${ip}/FrontEnd/assets/img/product/${item.product.image}" alt="${name}" class="cart-item-img">
             </div>
 
             <div class="flex-grow-1">
                <h5 class="fw-bold mb-1" style="color: #2c3e50;">${name}</h5>
+               <div class="cart-stock-status">${stockStatusHtml}</div>
                <p class="mb-0 text-dark">Price: <span class="fw-bold">₱${price.toLocaleString()}</span></p>
             </div>
 
             <div class="mx-4">
                 <div class="quantity-pill-container">
-                    <button class="changeQuantity minus-btn" data-id="${id}" data-action="minus" ${quantity <= 1 ? "disabled" : ""}>-</button>
+                    <button class="changeQuantity minus-btn" data-id="${id}" data-action="minus" ${quantity <= 1 || isOutOfStock ? "disabled" : ""}>-</button>
                     <span class="quantity">${quantity}</span>
-                    <button class="changeQuantity plus-btn" data-id="${id}" data-action="plus" ${quantity >= stock ? "disabled" : ""}>+</button>
+                    <button class="changeQuantity plus-btn" data-id="${id}" data-action="plus" ${quantity >= stock || isOutOfStock ? "disabled" : ""}>+</button>
                 </div>
             </div>
 
@@ -151,6 +149,15 @@ function loadCartItems() {
       $("#item-count-footer").text(
         `You have ${cartItems.length} items in your cart.`,
       );
+
+      $("#cart-stock-alert").remove();
+      if (unavailableCount > 0) {
+        $(".order-summary-card .card-body").prepend(`
+          <div class="cart-stock-alert" id="cart-stock-alert">
+            ${unavailableCount} item(s) cannot be checked out because stock is unavailable or below your cart quantity.
+          </div>
+        `);
+      }
 
       // Checkboxes unchecked by default and update selected total
       $(".select-item").prop("checked", false);
@@ -251,13 +258,13 @@ $(document).ready(function () {
         .rows()
         .nodes()
         .to$() // Convert to jQuery object
-        .find('input.select-item[type="checkbox"]:checked')
+        .find('input.select-item[type="checkbox"]:checked:not(:disabled)')
         .each(function () {
           selectedIds.push($(this).data("id")); // Get the 'data-id'
         });
     } else {
       // Fallback if DataTables hasn't initialized (shouldn't happen)
-      $('input.select-item[type="checkbox"]:checked').each(function () {
+      $('input.select-item[type="checkbox"]:checked:not(:disabled)').each(function () {
         selectedIds.push($(this).data("id"));
       });
     }
@@ -265,7 +272,7 @@ $(document).ready(function () {
     if (selectedIds.length === 0) {
       Swal.fire(
         "No Items Selected",
-        "Please select at least one item to check out.",
+        "Please select at least one available item to check out.",
         "warning",
       );
       return; // Stop if nothing is selected
@@ -329,7 +336,16 @@ $(document).ready(function () {
 
     let maxStock = parseInt($card.attr("data-stock"), 10);
     if (isNaN(maxStock)) {
-      maxStock = 999;
+      maxStock = 0;
+    }
+
+    if (maxStock <= 0) {
+      Swal.fire(
+        "Out of Stock",
+        "This item is currently unavailable.",
+        "warning",
+      );
+      return;
     }
 
     // Prevent spam clicking
@@ -436,14 +452,33 @@ $(document).ready(function () {
           $card.find(".minus-btn").prop("disabled", newQuantity <= 1);
 
           let updatedMaxStock = parseInt($card.attr("data-stock"), 10);
+          if (isNaN(updatedMaxStock)) {
+            updatedMaxStock = 0;
+          }
           $card
             .find(".plus-btn")
             .prop("disabled", newQuantity >= updatedMaxStock);
 
+          const canCheckoutItem =
+            updatedMaxStock > 0 && newQuantity <= updatedMaxStock;
+
           $card
+            .toggleClass("stock-issue", !canCheckoutItem)
             .find(".select-item")
+            .prop("disabled", !canCheckoutItem)
+            .data("stock-issue", !canCheckoutItem)
+            .attr("data-stock-issue", !canCheckoutItem)
             .data("price", newTotal)
             .attr("data-price", newTotal);
+
+          $card.find(".cart-stock-status").html(
+            canCheckoutItem
+              ? `<small class="text-muted">In stock: ${updatedMaxStock}</small>`
+              : `
+                  <span class="stock-warning-badge">Stock changed</span>
+                  <p class="cart-stock-warning mb-0">Only ${updatedMaxStock} available. Reduce quantity to check out.</p>
+                `,
+          );
 
           updateSelectedTotal();
         }
@@ -491,7 +526,19 @@ $(document).ready(function () {
   ------------------------------ */
   function updateSelectedTotal() {
     let selectedTotal = 0;
-    const $selectedItems = $("input.select-item:checked");
+    const $selectedItems = $("input.select-item:checked:not(:disabled)");
+    const hasAvailableItems = $("input.select-item:not(:disabled)").length > 0;
+
+    $("#checkout-btn").prop("disabled", !hasAvailableItems);
+
+    const unavailableCount = $(".cart-item-card.stock-issue").length;
+    if (unavailableCount === 0) {
+      $("#cart-stock-alert").remove();
+    } else {
+      $("#cart-stock-alert").text(
+        `${unavailableCount} item(s) cannot be checked out because stock is unavailable or below your cart quantity.`,
+      );
+    }
 
     $selectedItems.each(function () {
       selectedTotal += parseFloat($(this).data("price"));

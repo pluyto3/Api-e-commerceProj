@@ -164,7 +164,7 @@
                 </a>
                 <a
                   class="dropdown-item"
-                  href="admindashboard.html"
+                  href="dashboard.html"
                   id="adminDashboard"
                   style="display: none">
                   <i class="fas fa-home"></i> Dashboard
@@ -224,7 +224,7 @@
           <h3 class="header">Latest Products</h3>
         </div>
         <div class="section-product-cards">
-          <div class="owl-carousel" id="product-carousel">
+          <div class="owl-carousel" id="product-carousel" aria-live="polite">
             <!-- Product cards will be dynamically inserted here -->
           </div>
         </div>
@@ -237,7 +237,10 @@
           <hr class="mx-auto" />
           <p>Here you can check out our featured products</p>
         </div>
-        <div class="row mx-auto container-fluid" id="featured-container">
+        <div
+          class="row mx-auto container-fluid"
+          id="featured-container"
+          aria-live="polite">
           <!-- Featured items will be dynamically inserted here -->
         </div>
       </section>
@@ -261,7 +264,7 @@
           <hr class="mx-auto" />
           <p>Here you can check out our amazing products</p>
         </div>
-        <div class="container-fluid" id="dailyProducts-container">
+        <div class="container-fluid" id="dailyProducts-container" aria-live="polite">
           <!-- Daily Products items will be dynamically inserted here -->
         </div>
 
