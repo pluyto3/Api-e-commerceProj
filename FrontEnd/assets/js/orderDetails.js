@@ -17,8 +17,9 @@ let currentUserId = null;
 function load_user() {
   usr = $.cookie("username");
   token = $.cookie("token");
-  role = $.cookie("role");
+  role = String($.cookie("role") || "").toLowerCase();
   profileImage = $.cookie("profileImage");
+  currentUserId = $.cookie("user_id") || currentUserId;
 
   // DOM elements
   const $displayUsername = $("#displayUsername");
@@ -128,11 +129,123 @@ function load_user() {
 // Helpers
 // =======================================
 function isAdminView() {
-  return role === "admin" || role === "seller";
+  return role === "admin" || isSellerView();
+}
+
+function isSellerView() {
+  return role === "seller";
 }
 
 function isUserView() {
   return !!usr && !!token && !isAdminView();
+}
+
+function getLoggedInUserId() {
+  return currentUserId || $.cookie("user_id") || null;
+}
+
+function valuesMatch(left, right) {
+  if (
+    left === undefined ||
+    left === null ||
+    right === undefined ||
+    right === null
+  ) {
+    return false;
+  }
+
+  return String(left).trim() === String(right).trim();
+}
+
+function namesMatch(left, right) {
+  if (!left || !right) return false;
+
+  return (
+    String(left).trim().toLowerCase() ===
+    String(right).trim().toLowerCase()
+  );
+}
+
+function isItemForLoggedInSeller(item = {}) {
+  if (!isSellerView()) return true;
+
+  const sellerId = getLoggedInUserId();
+  const sellerIdCandidates = [
+    item.seller_id,
+    item.seller?.user_id,
+    item.seller?.id,
+    item.product?.seller_id,
+    item.product?.seller?.user_id,
+    item.product?.seller?.id,
+  ];
+
+  if (
+    sellerId &&
+    sellerIdCandidates.some((candidate) => valuesMatch(candidate, sellerId))
+  ) {
+    return true;
+  }
+
+  const sellerNameCandidates = [
+    getDirectItemSellerName(item),
+    item.seller?.fullname,
+    item.product?.seller?.fullname,
+  ];
+
+  return sellerNameCandidates.some((candidate) => namesMatch(candidate, usr));
+}
+
+function getVisibleOrderItems(order = {}, itemsOverride) {
+  const rawItems = itemsOverride || order.items || [];
+  if (!Array.isArray(rawItems)) return [];
+
+  return isSellerView() ? rawItems.filter(isItemForLoggedInSeller) : rawItems;
+}
+
+function isOrderForLoggedInSeller(order = {}) {
+  if (!isSellerView()) return true;
+
+  if (getVisibleOrderItems(order).length > 0) {
+    return true;
+  }
+
+  const sellerId = getLoggedInUserId();
+  const orderSellerIdCandidates = [
+    order.seller_id,
+    order.seller?.user_id,
+    order.seller?.id,
+  ];
+
+  if (
+    sellerId &&
+    orderSellerIdCandidates.some((candidate) =>
+      valuesMatch(candidate, sellerId),
+    )
+  ) {
+    return true;
+  }
+
+  return [
+    order.seller?.username,
+    order.seller?.fullname,
+    order.seller_username,
+    order.seller_name,
+    order.shop_name,
+  ].some((candidate) => namesMatch(candidate, usr));
+}
+
+function filterOrdersForCurrentRole(orders = []) {
+  const normalizedOrders = Array.isArray(orders) ? orders : [];
+
+  if (isUserView()) {
+    return filterOrdersForLoggedInUser(normalizedOrders);
+  }
+
+  if (isSellerView()) {
+    return normalizedOrders.filter(isOrderForLoggedInSeller);
+  }
+
+  return normalizedOrders;
 }
 
 function filterOrdersForLoggedInUser(orders = []) {
@@ -255,7 +368,7 @@ function resolveImageSrc(image) {
 }
 
 function getOrderItems(order, itemsOverride) {
-  const rawItems = itemsOverride || order.items || [];
+  const rawItems = getVisibleOrderItems(order, itemsOverride);
   return rawItems.map((item) => {
     const product = item.product || {};
     const productName =
@@ -343,7 +456,7 @@ function getOrderQuantityFallback(order) {
 }
 
 function groupItemsBySeller(order) {
-  const items = Array.isArray(order?.items) ? order.items : [];
+  const items = getVisibleOrderItems(order);
   if (items.length === 0) {
     return [{ seller: getOrderSellerDisplayName(order), items: [] }];
   }
@@ -369,7 +482,7 @@ function getOrderSellerNames(order) {
   if (!order) return [];
 
   const sellerSet = new Set();
-  const items = Array.isArray(order.items) ? order.items : [];
+  const items = getVisibleOrderItems(order);
 
   items.forEach((item) => {
     splitSellerNames(getDirectItemSellerName(item)).forEach((seller) =>
@@ -709,9 +822,7 @@ function fetchBuyerOrders() {
       const orders = isAdminView() ? res : res.data || res;
       const normalizedOrders = Array.isArray(orders) ? orders : [];
 
-      globalOrders = isUserView()
-        ? filterOrdersForLoggedInUser(normalizedOrders)
-        : normalizedOrders;
+      globalOrders = filterOrdersForCurrentRole(normalizedOrders);
 
       if (isAdminView()) {
         renderOrders($("#statusFilter").val() || "all");
@@ -924,8 +1035,27 @@ function submitOrderStatusUpdate() {
     contentType: "application/json",
     data: JSON.stringify({ status: newStatus }),
 
-    success: function () {
-      Swal.fire("Updated!", "Order status updated.", "success");
+    success: function (response) {
+      const updatedCheckout = response?.checkout || {};
+      const trackingNumber = updatedCheckout.tracking_number || "";
+      const updatedOrderId = updatedCheckout.checkout_id || orderId;
+      const existingOrder = (globalOrders || []).find(
+        (order) => String(order.checkout_id) === String(updatedOrderId),
+      );
+
+      if (existingOrder) {
+        existingOrder.status = updatedCheckout.status || newStatus;
+        existingOrder.tracking_number =
+          trackingNumber || existingOrder.tracking_number;
+      }
+
+      Swal.fire(
+        "Updated!",
+        trackingNumber
+          ? `Order status updated. Tracking Number: ${trackingNumber}`
+          : "Order status updated.",
+        "success",
+      );
 
       $("#updateStatusModal").modal("hide");
 
@@ -1037,10 +1167,15 @@ $(document).ready(function () {
           $defaultProfileIcon.show();
         }
 
+        if ((isUserView() || isSellerView()) && globalOrders.length > 0) {
+          globalOrders = filterOrdersForCurrentRole(globalOrders);
+        }
+
         if (isUserView() && globalOrders.length > 0) {
-          globalOrders = filterOrdersForLoggedInUser(globalOrders);
           populateUserSellerFilter();
           renderUserOrders();
+        } else if (isSellerView() && globalOrders.length > 0) {
+          renderOrders($("#statusFilter").val() || "all");
         }
       },
       error: function (xhr) {

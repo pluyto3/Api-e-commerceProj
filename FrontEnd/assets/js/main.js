@@ -55,21 +55,15 @@ function updateCartCount(count) {
   $("#cart-count").text(count || 0);
 }
 
-function renderHomepageCartButton(product, cartProductIds) {
+function renderHomepageCartButton(product) {
   const productId = product.product_id;
-  const isInCart = cartProductIds.has(String(productId));
-  const buttonClass = isInCart ? "already-in-cart" : "add-to-cart";
-  const iconClass = isInCart ? "fa-check" : "fa-cart-plus";
-  const label = isInCart ? "Already in Cart" : "Add to Cart";
-  const disabled = isInCart ? "disabled" : "";
 
   return `
     <button type="button"
-            class="btn homepage-cart-btn ${buttonClass}"
-            data-product-id="${productId}"
-            ${disabled}>
-      <i class="fas ${iconClass}"></i>
-      <span>${label}</span>
+            class="btn homepage-cart-btn add-to-cart"
+            data-product-id="${productId}">
+      <i class="fas fa-cart-plus"></i>
+      <span>Add to Cart</span>
     </button>
   `;
 }
@@ -84,7 +78,7 @@ function resetOwlCarousel($carousel) {
   $carousel.empty();
 }
 
-function renderProductCarousel(products, cartProductIds) {
+function renderProductCarousel(products) {
   const $carousel = $("#product-carousel");
   resetOwlCarousel($carousel);
 
@@ -108,7 +102,7 @@ function renderProductCarousel(products, cartProductIds) {
         </a>
 
         <div class="card-contents d-flex align-items-center justify-content-center">
-          ${renderHomepageCartButton(p, cartProductIds)}
+          ${renderHomepageCartButton(p)}
         </div>
 
         <a href="single-product.html?id=${productId}"
@@ -138,7 +132,7 @@ function renderProductCarousel(products, cartProductIds) {
   });
 }
 
-function renderFeaturedProducts(products, cartProductIds) {
+function renderFeaturedProducts(products) {
   const $featuredContainer = $("#featured-container").empty();
   const featuredProducts = products.slice(0, 4);
 
@@ -170,13 +164,13 @@ function renderFeaturedProducts(products, cartProductIds) {
 
         <h5 class="p-name">${productName}</h5>
         <h4 class="p-price">&#8369;${escapeHtml(p.product_price ?? "")}</h4>
-        ${renderHomepageCartButton(p, cartProductIds)}
+        ${renderHomepageCartButton(p)}
       </div>
     `);
   });
 }
 
-function renderDailyProducts(products, cartProductIds) {
+function renderDailyProducts(products) {
   const $dailyProductsContainer = $("#dailyProducts-container").empty();
   const dailyProducts = products.slice(0, 30);
 
@@ -208,7 +202,7 @@ function renderDailyProducts(products, cartProductIds) {
                 <span style="color: #ee4d2d; font-size: 1.1rem; font-weight: 500;">&#8369;${escapeHtml(p.product_price ?? "")}</span>
                 <small class="text-muted" style="font-size: 0.7rem;">Sold ${escapeHtml(p.sold ?? 0)}</small>
               </div>
-              ${renderHomepageCartButton(p, cartProductIds)}
+              ${renderHomepageCartButton(p)}
             </div>
           </div>
         </div>
@@ -262,12 +256,12 @@ function loadHomepageProducts() {
   });
 
   Promise.all([productsRequest, fetchHomepageCartProductIds()])
-    .then(([products, cartProductIds]) => {
+    .then(([products]) => {
       const visibleProducts = products.filter(isHomepageProductVisible);
 
-      renderProductCarousel(visibleProducts, cartProductIds);
-      renderFeaturedProducts(visibleProducts, cartProductIds);
-      renderDailyProducts(visibleProducts, cartProductIds);
+      renderProductCarousel(visibleProducts);
+      renderFeaturedProducts(visibleProducts);
+      renderDailyProducts(visibleProducts);
     })
     .catch((xhr) => {
       console.error("Error fetching products:", xhr.responseText || xhr);
@@ -279,16 +273,6 @@ function loadHomepageProducts() {
         '<p class="text-center w-100">Unable to load daily products.</p>',
       );
     });
-}
-
-function markProductAsInCart(productId) {
-  $(`.add-to-cart[data-product-id="${productId}"]`).each(function () {
-    $(this)
-      .removeClass("add-to-cart")
-      .addClass("already-in-cart")
-      .prop("disabled", true)
-      .html('<i class="fas fa-check"></i><span>Already in Cart</span>');
-  });
 }
 
 // =======================================
@@ -472,7 +456,6 @@ $(document).ready(() => {
       data: JSON.stringify({ product_id: productId, quantity: 1 }),
       success: function (response) {
         updateCartCount(response.count);
-        markProductAsInCart(productId);
         Swal.fire("Added", "Product added to your cart.", "success");
       },
       error: function (xhr) {

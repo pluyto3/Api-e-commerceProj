@@ -259,9 +259,14 @@ class CheckoutController extends Controller
             return response()->json(['msg' => 'Invalid Token.'], 401);
         }
 
-        $request->validate([
-            'status' => 'required|in:pending,to ship,shipped,completed'
-        ]);
+        $status = strtolower(trim((string) $request->input('status')));
+        $status = str_replace('_', ' ', $status);
+
+        if (!in_array($status, ['pending', 'to ship', 'shipped', 'completed'], true)) {
+            return response()->json([
+                'msg' => 'Invalid status value.',
+            ], 422);
+        }
         
         // Restrict to admin and seller only
         if (!in_array($user->role, ['admin', 'seller'])) {
@@ -274,15 +279,25 @@ class CheckoutController extends Controller
             return response()->json(['msg' => 'Checkout not found.'], 404);
         }
 
-        // Generate tracking ONLY when shipped
-        if($request->status === 'shipped' && !$checkout->tracking_number) {
+        if (
+            $user->role === 'seller' &&
+            !$checkout->items()->where('seller_id', $user->user_id)->exists()
+        ) {
+            return response()->json(['msg' => 'Unauthorized'], 403);
+        }
+
+        // Generate tracking number the first time an order is marked as shipped.
+        if ($status === 'shipped' && empty($checkout->tracking_number)) {
             $checkout->tracking_number = $this->generateTrackingNumber($checkout->checkout_id);
         }
 
-        $checkout->status = $request->status;
+        $checkout->status = $status;
         $checkout->save();
 
-        return response()->json(['msg' => 'Checkout status updated successfully.', 'checkout' => $checkout], 200);
+        return response()->json([
+            'msg' => 'Checkout status updated successfully.',
+            'checkout' => $checkout->fresh(),
+        ], 200);
     }
 
     /**

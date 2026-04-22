@@ -506,6 +506,16 @@ function setupEvents() {
     renderProducts();
   });
 
+  $("#searchInput").on("input search", function () {
+    const nextSearch = normalizeText(this.value);
+
+    if (nextSearch || !activeSearch) return;
+
+    activeSearch = "";
+    currentPage = 1;
+    renderProducts();
+  });
+
   $(document).on("click", ".shop-page-link", function (event) {
     event.preventDefault();
 
