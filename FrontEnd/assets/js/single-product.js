@@ -6,6 +6,8 @@ let token = null;
 let usr = null;
 let role = null;
 let profileImage = null;
+let currentProductStock = 0;
+let currentProductAvailable = false;
 
 function getApiHeaders(extraHeaders = {}) {
   return {
@@ -127,7 +129,7 @@ $(document).ready(function () {
 
   // --- Fetch Product Details ---
   $.ajax({
-    url: `${ip}/api/products/${productId}`,
+    url: `${ip}/api/products/${productId}?scope=public`,
     method: "GET",
     headers: getApiHeaders(),
     success: function (response) {
@@ -177,8 +179,33 @@ $(document).ready(function () {
       );
 
       const stock = product.stock_quantity ?? product.stock ?? 0;
+      const productStatus = (product.status || "active").toLowerCase();
+      const approvalStatus = (
+        product.approval_status || "approved"
+      ).toLowerCase();
+      currentProductStock = parseInt(stock, 10) || 0;
+      currentProductAvailable =
+        approvalStatus === "approved" &&
+        productStatus === "active" &&
+        currentProductStock > 0;
+
       $("#product-stock").text(`${stock} pieces available`);
-      $("#product-quantity-input").val(1).attr("max", stock);
+      $("#product-quantity-input")
+        .val(currentProductAvailable ? 1 : 0)
+        .attr("max", currentProductStock)
+        .prop("disabled", !currentProductAvailable);
+
+      $(".product-add-to-cart-btn, .product-buy-now-btn").prop(
+        "disabled",
+        !currentProductAvailable,
+      );
+
+      if (!currentProductAvailable) {
+        $("#product-stock")
+          .removeClass("text-muted")
+          .addClass("text-danger font-weight-bold")
+          .text("Out of stock");
+      }
 
       // Load products from the same shop
       loadSameShopProducts(product);
@@ -203,7 +230,7 @@ $(document).ready(function () {
     }
 
     $.ajax({
-      url: `${ip}/api/products`,
+      url: `${ip}/api/products?scope=public`,
       method: "GET",
       headers: getApiHeaders(),
       success: function (response) {
@@ -221,8 +248,16 @@ $(document).ready(function () {
             String(currentProduct.product_id || currentProduct.id);
           const isApproved =
             (p.approval_status || "approved").toLowerCase() === "approved";
+          const isActive = (p.status || "active").toLowerCase() === "active";
+          const hasStock = Number(p.stock_quantity || 0) > 0;
 
-          return isSameSeller && isNotCurrentProduct && isApproved;
+          return (
+            isSameSeller &&
+            isNotCurrentProduct &&
+            isApproved &&
+            isActive &&
+            hasStock
+          );
         });
 
         if (sameShopProducts.length === 0) {
@@ -275,6 +310,15 @@ $(document).ready(function () {
     const quantity =
       $("#product-quantity-input").val() || $("input[type=number]").val();
 
+    if (!currentProductAvailable || Number(quantity) > currentProductStock) {
+      Swal.fire(
+        "Out of Stock",
+        "This product is currently unavailable.",
+        "warning",
+      );
+      return;
+    }
+
     if (!token) {
       Swal.fire({
         title: "Login Required",
@@ -322,6 +366,15 @@ $(document).ready(function () {
   // --- Buy Now ---
   $(".product-buy-now-btn").on("click", function () {
     const quantity = $("#product-quantity-input").val() || 1;
+
+    if (!currentProductAvailable || Number(quantity) > currentProductStock) {
+      Swal.fire(
+        "Out of Stock",
+        "This product is currently unavailable.",
+        "warning",
+      );
+      return;
+    }
 
     if (!token) {
       Swal.fire({
@@ -372,4 +425,24 @@ $(document).ready(function () {
   } else {
     updateCartCount(0);
   }
+
+  // --- Logout Functionality ---
+  $("#logout").click(function () {
+    $.ajax({
+      url: `${ip}/api/logout`,
+      type: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      data: { token },
+      success: () => {
+        Swal.fire({ icon: "success", title: "Logout Successful" }).then(() => {
+          Object.keys($.cookie()).forEach((cookie) => $.removeCookie(cookie));
+          window.location.replace("login.html");
+        });
+      },
+      error: (res) => {
+        const msg = res.responseJSON?.msg || "Logout failed. Please try again.";
+        Swal.fire({ icon: "error", title: "Error", text: msg });
+      },
+    });
+  });
 });

@@ -51,18 +51,28 @@ class CategoryController extends Controller
         ];
     }
 
+    private function canManageCategory(User $user, Category $category): bool
+    {
+        return $user->role === 'admin'
+            || ($user->role === 'seller' && (int) $category->seller_id === (int) $user->user_id);
+    }
+
     /**
      * Display a listing of the resource.
      */
     public function index(Request $request){
         $user = $this->getAuthenticatedUser($request);
-        if(!$user){
-            return response()->json([
-                'msg' => 'No Token Provided or Invalid Token.'
-            ], 400);
+        $publicScope = $request->input('scope') === 'public';
+
+        $categoriesQuery = Category::with(['seller', 'approver']);
+
+        if ($publicScope || !$user || $user->role === 'user') {
+            $categoriesQuery->where('status', 'approved');
+        } elseif ($user->role === 'seller') {
+            $categoriesQuery->where('seller_id', $user->user_id);
         }
 
-        $categories = Category::with(['seller', 'approver'])->get();
+        $categories = $categoriesQuery->get();
         $data = $categories->map(fn($category) => $this->formatCategory($category));
 
         return response()->json(['data' => $data], 200);
@@ -79,6 +89,10 @@ class CategoryController extends Controller
             ], 400);
         }
 
+        if (!in_array($user->role, ['admin', 'seller'], true)) {
+            return response()->json(['msg' => 'Unauthorized.'], 403);
+        }
+
         $request->validate([
             'name' => 'required|string|unique:categories,name',
             'description' => 'nullable|string',
@@ -89,9 +103,9 @@ class CategoryController extends Controller
         $category->name = $request->name;
         $category->description = $request->description;
         $category->seller_id = $user->user_id;
-        $category->status = 'pending';
+        $category->status = $user->role === 'admin' ? 'approved' : 'pending';
         $category->approval_reason = null;
-        $category->approved_by = null;
+        $category->approved_by = $user->role === 'admin' ? $user->user_id : null;
 
         $destinationPath = public_path('FrontEnd/assets/img/category');
 
@@ -122,19 +136,21 @@ class CategoryController extends Controller
      * Display the specified resource.
      */
     public function getCategory_id(Request $request, $id) {
-        $user = $this->getAuthenticatedUser($request);
-        if(!$user){
-            return response()->json([
-                'msg' => 'No Token Provided or Invalid Token.'
-            ], 400);
-        }
-
         $category = Category::with(['seller', 'approver'])->find($id);
-        if($category){
-            return response()->json($this->formatCategory($category), 200);
-        } else {
+        if(!$category){
             return response()->json(['message' => 'Category not found'], 404);
         }
+
+        $user = $this->getAuthenticatedUser($request);
+        if (!$user || $user->role === 'user') {
+            if ($category->status !== 'approved') {
+                return response()->json(['message' => 'Category not found'], 404);
+            }
+        } elseif ($user->role === 'seller' && (int) $category->seller_id !== (int) $user->user_id) {
+            return response()->json(['message' => 'Category not found'], 404);
+        }
+
+        return response()->json($this->formatCategory($category), 200);
     }   
 
     /**
@@ -152,6 +168,10 @@ class CategoryController extends Controller
         
         if (!$category) {
             return response()->json(['msg' => 'Category not found.'], 404);
+        }
+
+        if (!$this->canManageCategory($user, $category)) {
+            return response()->json(['msg' => 'Unauthorized. Sellers can only update their own categories.'], 403);
         }
 
         $request->validate([
@@ -266,6 +286,11 @@ class CategoryController extends Controller
                     return response()->json([
                         'msg' => 'Category not found.'
                     ], 404);
+                }
+                if (!$this->canManageCategory($user, $category)) {
+                    return response()->json([
+                        'msg' => 'Unauthorized. Sellers can only delete their own categories.'
+                    ], 403);
                 }
                 $category->delete();
                 return response()->json([

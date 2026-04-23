@@ -282,9 +282,10 @@
                   style="width: 150px">
                   <option value="all">All</option>
                   <option value="pending">Pending</option>
-                  <option value="to ship">To Ship</option>
+                  <option value="packed">Packed</option>
                   <option value="shipped">Shipped</option>
-                  <option value="completed">Completed</option>
+                  <option value="delivered">Delivered</option>
+                  <option value="cancelled">Cancelled</option>
                 </select>
               </div>
             </div>
@@ -330,6 +331,10 @@
               <!-- Summary -->
               <div id="order-summary" class="mb-3 p-3 bg-light rounded border">
                 <p><strong>Status:</strong> <span id="summaryStatus"></span></p>
+                <p>
+                  <strong>Payment:</strong>
+                  <span id="summaryPaymentStatus"></span>
+                </p>
                 <p><strong>Date:</strong> <span id="summaryDate"></span></p>
                 <p>
                   <strong>Total Items:</strong> <span id="summaryItems"></span>
@@ -403,9 +408,21 @@
                 <label>Order Status</label>
                 <select id="newOrderStatus" class="form-control">
                   <option value="pending">Pending</option>
-                  <option value="to ship">To Ship</option>
+                  <option value="packed">Packed</option>
                   <option value="shipped">Shipped</option>
-                  <option value="completed">Completed</option>
+                  <option value="delivered">Delivered</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>Payment Status</label>
+                <select id="newPaymentStatus" class="form-control">
+                  <option value="">No change</option>
+                  <option value="pending">Pending</option>
+                  <option value="paid">Paid</option>
+                  <option value="failed">Failed</option>
+                  <option value="cancelled">Cancelled</option>
                 </select>
               </div>
             </div>

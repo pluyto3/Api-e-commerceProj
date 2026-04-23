@@ -39,7 +39,12 @@ function getStockQuantity(product) {
 
 function isHomepageProductVisible(product) {
   const approvalStatus = product?.approval_status || "approved";
-  return approvalStatus === "approved" && getStockQuantity(product) > 0;
+  const productStatus = product?.status || "active";
+  return (
+    approvalStatus === "approved" &&
+    productStatus === "active" &&
+    getStockQuantity(product) > 0
+  );
 }
 
 function getCartProductIds(cartItems) {
@@ -247,7 +252,7 @@ function loadHomepageProducts() {
 
   const productsRequest = new Promise((resolve, reject) => {
     $.ajax({
-      url: `${ip}/api/products`,
+      url: `${ip}/api/products?scope=public`,
       method: "GET",
       headers: getApiHeaders(),
       success: (response) => resolve(getProductsFromResponse(response)),
@@ -383,7 +388,7 @@ $(document).ready(() => {
      LOAD BRANDS (for Carousel)
   ----------------------------- */
   $.ajax({
-    url: `${ip}/api/brands`,
+    url: `${ip}/api/brands?scope=public`,
     method: "GET",
     headers: getApiHeaders(),
     success: (response) => {
@@ -430,6 +435,14 @@ $(document).ready(() => {
      LOAD HOMEPAGE PRODUCTS + CART STATE
   ----------------------------- */
   loadHomepageProducts();
+
+  $(".search-form").on("submit", function (event) {
+    event.preventDefault();
+    const q = ($("#searchInput").val() || "").trim();
+    window.location.href = q
+      ? `shop.html?q=${encodeURIComponent(q)}`
+      : "shop.html";
+  });
 
   /* -----------------------------
      ADD TO CART HANDLER

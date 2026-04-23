@@ -63,6 +63,7 @@ function load_user() {
   const $navbarProfileImage = $("#navbarProfileImage");
   const $defaultProfileIcon = $("#defaultProfileIcon");
   const $addCategorySection = $(".add_product");
+  const $addProductSection = $("#addProductSection");
   const $sidebarAccounts = $("#sidebarAccounts");
 
   if (!usr || !token) {
@@ -77,6 +78,7 @@ function load_user() {
     $navbarProfileImage.hide();
     $defaultProfileIcon.show();
     $addCategorySection.hide();
+    $addProductSection.addClass("d-none");
     $sidebarAccounts.hide();
     return;
   }
@@ -105,9 +107,11 @@ function load_user() {
 
   if (role === "seller") {
     $addCategorySection.show();
+    $addProductSection.removeClass("d-none");
     $sidebarAccounts.hide();
   } else {
     $addCategorySection.hide();
+    $addProductSection.addClass("d-none");
     $sidebarAccounts.show();
   }
 }
@@ -822,6 +826,7 @@ function loadCategories($select = $("#category_id"), callback) {
           '<option value="" disabled selected>Select a category</option>',
         );
       (Array.isArray(categories) ? categories : []).forEach((cat) => {
+        if ((cat.status || "pending").toLowerCase() !== "approved") return;
         const id = cat.category_id || cat.id;
         const name = cat.name || cat.category_name;
         if (id && name)
@@ -849,6 +854,7 @@ function loadBrands($select = $("#brand_id"), callback) {
         .empty()
         .append('<option value="" disabled selected>Select a brand</option>');
       (Array.isArray(brands) ? brands : []).forEach((brand) => {
+        if ((brand.status || "pending").toLowerCase() !== "approved") return;
         const id = brand.brand_id || brand.id;
         const name = brand.name || brand.brand_name;
         if (id && name)
@@ -1096,6 +1102,7 @@ $(document).ready(function () {
           $("#edit_product_price").val(product.product_price);
           $("#edit_product_description").val(product.product_description);
           $("#edit_stock_quantity").val(product.stock_quantity);
+          $("#edit_status").val(product.status || "active");
 
           const imgUrl = buildImageCandidates(product.image)[0];
           $("#edit_image_preview").attr("src", imgUrl).show();

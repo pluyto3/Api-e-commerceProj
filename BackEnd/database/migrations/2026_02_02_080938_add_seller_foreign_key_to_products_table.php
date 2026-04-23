@@ -12,6 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('products', function (Blueprint $table) {
+            if (!Schema::hasColumn('products', 'seller_id')) {
+                $table->unsignedBigInteger('seller_id')->nullable()->after('product_id');
+            }
+
             // Add foreign key referencing users.user_id
             $table->foreign('seller_id')
                   ->references('user_id')
@@ -28,6 +32,9 @@ return new class extends Migration
     {
         Schema::table('products', function (Blueprint $table) {
             $table->dropForeign(['seller_id']);
+            if (Schema::hasColumn('products', 'seller_id')) {
+                $table->dropColumn('seller_id');
+            }
         });
     }
 };

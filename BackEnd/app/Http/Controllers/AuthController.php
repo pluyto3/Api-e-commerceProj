@@ -624,6 +624,8 @@ class AuthController extends Controller
             'total_orders' => 0,
             'pending_orders' => 0,
             'completed_orders' => 0,
+            'cancelled_orders' => 0,
+            'low_stock_products' => 0,
         ];
 
         // ==========================
@@ -636,8 +638,22 @@ class AuthController extends Controller
             
             // Admin sees ALL orders
             $data['total_orders'] = Checkout::count();
-            $data['pending_orders'] = Checkout::where('status', 'pending')->count();
-            $data['completed_orders'] = Checkout::where('status', 'completed')->count();
+            $data['pending_orders'] = Checkout::where(function ($query) {
+                $query->where('shipping_status', 'pending')
+                    ->orWhere('status', 'pending');
+            })->count();
+            $data['completed_orders'] = Checkout::where(function ($query) {
+                $query->where('shipping_status', 'delivered')
+                    ->orWhere('status', 'completed')
+                    ->orWhere('status', 'delivered');
+            })->count();
+            $data['cancelled_orders'] = Checkout::where(function ($query) {
+                $query->where('shipping_status', 'cancelled')
+                    ->orWhere('status', 'cancelled');
+            })->count();
+            $data['low_stock_products'] = Product::where('stock_quantity', '>', 0)
+                ->where('stock_quantity', '<=', 5)
+                ->count();
         }
 
         // ==========================
@@ -656,6 +672,10 @@ class AuthController extends Controller
             $data['approved_products'] = (clone $sellerProducts)
                 ->where('approval_status', 'approved')
                 ->count();
+            $data['low_stock_products'] = (clone $sellerProducts)
+                ->where('stock_quantity', '>', 0)
+                ->where('stock_quantity', '<=', 5)
+                ->count();
 
             $sellerOrders = Checkout::whereHas('items', function ($query) use ($user) {
                 $query->where('seller_id', $user->user_id);
@@ -663,10 +683,23 @@ class AuthController extends Controller
 
             $data['total_orders'] = (clone $sellerOrders)->count();
             $data['pending_orders'] = (clone $sellerOrders)
-                ->where('status', 'pending')
+                ->where(function ($query) {
+                    $query->where('shipping_status', 'pending')
+                        ->orWhere('status', 'pending');
+                })
                 ->count();
             $data['completed_orders'] = (clone $sellerOrders)
-                ->where('status', 'completed')
+                ->where(function ($query) {
+                    $query->where('shipping_status', 'delivered')
+                        ->orWhere('status', 'completed')
+                        ->orWhere('status', 'delivered');
+                })
+                ->count();
+            $data['cancelled_orders'] = (clone $sellerOrders)
+                ->where(function ($query) {
+                    $query->where('shipping_status', 'cancelled')
+                        ->orWhere('status', 'cancelled');
+                })
                 ->count();
         }
 

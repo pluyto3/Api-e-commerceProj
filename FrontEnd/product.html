@@ -302,6 +302,14 @@
                         <input type="text" class="form-control" id="stock_quantity" name="stock_quantity" placeholder="Enter amount " required>
                       </div>
                       <div class="form-group">
+                        <label for="status" class="font-weight-bold">Product Status</label>
+                        <select name="status" id="status" class="custom-select">
+                          <option value="active" selected>Active</option>
+                          <option value="inactive">Inactive</option>
+                        </select>
+                        <small class="text-muted">Products with zero stock are automatically marked out of stock.</small>
+                      </div>
+                      <div class="form-group">
                         <label for="image" class="font-weight-bold">Image</label>
                         <input type="file" class="form-control" id="image" name="image" placeholder="Enter Image " required>
                       </div>
@@ -351,6 +359,15 @@
                       <div class="form-group">
                         <label for="edit_stock_quantity" class="font-weight-bold">Quantity</label>
                         <input type="text" class="form-control" id="edit_stock_quantity" name="edit_stock_quantity" required>
+                      </div>
+                      <div class="form-group">
+                        <label for="edit_status" class="font-weight-bold">Product Status</label>
+                        <select name="edit_status" id="edit_status" class="custom-select">
+                          <option value="active">Active</option>
+                          <option value="inactive">Inactive</option>
+                          <option value="out_of_stock">Out of Stock</option>
+                        </select>
+                        <small class="text-muted">Zero stock will force the out-of-stock status.</small>
                       </div>
                       <div class="form-group">
                         <label for="edit_image" class="font-weight-bold">Image</label>

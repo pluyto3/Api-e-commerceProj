@@ -40,7 +40,9 @@ class AddToCartController extends Controller
                     'product_price',
                     'stock_quantity',
                     'image',
-                    'approval_status'
+                    'status',
+                    'approval_status',
+                    'seller_id'
                 );
             },
         ])
@@ -51,6 +53,13 @@ class AddToCartController extends Controller
             $item->setAttribute(
                 'subtotal',
                 $item->product ? $item->quantity * $item->product->product_price : 0
+            );
+            $item->setAttribute(
+                'is_available',
+                $item->product
+                    && $item->product->approval_status === 'approved'
+                    && $item->product->status === 'active'
+                    && (int) $item->product->stock_quantity >= (int) $item->quantity
             );
         });
 
@@ -81,6 +90,12 @@ class AddToCartController extends Controller
         $product = Product::find($validated['product_id']);
         if (!$product) {
             return response()->json(['msg' => 'Product not found.'], 404);
+        }
+
+        if (($product->approval_status ?? 'pending') !== 'approved' || ($product->status ?? 'active') !== 'active') {
+            return response()->json([
+                'msg' => 'This product is not available for purchase.',
+            ], 422);
         }
 
         $stock = (int) $product->stock_quantity;
@@ -174,6 +189,12 @@ class AddToCartController extends Controller
         $product = $cartItem->product ?: Product::find($cartItem->product_id);
         if (!$product) {
             return response()->json(['msg' => 'Product not found.'], 404);
+        }
+
+        if (($product->approval_status ?? 'pending') !== 'approved' || ($product->status ?? 'active') !== 'active') {
+            return response()->json([
+                'msg' => 'This product is not available for purchase.',
+            ], 422);
         }
 
         $stock = (int) $product->stock_quantity;

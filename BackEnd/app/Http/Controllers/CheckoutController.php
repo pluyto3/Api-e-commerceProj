@@ -2,197 +2,352 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\User;
 use App\Models\addToCart;
 use App\Models\Checkout;
 use App\Models\CheckoutItem;
+use App\Models\Product;
+use App\Models\User;
 use Carbon\Carbon;
-
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class CheckoutController extends Controller
 {
-    /**
-     * Create Checkout
-     */
-    public function createCheckout(Request $request)
+    private const PAYMENT_STATUSES = ['pending', 'paid', 'failed', 'cancelled'];
+    private const SHIPPING_STATUSES = ['pending', 'packed', 'shipped', 'delivered', 'cancelled'];
+
+    private function getAuthenticatedUser(Request $request): ?User
     {
         $token = $request->bearerToken();
-        if ($token) {
-            $user = User::where('token', $token)->first();
-            if ($user) {
-                $request->validate([
-                    'payment_method' => 'required|string',
-                    'purok'          => 'required|string|max:50',
-                    'barangay'       => 'required|string|max:100',
-                    'city'           => 'required|string|max:100',
-                    'province'       => 'required|string|max:100',
-                    'zipcode'        => 'required|string|max:10',
-                    'phone'   => 'required|string|max:20',
-                    'total_amount'   => 'required|numeric|min:0',
-                    'item_ids'       => 'required|array|min:1',
-                    'item_ids.*'     => 'integer|exists:add_to_cart,addTocart_id',
+
+        if (!$token) {
+            return null;
+        }
+
+        return User::where('token', $token)->first();
+    }
+
+    private function normalizeShippingStatus(?string $status): string
+    {
+        $value = strtolower(trim((string) $status));
+        $value = str_replace(['_', '-'], ' ', $value);
+        $value = preg_replace('/\s+/', ' ', $value);
+
+        return match ($value) {
+            'to ship', 'to_ship', 'processing' => 'packed',
+            'complete', 'completed' => 'delivered',
+            default => str_replace(' ', '_', $value ?: 'pending'),
+        };
+    }
+
+    private function normalizePaymentStatus(?string $status): string
+    {
+        return strtolower(trim((string) ($status ?: 'pending')));
+    }
+
+    private function initialPaymentStatus(string $paymentMethod): string
+    {
+        return strtolower($paymentMethod) === 'cod' ? 'pending' : 'pending';
+    }
+
+    private function syncLegacyStatus(Checkout $checkout): void
+    {
+        $checkout->status = $checkout->shipping_status ?: $checkout->status ?: 'pending';
+    }
+
+    private function ensureCheckoutItemsCanBePurchased($cartItems, $products): void
+    {
+        foreach ($cartItems as $item) {
+            $product = $products->get($item->product_id);
+            $quantity = (int) $item->quantity;
+
+            if (!$product) {
+                throw ValidationException::withMessages([
+                    'item_ids' => 'One of the selected products no longer exists.',
                 ]);
-
-                $checkout = new Checkout();
-                $checkout->user_id = $user->user_id;
-                $checkout->payment_method = $request->payment_method;
-                $checkout->purok = $request->purok;
-                $checkout->barangay = $request->barangay;
-                $checkout->city = $request->city;
-                $checkout->province = $request->province;
-                $checkout->zipcode = $request->zipcode;
-                $checkout->phone_number = $request->phone;
-                $checkout->total_amount = $request->total_amount;
-                $checkout->status = 'pending'; 
-                $checkout->save();
-
-                // Only fetch selected cart items
-                $selectedIds = $request->item_ids;
-
-                // Get cart items for the user
-                $cartItems = addToCart::where('user_id', $user->user_id)
-                    ->with('product')
-                    ->whereIn('addTocart_id', $selectedIds)
-                    ->get();
-
-                if ($cartItems->isEmpty()) {
-                    return response()->json(['msg' => 'No valid selected cart items found.'], 400);
-                }
-
-                // Create checkout items
-                foreach ($cartItems as $item) {
-                    CheckoutItem::create([
-                        'checkout_id' => $checkout->checkout_id,
-                        'product_id'  => $item->product_id,
-                        'seller_id'   => $item->product?->seller_id,
-                        'quantity'    => $item->quantity,
-                        'price'       => $item->product->product_price, 
-                        'subtotal'    => $item->quantity * $item->product->product_price,
-                    ]);
-                }   
-
-                // Clear the user's cart after checkout
-                addToCart::where('user_id', $user->user_id)
-                    ->whereIn('addTocart_id', $selectedIds)
-                    ->delete();
-
-                return response()->json([
-                'message'  => 'Checkout created successfully',
-                    'checkout' => $checkout,
-                    'items'    => $cartItems->map(function ($item) {
-                        return [
-                            'product_id' => $item->product_id,
-                            'product_name' => $item->product->product_name,
-                            'quantity' => $item->quantity,
-                            'price' => $item->product->product_price,
-                            'subtotal' => $item->quantity * $item->product->product_price,
-                        ];
-                    }),
-                ], 201);
-            } else {
-                return response()->json(['msg' => 'Invalid Token.'], 400);
             }
-        } else {
-            return response()->json(['msg' => 'No Token Provided.'], 401);
+
+            if (($product->approval_status ?? 'pending') !== 'approved') {
+                throw ValidationException::withMessages([
+                    'item_ids' => "{$product->product_name} is not available for checkout.",
+                ]);
+            }
+
+            if (($product->status ?? 'active') !== 'active') {
+                throw ValidationException::withMessages([
+                    'item_ids' => "{$product->product_name} is currently {$product->status}.",
+                ]);
+            }
+
+            if ((int) $product->stock_quantity <= 0) {
+                throw ValidationException::withMessages([
+                    'item_ids' => "{$product->product_name} is out of stock.",
+                ]);
+            }
+
+            if ($quantity > (int) $product->stock_quantity) {
+                throw ValidationException::withMessages([
+                    'item_ids' => "Only {$product->stock_quantity} item(s) left for {$product->product_name}.",
+                ]);
+            }
         }
     }
 
+    private function reduceProductStock(Product $product, int $quantity): void
+    {
+        $product->stock_quantity = max(0, (int) $product->stock_quantity - $quantity);
+
+        if ($product->stock_quantity <= 0) {
+            $product->status = 'out_of_stock';
+        }
+
+        $product->save();
+    }
+
+    private function restoreCheckoutStock(Checkout $checkout): void
+    {
+        $items = $checkout->items()->get();
+        $productIds = $items->pluck('product_id')->unique()->values();
+
+        if ($productIds->isEmpty()) {
+            return;
+        }
+
+        $products = Product::whereIn('product_id', $productIds)
+            ->lockForUpdate()
+            ->get()
+            ->keyBy('product_id');
+
+        foreach ($items as $item) {
+            $product = $products->get($item->product_id);
+
+            if (!$product) {
+                continue;
+            }
+
+            $product->stock_quantity = (int) $product->stock_quantity + (int) $item->quantity;
+
+            if ($product->status === 'out_of_stock' && $product->stock_quantity > 0) {
+                $product->status = 'active';
+            }
+
+            $product->save();
+        }
+    }
+
+    private function canSellerAccessCheckout(Checkout $checkout, User $user): bool
+    {
+        return $checkout->items()
+            ->where('seller_id', $user->user_id)
+            ->exists();
+    }
+
+    private function formatImagePath(?Product $product): string
+    {
+        return $product?->image
+            ? 'FrontEnd/assets/img/product/' . $product->image
+            : 'assets/img/back.jpg';
+    }
+
+    private function formatOrder(Checkout $order): array
+    {
+        $items = $order->items ?? collect();
+
+        $sellerNames = $items
+            ->map(function ($item) {
+                return $item->seller?->username
+                    ?? $item->product?->seller?->username
+                    ?? null;
+            })
+            ->filter()
+            ->unique()
+            ->values();
+
+        $shippingStatus = $order->shipping_status ?: $order->status ?: 'pending';
+        $paymentStatus = $order->payment_status ?: 'pending';
+
+        return [
+            'checkout_id' => $order->checkout_id,
+            'user_id' => $order->user_id,
+            'user' => $order->user ? [
+                'user_id' => $order->user->user_id,
+                'username' => $order->user->username,
+                'fullname' => $order->user->fullname,
+                'email' => $order->user->email,
+            ] : null,
+            'payment_method' => $order->payment_method,
+            'payment_status' => $paymentStatus,
+            'shipping_status' => $shippingStatus,
+            'status' => $shippingStatus,
+            'total_amount' => $order->total_amount,
+            'tracking_number' => $order->tracking_number,
+            'created_date' => $order->created_at ? Carbon::parse($order->created_at)->toDateString() : null,
+            'created_at' => $order->created_at ? Carbon::parse($order->created_at)->format('M d, Y') : null,
+            'updated_at' => $order->updated_at,
+            'purok' => $order->purok,
+            'barangay' => $order->barangay,
+            'city' => $order->city,
+            'province' => $order->province,
+            'zipcode' => $order->zipcode,
+            'phone_number' => $order->phone_number,
+            'item_count' => $items->count(),
+            'shop_name' => $sellerNames->isNotEmpty() ? $sellerNames->implode(', ') : 'Unknown Shop',
+            'items' => $items->map(function ($item) {
+                return [
+                    'checkout_item_id' => $item->checkout_item_id,
+                    'product_id' => $item->product_id,
+                    'seller_id' => $item->seller_id,
+                    'product_name' => $item->product ? $item->product->product_name : 'Unknown Product',
+                    'quantity' => $item->quantity,
+                    'price' => $item->price,
+                    'subtotal' => $item->subtotal,
+                    'seller_name' => $item->seller?->username ?? $item->product?->seller?->username,
+                    'image' => $this->formatImagePath($item->product),
+                    'product' => $item->product,
+                    'seller' => $item->seller,
+                ];
+            })->values(),
+        ];
+    }
+
     /**
-     * Fetch Buyer Orders
+     * Create checkout, order items, and stock deduction atomically.
+     */
+    public function createCheckout(Request $request)
+    {
+        $user = $this->getAuthenticatedUser($request);
+
+        if (!$user) {
+            return response()->json(['msg' => 'Invalid or missing token.'], 401);
+        }
+
+        $validated = $request->validate([
+            'payment_method' => 'required|string|in:cod,gcash',
+            'purok' => 'required|string|max:50',
+            'barangay' => 'required|string|max:100',
+            'city' => 'required|string|max:100',
+            'province' => 'required|string|max:100',
+            'zipcode' => 'required|string|max:10',
+            'phone' => 'required|string|max:20',
+            'total_amount' => 'nullable|numeric|min:0',
+            'item_ids' => 'required|array|min:1',
+            'item_ids.*' => 'integer',
+        ]);
+
+        $selectedIds = collect($validated['item_ids'])
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        $checkout = DB::transaction(function () use ($request, $user, $selectedIds, $validated) {
+            $cartItems = addToCart::where('user_id', $user->user_id)
+                ->whereIn('addTocart_id', $selectedIds)
+                ->lockForUpdate()
+                ->get();
+
+            if ($cartItems->count() !== $selectedIds->count()) {
+                throw ValidationException::withMessages([
+                    'item_ids' => 'Some selected cart items were not found. Please refresh your cart.',
+                ]);
+            }
+
+            $productIds = $cartItems->pluck('product_id')->unique()->values();
+            $products = Product::whereIn('product_id', $productIds)
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('product_id');
+
+            $this->ensureCheckoutItemsCanBePurchased($cartItems, $products);
+
+            $computedTotal = $cartItems->sum(function ($item) use ($products) {
+                $product = $products->get($item->product_id);
+                return (float) $product->product_price * (int) $item->quantity;
+            });
+
+            $checkout = new Checkout();
+            $checkout->user_id = $user->user_id;
+            $checkout->payment_method = $validated['payment_method'];
+            $checkout->payment_status = $this->initialPaymentStatus($validated['payment_method']);
+            $checkout->purok = $request->purok;
+            $checkout->barangay = $request->barangay;
+            $checkout->city = $request->city;
+            $checkout->province = $request->province;
+            $checkout->zipcode = $request->zipcode;
+            $checkout->phone_number = $request->phone;
+            $checkout->total_amount = $computedTotal;
+            $checkout->shipping_status = 'pending';
+            $checkout->status = 'pending';
+            $checkout->save();
+
+            foreach ($cartItems as $item) {
+                $product = $products->get($item->product_id);
+                $quantity = (int) $item->quantity;
+                $price = (float) $product->product_price;
+
+                CheckoutItem::create([
+                    'checkout_id' => $checkout->checkout_id,
+                    'product_id' => $item->product_id,
+                    'seller_id' => $product->seller_id,
+                    'quantity' => $quantity,
+                    'price' => $price,
+                    'subtotal' => $quantity * $price,
+                ]);
+
+                $this->reduceProductStock($product, $quantity);
+            }
+
+            addToCart::where('user_id', $user->user_id)
+                ->whereIn('addTocart_id', $selectedIds)
+                ->delete();
+
+            return $checkout;
+        });
+
+        $checkout->load(['user', 'items.product.brand', 'items.product.seller', 'items.seller']);
+        $formatted = $this->formatOrder($checkout);
+
+        return response()->json([
+            'message' => 'Order placed successfully.',
+            'order_id' => $checkout->checkout_id,
+            'checkout' => $formatted,
+            'items' => $formatted['items'],
+        ], 201);
+    }
+
+    /**
+     * Fetch buyer orders.
      */
     public function getUserOrders(Request $request)
     {
-        $token = $request->bearerToken();
-        $user = User::where('token', $token)->first();
+        $user = $this->getAuthenticatedUser($request);
 
         if (!$user) {
             return response()->json(['msg' => 'Invalid Token.'], 401);
         }
 
-        // Load all checkouts with their items and product details
         $orders = Checkout::with(['user', 'items.product.brand', 'items.product.seller', 'items.seller'])
             ->where('user_id', $user->user_id)
             ->orderBy('checkout_id', 'DESC')
             ->get();
 
-        $formattedOrders = $orders->map(function ($order) {
-
-            $sellerNames = $order->items
-                ->map(function ($item) {
-                    return $item->seller?->username
-                        ?? $item->product?->seller?->username
-                        ?? null;
-                })
-                ->filter()
-                ->unique()
-                ->values();
-
-            $shopName = $sellerNames->isNotEmpty()
-                ? $sellerNames->implode(', ')
-                : 'Unknown Shop';
-
-            return [
-                'checkout_id'  => $order->checkout_id,
-                'user_id'      => $order->user_id,
-                'user'         => $order->user ? [
-                    'user_id' => $order->user->user_id,
-                    'username' => $order->user->username,
-                    'fullname' => $order->user->fullname,
-                    'email' => $order->user->email,
-                ] : null,
-                'status'       => $order->status,
-                'total_amount' => $order->total_amount,
-                'tracking_number' => $order->tracking_number,
-                'created_date' => Carbon::parse($order->created_at)->toDateString(),
-                'created_at'   => Carbon::parse($order->created_at)->format('M d, Y'),
-
-                // Additional summary
-                'item_count'   => $order->items->count(),
-                'shop_name'    => $shopName,
-
-                // Items inside each checkout
-                'items'        => $order->items->map(function ($item) {
-
-                // FIX: Correct image path
-                $imagePath = $item->product?->image
-                    ? 'FrontEnd/assets/img/product/' . $item->product->image
-                    : 'assets/img/back.jpg';
-
-                    return [
-                        // Extract the product details
-                        'product_id'   => $item->product_id,    
-                        'product_name' => $item->product ? $item->product->product_name : 'Unknown Product',
-                        'quantity'     => $item->quantity,
-                        'price'        => $item->price,
-                        'subtotal'     => $item->subtotal,
-                        'seller_name'  => $item->seller?->username ?? $item->product?->seller?->username,
-                        'image'        => $imagePath
-                    ];
-                }),
-            ];
-            
-        });
-
         return response()->json([
-            'data' => $formattedOrders
+            'data' => $orders->map(fn ($order) => $this->formatOrder($order))->values(),
         ], 200);
     }
 
     /**
-     * Get a single checkout with items
+     * Get a single checkout with items.
      */
     public function getOrderDetails($checkout_id)
     {
-        $token = request()->bearerToken();
-        $user = User::where('token', $token)->first();
+        $user = $this->getAuthenticatedUser(request());
 
         if (!$user) {
             return response()->json(['message' => 'Invalid Token'], 401);
         }
 
-        // Fetch checkout with related items, products, and user
-        $order = Checkout::with(['user', 'items.product.brand'])
+        $order = Checkout::with(['user', 'items.product.brand', 'items.product.seller', 'items.seller'])
             ->where('checkout_id', $checkout_id)
             ->where('user_id', $user->user_id)
             ->first();
@@ -201,157 +356,211 @@ class CheckoutController extends Controller
             return response()->json(['message' => 'Order not found'], 404);
         }
 
-        $formatted = [
-            'checkout_id'  => $order->checkout_id,
-            'user_id'      => $order->user_id,
-            'user'         => $order->user ? [
-                'user_id' => $order->user->user_id,
-                'username' => $order->user->username,
-                'fullname' => $order->user->fullname,
-                'email' => $order->user->email,
-            ] : null,
-            'status'       => $order->status,
-            'tracking_number' => $order->tracking_number,
-            'total_amount' => $order->total_amount,
-            'created_at'   => Carbon::parse($order->created_at)->format('M d, Y'),
-            'purok'        => $order->purok,
-            'barangay'     => $order->barangay,
-            'city'         => $order->city,
-            'province'     => $order->province,
-            'zipcode'      => $order->zipcode,
-            'item_count'   => $order->items->count(),
-            'shop_name'    => $order->items->first()?->product?->brand?->name ?? "Unknown Shop",
-
-            // Items inside the checkout
-            'items' => $order->items->map(function ($item) {
-
-                // FIX: Correct image path
-                $imagePath = $item->product?->image
-                    ? 'FrontEnd/assets/img/product/' . $item->product->image
-                    : 'assets/img/back.jpg';
-
-                return [
-                    'product_id'   => $item->product_id,    
-                    'product_name' => $item->product ? $item->product->product_name : 'Unknown Product',
-                    'quantity'     => $item->quantity,
-                    'price'        => $item->price,
-                    'subtotal'     => $item->subtotal,
-                    'image'        => $imagePath
-                ];
-            }),
-        ];
+        $formatted = $this->formatOrder($order);
 
         return response()->json([
             'order' => $formatted,
-            'items' => $formatted['items']
+            'items' => $formatted['items'],
         ], 200);
     }
 
     /**
-     * Update Order Status (Admin)
+     * Update shipping/payment status for admin or seller.
      */
     public function updateStatus(Request $request, $checkout_id)
     {
-        $token = $request->bearerToken();
-        $user = User::where('token', $token)->first();
+        $user = $this->getAuthenticatedUser($request);
 
         if (!$user) {
             return response()->json(['msg' => 'Invalid Token.'], 401);
         }
 
-        $status = strtolower(trim((string) $request->input('status')));
-        $status = str_replace('_', ' ', $status);
-
-        if (!in_array($status, ['pending', 'to ship', 'shipped', 'completed'], true)) {
-            return response()->json([
-                'msg' => 'Invalid status value.',
-            ], 422);
-        }
-        
-        // Restrict to admin and seller only
-        if (!in_array($user->role, ['admin', 'seller'])) {
+        if (!in_array($user->role, ['admin', 'seller'], true)) {
             return response()->json(['msg' => 'Unauthorized'], 403);
         }
 
-        $checkout = Checkout::find($checkout_id);
+        $incomingShipping = $request->input('shipping_status', $request->input('status'));
+        $incomingPayment = $request->input('payment_status');
+
+        if (!$incomingShipping && !$incomingPayment) {
+            return response()->json(['msg' => 'Please provide a shipping or payment status.'], 422);
+        }
+
+        $shippingStatus = $incomingShipping ? $this->normalizeShippingStatus($incomingShipping) : null;
+        $paymentStatus = $incomingPayment ? $this->normalizePaymentStatus($incomingPayment) : null;
+
+        if ($shippingStatus && !in_array($shippingStatus, self::SHIPPING_STATUSES, true)) {
+            return response()->json(['msg' => 'Invalid shipping status value.'], 422);
+        }
+
+        if ($paymentStatus && !in_array($paymentStatus, self::PAYMENT_STATUSES, true)) {
+            return response()->json(['msg' => 'Invalid payment status value.'], 422);
+        }
+
+        $checkoutForAuth = Checkout::find($checkout_id);
+        if (!$checkoutForAuth) {
+            return response()->json(['msg' => 'Checkout not found.'], 404);
+        }
+
+        if ($user->role === 'seller' && !$this->canSellerAccessCheckout($checkoutForAuth, $user)) {
+            return response()->json(['msg' => 'Unauthorized'], 403);
+        }
+
+        $checkout = DB::transaction(function () use ($request, $checkout_id, $user, $shippingStatus, $paymentStatus) {
+            $checkout = Checkout::where('checkout_id', $checkout_id)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$checkout) {
+                return null;
+            }
+
+            $currentShipping = $this->normalizeShippingStatus($checkout->shipping_status ?: $checkout->status);
+
+            if ($currentShipping === 'cancelled' && $shippingStatus !== 'cancelled') {
+                throw ValidationException::withMessages([
+                    'shipping_status' => 'Cancelled orders cannot be moved back to active shipping statuses.',
+                ]);
+            }
+
+            if ($shippingStatus) {
+                $checkout->shipping_status = $shippingStatus;
+
+                if ($shippingStatus === 'shipped' && empty($checkout->tracking_number)) {
+                    $checkout->tracking_number = $this->generateTrackingNumber($checkout->checkout_id);
+                }
+
+                if ($shippingStatus === 'delivered' && $checkout->payment_method === 'cod' && $checkout->payment_status === 'pending') {
+                    $checkout->payment_status = 'paid';
+                }
+
+                if ($shippingStatus === 'cancelled') {
+                    if (!$checkout->cancelled_at) {
+                        $this->restoreCheckoutStock($checkout);
+                    }
+
+                    $checkout->cancelled_at = now();
+                    $checkout->cancelled_by = $user->user_id;
+                    $checkout->cancellation_reason = $request->input('reason', $checkout->cancellation_reason);
+
+                    if ($checkout->payment_status !== 'paid') {
+                        $checkout->payment_status = 'cancelled';
+                    }
+                }
+            }
+
+            if ($paymentStatus) {
+                $checkout->payment_status = $paymentStatus;
+
+                if (in_array($paymentStatus, ['failed', 'cancelled'], true) && $this->normalizeShippingStatus($checkout->shipping_status) !== 'cancelled') {
+                    if (!$checkout->cancelled_at) {
+                        $this->restoreCheckoutStock($checkout);
+                    }
+
+                    $checkout->shipping_status = 'cancelled';
+                    $checkout->cancelled_at = now();
+                    $checkout->cancelled_by = $user->user_id;
+                    $checkout->cancellation_reason = $request->input('reason', 'Payment was ' . $paymentStatus . '.');
+                }
+            }
+
+            $this->syncLegacyStatus($checkout);
+            $checkout->save();
+
+            return $checkout;
+        });
 
         if (!$checkout) {
             return response()->json(['msg' => 'Checkout not found.'], 404);
         }
 
-        if (
-            $user->role === 'seller' &&
-            !$checkout->items()->where('seller_id', $user->user_id)->exists()
-        ) {
-            return response()->json(['msg' => 'Unauthorized'], 403);
-        }
-
-        // Generate tracking number the first time an order is marked as shipped.
-        if ($status === 'shipped' && empty($checkout->tracking_number)) {
-            $checkout->tracking_number = $this->generateTrackingNumber($checkout->checkout_id);
-        }
-
-        $checkout->status = $status;
-        $checkout->save();
+        $checkout->load(['user', 'items.product.brand', 'items.product.seller', 'items.seller']);
 
         return response()->json([
-            'msg' => 'Checkout status updated successfully.',
-            'checkout' => $checkout->fresh(),
+            'msg' => 'Order status updated successfully.',
+            'checkout' => $this->formatOrder($checkout),
         ], 200);
     }
 
-    /**
-     * Logic for Generating Tracking Number
-     */
-    private function generateTrackingNumber($checkout_id)
+    private function generateTrackingNumber($checkout_id): string
     {
         return 'TRK-' . now()->format('Ymd') . '-' . str_pad($checkout_id, 6, '0', STR_PAD_LEFT);
     }
 
     /**
-     * Buyer Cancel Order
+     * Buyer cancel order.
      */
     public function cancelOrder(Request $request, $checkout_id)
     {
-        $token = $request->bearerToken();
-        $user = User::where('token', $token)->first();
+        $user = $this->getAuthenticatedUser($request);
 
         if (!$user) {
             return response()->json(['msg' => 'Invalid Token.'], 401);
         }
 
-        $checkout = Checkout::where('checkout_id', $checkout_id)
-            ->where('user_id', $user->user_id)
-            ->first();
+        $checkout = DB::transaction(function () use ($request, $checkout_id, $user) {
+            $checkout = Checkout::where('checkout_id', $checkout_id)
+                ->where('user_id', $user->user_id)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$checkout) {
+                return null;
+            }
+
+            $shippingStatus = $this->normalizeShippingStatus($checkout->shipping_status ?: $checkout->status);
+
+            if ($shippingStatus !== 'pending') {
+                throw ValidationException::withMessages([
+                    'status' => 'Only pending orders can be cancelled.',
+                ]);
+            }
+
+            if ($checkout->payment_status === 'paid') {
+                throw ValidationException::withMessages([
+                    'payment_status' => 'Paid orders need admin assistance before cancellation.',
+                ]);
+            }
+
+            if (!$checkout->cancelled_at) {
+                $this->restoreCheckoutStock($checkout);
+            }
+
+            $checkout->shipping_status = 'cancelled';
+            $checkout->status = 'cancelled';
+            $checkout->payment_status = 'cancelled';
+            $checkout->cancelled_at = now();
+            $checkout->cancelled_by = $user->user_id;
+            $checkout->cancellation_reason = $request->input('reason', 'Cancelled by buyer.');
+            $checkout->save();
+
+            return $checkout;
+        });
 
         if (!$checkout) {
             return response()->json(['msg' => 'Checkout not found.'], 404);
         }
 
-        if ($checkout->status !== 'pending') {
-            return response()->json(['msg' => 'Only pending orders can be canceled.'], 400);
-        }
+        $checkout->load(['user', 'items.product.brand', 'items.product.seller', 'items.seller']);
 
-        $checkout->status = 'cancelled';
-        $checkout->save();
-
-        return response()->json(['msg' => 'Order cancelled successfully.', 'checkout' => $checkout], 200);
+        return response()->json([
+            'msg' => 'Order cancelled successfully.',
+            'checkout' => $this->formatOrder($checkout),
+        ], 200);
     }
 
     /**
-     * ADMIN: Get All Orders
+     * Admin/seller: Get orders.
      */
     public function getAllOrders(Request $request)
     {
-        $token = $request->bearerToken();
-        $user = User::where('token', $token)->first();
+        $user = $this->getAuthenticatedUser($request);
 
         if (!$user) {
             return response()->json(['msg' => 'Invalid Token.'], 401);
         }
 
-        // Restrict to admin users only
-        if (!in_array($user->role, ['admin', 'seller'])) {
+        if (!in_array($user->role, ['admin', 'seller'], true)) {
             return response()->json(['msg' => 'Unauthorized'], 403);
         }
 
@@ -365,37 +574,41 @@ class CheckoutController extends Controller
             })->with([
                 'items' => function ($itemsQuery) use ($user) {
                     $itemsQuery->where('seller_id', $user->user_id)
-                        ->with('product.seller');
-                }
+                        ->with(['product.brand', 'product.category', 'product.seller', 'seller']);
+                },
             ]);
         } else {
-            $ordersQuery->with('items.product.seller');
+            $ordersQuery->with(['items.product.brand', 'items.product.category', 'items.product.seller', 'items.seller']);
         }
 
         $orders = $ordersQuery->get();
 
-        return response()->json($orders, 200);
+        return response()->json(
+            $orders->map(fn ($order) => $this->formatOrder($order))->values(),
+            200
+        );
     }
 
     /**
-     * Dashboard: Orders Monthly
+     * Dashboard: Orders monthly.
      */
     public function ordersMonthly(Request $request)
     {
-        $user = User::where('token', $request->bearerToken())->first();
+        $user = $this->getAuthenticatedUser($request);
 
-        if (!$user || !in_array($user->role, ['admin', 'seller'])) {
+        if (!$user || !in_array($user->role, ['admin', 'seller'], true)) {
             return response()->json(['msg' => 'Unauthorized'], 403);
         }
 
         $query = Checkout::query();
+
         if ($user->role === 'seller') {
             $query->whereHas('items', function ($q) use ($user) {
                 $q->where('seller_id', $user->user_id);
             });
         }
 
-         $orders = $query->selectRaw('YEAR(created_at) as year, MONTH(created_at) as month, COUNT(*) as total')
+        $orders = $query->selectRaw('YEAR(created_at) as year, MONTH(created_at) as month, COUNT(*) as total')
             ->groupBy('year', 'month')
             ->orderBy('year')
             ->orderBy('month')
@@ -413,30 +626,31 @@ class CheckoutController extends Controller
     }
 
     /**
-     * Dashboard: Orders By Status
+     * Dashboard: Orders by shipping status.
      */
     public function ordersByStatus(Request $request)
     {
-        $user = User::where('token', $request->bearerToken())->first();
+        $user = $this->getAuthenticatedUser($request);
 
-        if (!$user || !in_array($user->role, ['admin', 'seller'])) {
+        if (!$user || !in_array($user->role, ['admin', 'seller'], true)) {
             return response()->json(['msg' => 'Unauthorized'], 403);
         }
 
         $query = Checkout::query();
+
         if ($user->role === 'seller') {
             $query->whereHas('items', function ($q) use ($user) {
                 $q->where('seller_id', $user->user_id);
             });
         }
 
-         $orders = $query->selectRaw('status, COUNT(*) as total')
-            ->groupBy('status')
+        $orders = $query->selectRaw('COALESCE(shipping_status, status) as status_label, COUNT(*) as total')
+            ->groupBy('status_label')
             ->get();
 
         return response()->json([
-            'labels' => $orders->pluck('status')->values(),
-            'data'   => $orders->pluck('total')->values(),
+            'labels' => $orders->pluck('status_label')->values(),
+            'data' => $orders->pluck('total')->values(),
         ]);
     }
 }

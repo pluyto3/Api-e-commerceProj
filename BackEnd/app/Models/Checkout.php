@@ -22,7 +22,16 @@ class Checkout extends Model
         'phone_number',
         'total_amount',
         'status',
-        'tracking_number'
+        'payment_status',
+        'shipping_status',
+        'tracking_number',
+        'cancelled_at',
+        'cancelled_by',
+        'cancellation_reason',
+    ];
+
+    protected $casts = [
+        'cancelled_at' => 'datetime',
     ];
 
     public function user()

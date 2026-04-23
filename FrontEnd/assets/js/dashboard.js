@@ -125,6 +125,8 @@ function loadCounts() {
     method: "GET",
     headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
     success: function (res) {
+      $dashboard.find(".low-stock-dashboard-alert").remove();
+
       if (role === "seller") {
         $dashboard.find("#countedMyProducts").text(res.my_products || 0);
         $dashboard
@@ -136,6 +138,13 @@ function loadCounts() {
         $dashboard
           .find("#countedMyOrders")
           .text(res.total_orders || res.totalOrders || 0);
+        if (Number(res.low_stock_products || 0) > 0) {
+          $dashboard.prepend(
+            `<div class="alert alert-warning low-stock-dashboard-alert">
+              ${res.low_stock_products} product(s) are low on stock.
+            </div>`,
+          );
+        }
         return;
       }
 
@@ -150,6 +159,17 @@ function loadCounts() {
       $dashboard
         .find("#countedCompletedOrders")
         .text(res.completed_orders || res.completedOrders || 0);
+      $dashboard
+        .find("#countedCancelled")
+        .text(res.cancelled_orders || res.cancelledOrders || 0);
+
+      if (Number(res.low_stock_products || 0) > 0) {
+        $dashboard.prepend(
+          `<div class="alert alert-warning low-stock-dashboard-alert">
+            ${res.low_stock_products} product(s) are low on stock.
+          </div>`,
+        );
+      }
 
       // keep older IDs for backward-compatibility if they exist
       $dashboard.find("#countedCategory").text(res.categories || 0);
@@ -195,29 +215,6 @@ function loadCounts() {
           console.warn("Could not load products for counts:", xhr.responseText);
           $dashboard.find("#countedProducts").text(0);
           $dashboard.find("#countedPendingApproval").text(0);
-        },
-      });
-
-      // 3) Compute cancelled orders from all orders
-      $.ajax({
-        url: `${ip}/api/checkout/all`,
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        success: function (orders) {
-          const cancelled = (orders || []).filter(
-            (o) => o.status === "cancelled",
-          ).length;
-          $dashboard.find("#countedCancelled").text(cancelled || 0);
-        },
-        error: function (xhr) {
-          console.warn(
-            "Could not load orders for cancelled count:",
-            xhr.responseText,
-          );
-          $dashboard.find("#countedCancelled").text(0);
         },
       });
 

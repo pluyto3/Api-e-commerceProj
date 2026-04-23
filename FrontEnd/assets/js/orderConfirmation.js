@@ -117,6 +117,8 @@ $(document).ready(function () {
   $("#confirmationPaymentMethod").html(
     `${order.paymentMethod} <i class="fas fa-money-bill-wave ml-1"></i>`,
   ); // Assuming COD is the only one with icon
+  $("#confirmationPaymentStatus").text(order.paymentStatus || "pending");
+  $("#confirmationShippingStatus").text(order.shippingStatus || "pending");
 
   $("#confirmationRecipientName").text(order.shipping.name);
   $("#confirmationRecipientPhone").text(order.shipping.phone);
@@ -170,6 +172,26 @@ $(document).ready(function () {
       console.error("Error fetching cart items:", xhr.responseText);
       updateCartCount(0); // Set to 0 on error
     },
+  });
+
+  // --- Logout Functionality ---
+  $("#logout").click(function () {
+    $.ajax({
+      url: `${ip}/api/logout`,
+      type: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      data: { token },
+      success: () => {
+        Swal.fire({ icon: "success", title: "Logout Successful" }).then(() => {
+          Object.keys($.cookie()).forEach((cookie) => $.removeCookie(cookie));
+          window.location.replace("login.html");
+        });
+      },
+      error: (res) => {
+        const msg = res.responseJSON?.msg || "Logout failed. Please try again.";
+        Swal.fire({ icon: "error", title: "Error", text: msg });
+      },
+    });
   });
 });
 

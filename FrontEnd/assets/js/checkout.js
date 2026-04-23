@@ -87,6 +87,7 @@ $(document).ready(function () {
   let defaultAddressInfo = null;
   let defaultAccountInfo = null;
   let allCartItems = []; // Declare here to make it accessible later
+  let checkoutBlocked = false;
 
   $(document)
     .ajaxStart(() => $("#wait").show())
@@ -303,6 +304,7 @@ $(document).ready(function () {
       //   console.log("Cart items:", cartItems);
 
       totalAmount = 0;
+      checkoutBlocked = false;
 
       $(".cartItems").empty();
 
@@ -312,6 +314,21 @@ $(document).ready(function () {
         const price = item.product.product_price || 0;
         const quantity = item.quantity || 0;
         const subtotal = item.subtotal || price * quantity;
+        const stock = parseInt(item.product.stock_quantity || 0, 10) || 0;
+        const productStatus = (item.product.status || "active").toLowerCase();
+        const approvalStatus = (
+          item.product.approval_status || "approved"
+        ).toLowerCase();
+        const isAvailable =
+          item.is_available !== false &&
+          approvalStatus === "approved" &&
+          productStatus === "active" &&
+          stock > 0 &&
+          stock >= quantity;
+
+        if (!isAvailable) {
+          checkoutBlocked = true;
+        }
         totalAmount += subtotal;
 
         console.log("Cart item:", item);
@@ -323,6 +340,9 @@ $(document).ready(function () {
                   <h6 class="font-weight-bold mb-1" style="font-size: 0.95rem;">${name}</h6>
                   <small class="text-muted d-block">Price: ₱${price.toLocaleString()}</small>
                   <small class="text-muted d-block">Qty: ${quantity}</small>
+                  <small class="${isAvailable ? "text-muted" : "text-danger font-weight-bold"} d-block">
+                    ${isAvailable ? `Stock: ${stock}` : "Stock changed. Please update your cart."}
+                  </small>
               </div>
               <div class="font-weight-bold ml-2">
                   ₱${subtotal.toLocaleString()}
@@ -333,6 +353,17 @@ $(document).ready(function () {
         $(".cartItems").append(listCartItems);
       });
 
+      if (cartItems.length === 0) {
+        checkoutBlocked = true;
+        $(".cartItems").html(
+          '<div class="alert alert-warning">No selected cart items were found. Please return to your cart.</div>',
+        );
+      } else if (checkoutBlocked) {
+        $(".cartItems").prepend(
+          '<div class="alert alert-warning">Some selected items are no longer available. Please return to your cart and update the quantity.</div>',
+        );
+      }
+
       // Update subtotal and total without adding shipping to the order summary.
       const subtotal = totalAmount;
 
@@ -341,6 +372,7 @@ $(document).ready(function () {
 
       // Keep the checkout payload aligned with the order summary.
       totalAmount = subtotal;
+      $("#placeOrder").prop("disabled", checkoutBlocked);
     },
     error: function (xhr) {
       console.error("Error fetching cart items:", xhr.responseText);
@@ -361,6 +393,15 @@ $(document).ready(function () {
     // Validate form fields before proceeding
     if (!validateForm()) {
       return; // Stop execution if validation fails
+    }
+
+    if (checkoutBlocked) {
+      Swal.fire(
+        "Review Cart",
+        "Some selected items are no longer available. Please update your cart before checking out.",
+        "warning",
+      );
+      return;
     }
 
     // Get the selected item IDs from sessionStorage
@@ -437,13 +478,18 @@ $(document).ready(function () {
       data: JSON.stringify(checkoutData),
       success: function (response) {
         console.log("Checkout response:", response);
+        const confirmedCheckout = response.checkout || {};
+        const confirmedItems = response.items || confirmedCheckout.items || [];
 
         // Prepare data for the confirmation page
         const confirmedOrderDetails = {
-          orderId: response.order_id || "N/A", // Assuming backend returns order_id
+          orderId:
+            response.order_id || confirmedCheckout.checkout_id || "N/A",
           customerName: $("#name").val(),
-          totalAmount: totalAmount,
+          totalAmount: Number(confirmedCheckout.total_amount || totalAmount),
           paymentMethod: paymentMethod,
+          paymentStatus: confirmedCheckout.payment_status || "pending",
+          shippingStatus: confirmedCheckout.shipping_status || "pending",
           shippingFee: 50, // Consistent with calculation
           shipping: {
             name: $("#name").val(),
@@ -454,16 +500,13 @@ $(document).ready(function () {
             province: $("#province").val(),
             zipcode: $("#zipcode").val(),
           },
-          // Filter cart items to only include those that were selected for this order
-          orderedItems: allCartItems
-            .filter((item) => selectedItemIDs.includes(item.addTocart_id))
-            .map((item) => ({
-              name: item.product.product_name,
-              price: item.product.product_price,
-              quantity: item.quantity,
-              subtotal: item.subtotal,
-              image: item.product.image,
-            })),
+          orderedItems: confirmedItems.map((item) => ({
+            name: item.product_name || item.product?.product_name,
+            price: Number(item.price || item.product?.product_price || 0),
+            quantity: Number(item.quantity || 0),
+            subtotal: Number(item.subtotal || 0),
+            image: item.image || item.product?.image,
+          })),
         };
         sessionStorage.setItem(
           "lastConfirmedOrder",
@@ -482,13 +525,22 @@ $(document).ready(function () {
       },
       error: function (xhr) {
         console.error("Error during checkout:", xhr.responseText);
+        let msg =
+          "An error occurred while processing your order. Please try again.";
+        if (xhr.responseJSON?.errors) {
+          msg = Object.values(xhr.responseJSON.errors)
+            .map((items) => items[0])
+            .join("\n");
+        } else if (xhr.responseJSON?.msg || xhr.responseJSON?.message) {
+          msg = xhr.responseJSON.msg || xhr.responseJSON.message;
+        }
         Swal.fire({
           icon: "error",
           title: "Checkout Failed",
-          text: "An error occurred while processing your order. Please try again.",
+          text: msg,
           showConfirmButton: true,
         }).then(() => {
-          window.location.href = "checkout.html";
+          window.location.href = "cart.html";
         });
       },
     });

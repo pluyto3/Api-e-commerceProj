@@ -271,6 +271,38 @@
               </li>
             </ul>
             <hr />
+            <h5 class="mb-3"><i class="fa fa-tags mr-2"></i>Brands</h5>
+            <ul class="list-unstyled shopee-filter-list" id="shop-brand-list">
+              <li>
+                <span class="text-muted py-1 d-block">Loading brands...</span>
+              </li>
+            </ul>
+            <hr />
+            <h5 class="mb-3"><i class="fa fa-filter mr-2"></i>Price</h5>
+            <div class="form-row">
+              <div class="col-6">
+                <input
+                  type="number"
+                  min="0"
+                  id="minPriceFilter"
+                  class="form-control form-control-sm"
+                  placeholder="Min" />
+              </div>
+              <div class="col-6">
+                <input
+                  type="number"
+                  min="0"
+                  id="maxPriceFilter"
+                  class="form-control form-control-sm"
+                  placeholder="Max" />
+              </div>
+            </div>
+            <button
+              type="button"
+              id="applyPriceFilter"
+              class="btn btn-sm btn-outline-primary btn-block mt-2">
+              Apply
+            </button>
           </aside>
 
           <div class="col-lg-10" id="shop-products-panel">
@@ -291,6 +323,21 @@
                 </button>
                 <button class="btn btn-light shop-sort-btn" data-sort="sales">
                   Most Sales
+                </button>
+                <button
+                  class="btn btn-light shop-sort-btn"
+                  data-sort="price_asc">
+                  Price Low
+                </button>
+                <button
+                  class="btn btn-light shop-sort-btn"
+                  data-sort="price_desc">
+                  Price High
+                </button>
+                <button
+                  class="btn btn-light shop-sort-btn"
+                  data-sort="name_asc">
+                  Name
                 </button>
               </div>
             </div>

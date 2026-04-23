@@ -12,8 +12,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('products', function (Blueprint $table) {
-            DB::statement('ALTER TABLE products CHANGE amount stock_quantity INT');
-            $table->enum('status', ['active', 'inactive', 'out_of_stock'])->default('active')->after('image');
+            if (Schema::hasColumn('products', 'amount') && !Schema::hasColumn('products', 'stock_quantity')) {
+                DB::statement('ALTER TABLE products CHANGE amount stock_quantity INT');
+            }
+
+            if (!Schema::hasColumn('products', 'status')) {
+                $table->enum('status', ['active', 'inactive', 'out_of_stock'])->default('active')->after('image');
+            }
         });
     }
 
@@ -23,8 +28,13 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('products', function (Blueprint $table) {
-            $table->renameColumn('stock_quantity', 'amount');
-            $table->dropColumn('status');
+            if (Schema::hasColumn('products', 'stock_quantity') && !Schema::hasColumn('products', 'amount')) {
+                DB::statement('ALTER TABLE products CHANGE stock_quantity amount INT');
+            }
+
+            if (Schema::hasColumn('products', 'status')) {
+                $table->dropColumn('status');
+            }
         });
     }
 };

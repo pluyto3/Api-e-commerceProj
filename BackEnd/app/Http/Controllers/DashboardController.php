@@ -12,11 +12,14 @@ class DashboardController extends Controller
 {
      public function sellerDashboard(Request $request)
     {
-        if (auth()->user()->role !== 'seller') {
+        $token = $request->bearerToken();
+        $user = $token ? User::where('token', $token)->first() : null;
+
+        if (!$user || $user->role !== 'seller') {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
         
-        $sellerId = auth()->id();
+        $sellerId = $user->user_id;
 
         $products = Product::where('seller_id', $sellerId)->get();
 
@@ -36,6 +39,10 @@ class DashboardController extends Controller
         return response()->json([
             'products' => $products->count(),
             'pending' => $products->where('approval_status', 'pending')->count(),
+            'low_stock' => $products
+                ->where('stock_quantity', '>', 0)
+                ->where('stock_quantity', '<=', 5)
+                ->count(),
             'orders' => $orders->count(),
             'revenue' => $revenue
         ]);

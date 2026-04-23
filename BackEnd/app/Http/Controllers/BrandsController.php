@@ -21,7 +21,13 @@ class BrandsController extends Controller
 
     private function canViewAllBrands(?User $user): bool
     {
-        return $user && in_array($user->role, ['admin', 'seller'], true);
+        return $user && $user->role === 'admin';
+    }
+
+    private function canManageBrand(User $user, Brands $brand): bool
+    {
+        return $user->role === 'admin'
+            || ($user->role === 'seller' && (int) $brand->seller_id === (int) $user->user_id);
     }
 
     private function formatBrand(Brands $brand): array
@@ -58,9 +64,12 @@ class BrandsController extends Controller
     public function index(Request $request)
     {
         $user = $this->getAuthenticatedUser($request);
+        $publicScope = $request->input('scope') === 'public';
 
         $brandsQuery = Brands::with(['seller', 'approver']);
-        if (!$this->canViewAllBrands($user)) {
+        if (!$publicScope && $user && $user->role === 'seller') {
+            $brandsQuery->where('seller_id', $user->user_id);
+        } elseif ($publicScope || !$this->canViewAllBrands($user)) {
             $brandsQuery->where('status', 'approved');
         }
 
@@ -80,6 +89,10 @@ class BrandsController extends Controller
             return response()->json(['msg' => 'Token is required.'], 401);
         }
 
+        if (!in_array($user->role, ['admin', 'seller'], true)) {
+            return response()->json(['msg' => 'Unauthorized.'], 403);
+        }
+
         $request->validate([
             'name' => 'required|string|unique:brands,name',
             'description' => 'nullable|string',
@@ -90,9 +103,9 @@ class BrandsController extends Controller
         $brand->name = $request->name;
         $brand->description = $request->description;
         $brand->seller_id = $user->user_id;
-        $brand->status = 'pending';
+        $brand->status = $user->role === 'admin' ? 'approved' : 'pending';
         $brand->approval_reason = null;
-        $brand->approved_by = null;
+        $brand->approved_by = $user->role === 'admin' ? $user->user_id : null;
 
         $destinationPath = public_path('FrontEnd/assets/img/brand');
         if (!File::exists($destinationPath)) {
@@ -125,7 +138,9 @@ class BrandsController extends Controller
 
         $brandQuery = Brands::with(['seller', 'approver'])
             ->where('brand_id', $id);
-        if (!$this->canViewAllBrands($user)) {
+        if ($user && $user->role === 'seller') {
+            $brandQuery->where('seller_id', $user->user_id);
+        } elseif (!$this->canViewAllBrands($user)) {
             $brandQuery->where('status', 'approved');
         }
 
@@ -150,6 +165,10 @@ class BrandsController extends Controller
         $brand = Brands::find($id);
         if (!$brand) {
             return response()->json(['msg' => 'Brand not found.'], 404);
+        }
+
+        if (!$this->canManageBrand($user, $brand)) {
+            return response()->json(['msg' => 'Unauthorized. Sellers can only update their own brands.'], 403);
         }
 
         $request->validate([
@@ -257,6 +276,10 @@ class BrandsController extends Controller
         $brand = Brands::find($id);
         if (!$brand) {
             return response()->json(['msg' => 'Brand not found.'], 404);
+        }
+
+        if (!$this->canManageBrand($user, $brand)) {
+            return response()->json(['msg' => 'Unauthorized. Sellers can only delete their own brands.'], 403);
         }
 
         $brand->delete();

@@ -161,8 +161,7 @@ function namesMatch(left, right) {
   if (!left || !right) return false;
 
   return (
-    String(left).trim().toLowerCase() ===
-    String(right).trim().toLowerCase()
+    String(left).trim().toLowerCase() === String(right).trim().toLowerCase()
   );
 }
 
@@ -284,10 +283,13 @@ function formatStatusLabel(status) {
 function mapStatusToSelectValue(status) {
   const normalized = normalizeStatus(status);
   if (normalized === "processing" || normalized === "to_ship") {
-    return "to ship";
+    return "packed";
   }
   if (normalized === "pending_payment") {
     return "pending";
+  }
+  if (normalized === "completed") {
+    return "delivered";
   }
   return normalized.replace(/_/g, " ");
 }
@@ -517,8 +519,11 @@ function getOrderSellerNames(order) {
 
 function populateOrderDetails(order, itemsOverride) {
   const items = getOrderItems(order, itemsOverride);
+  const shippingStatus = order.shipping_status || order.status;
+  const paymentStatus = order.payment_status || "pending";
 
-  $("#summaryStatus").text(formatStatusLabel(order.status));
+  $("#summaryStatus").text(formatStatusLabel(shippingStatus));
+  $("#summaryPaymentStatus").text(formatStatusLabel(paymentStatus));
   $("#summaryDate").text(formatDate(order.created_at || order.updated_at));
   $("#summaryItems").text(items.length);
   const user = order.user || currentUserProfile || {};
@@ -579,6 +584,8 @@ function getUserStatusBadgeClass(statusLabel) {
   const normalized = String(statusLabel || "").toLowerCase();
 
   if (normalized === "completed") return "status-completed";
+  if (normalized === "delivered") return "status-completed";
+  if (normalized === "packed") return "status-shipped";
   if (normalized === "shipped") return "status-shipped";
   if (normalized === "cancelled") return "status-cancelled";
   return "status-pending";
@@ -590,7 +597,7 @@ function getActiveUserStatusFilter() {
 
 function matchesUserStatusFilter(order, filterValue) {
   const selectedFilter = normalizeStatus(filterValue || "all");
-  const orderStatus = normalizeStatus(order?.status);
+  const orderStatus = normalizeStatus(order?.shipping_status || order?.status);
 
   switch (selectedFilter) {
     case "pending":
@@ -599,10 +606,16 @@ function matchesUserStatusFilter(order, filterValue) {
     case "to_ship":
     case "to-ship":
     case "processing":
-      return orderStatus === "to_ship" || orderStatus === "processing";
+    case "packed":
+      return (
+        orderStatus === "to_ship" ||
+        orderStatus === "processing" ||
+        orderStatus === "packed"
+      );
     case "shipped":
       return orderStatus === "shipped";
     case "completed":
+    case "delivered":
       return orderStatus === "completed" || orderStatus === "delivered";
     case "cancelled":
       return orderStatus === "cancelled";
@@ -628,7 +641,10 @@ function getUserOrderSearchText(order) {
   const rawDate = order?.created_at || order?.updated_at || "";
   const formattedDate = formatDate(rawDate);
   const filterDate = getOrderDateFilterValue(order);
-  const formattedStatus = formatStatusLabel(order?.status);
+  const formattedStatus = formatStatusLabel(
+    order?.shipping_status || order?.status,
+  );
+  const formattedPaymentStatus = formatStatusLabel(order?.payment_status);
 
   return [
     orderId,
@@ -638,8 +654,10 @@ function getUserOrderSearchText(order) {
     sellerDisplay,
     sellerNames,
     tracking,
-    order?.status || "",
+    order?.shipping_status || order?.status || "",
+    order?.payment_status || "",
     formattedStatus,
+    formattedPaymentStatus,
     itemNames,
     total,
     rawTotal,
@@ -716,7 +734,12 @@ function renderUserOrders() {
     const orderId = order.checkout_id || order.order_id || "N/A";
     const seller = getOrderSellerDisplayName(order);
     const total = formatCurrency(getUserOrderTotal(order));
-    const statusLabel = formatStatusLabel(order.status).toLowerCase();
+    const statusLabel = formatStatusLabel(
+      order.shipping_status || order.status,
+    ).toLowerCase();
+    const paymentLabel = formatStatusLabel(
+      order.payment_status || "pending",
+    ).toLowerCase();
     const date = formatDate(order.created_at || order.updated_at);
     const tracking = order.tracking_number || "Not available";
     const items = getOrderItems(order);
@@ -779,6 +802,7 @@ function renderUserOrders() {
               <div class="small text-muted order-card-meta mb-3 mb-md-0">
                 <div>Date: ${date}</div>
                 <div>Tracking: ${tracking}</div>
+                <div>Payment: ${paymentLabel}</div>
               </div>
               <div class="d-flex">
                 <button class="btn btn-dark btn-sm rounded px-3 mr-2" data-toggle="modal" data-target="#orderDetailsModal" data-id="${orderId}">
@@ -867,7 +891,7 @@ function renderOrders(filter = "All") {
       return false;
     }
 
-    const statusKey = normalizeStatus(o.status);
+    const statusKey = normalizeStatus(o.shipping_status || o.status);
     switch (filterKey) {
       case "unpaid":
       case "pending":
@@ -876,16 +900,25 @@ function renderOrders(filter = "All") {
 
       case "to_ship":
       case "processing":
-        return statusKey === "processing" || statusKey === "to_ship";
+      case "packed":
+        return (
+          statusKey === "processing" ||
+          statusKey === "to_ship" ||
+          statusKey === "packed"
+        );
 
       case "shipped":
         return statusKey === "shipped";
 
       case "completed":
+      case "delivered":
         return statusKey === "completed" || statusKey === "delivered";
 
       case "to_review":
         return statusKey === "completed" || statusKey === "delivered";
+
+      case "cancelled":
+        return statusKey === "cancelled";
 
       case "all":
       default:
@@ -908,8 +941,10 @@ function renderOrders(filter = "All") {
   const canUpdateStatus = isAdminView();
 
   filteredOrders.forEach((order) => {
-    const statusKey = normalizeStatus(order.status);
-    const statusLabel = formatStatusLabel(order.status);
+    const statusKey = normalizeStatus(order.shipping_status || order.status);
+    const statusLabel = formatStatusLabel(
+      order.shipping_status || order.status,
+    );
     const orderId = order.checkout_id || order.order_id || "N/A";
     const customer = isAdminView()
       ? order.user?.username ||
@@ -921,7 +956,9 @@ function renderOrders(filter = "All") {
     const fallbackQuantity = getOrderQuantityFallback(order);
     const date = formatDate(order.created_at || order.updated_at);
 
-    const safeStatus = String(order.status || "").replace(/'/g, "\\'");
+    const safeStatus = String(
+      order.shipping_status || order.status || "",
+    ).replace(/'/g, "\\'");
 
     const actionButtons = [];
     actionButtons.push(`
@@ -990,7 +1027,11 @@ function renderOrders(filter = "All") {
           <td>${seller}</td>
           <td>${quantity}</td>
           <td>&#8369;${total}</td>
-          <td>${statusLabel}</td>
+          <td>
+            <span>${statusLabel}</span>
+            <br>
+            <small class="text-muted">Payment: ${formatStatusLabel(order.payment_status || "pending")}</small>
+          </td>
           <td>${date}</td>
           <td class="text-center">${actionButtons.join("")}</td>
         </tr>
@@ -1016,6 +1057,10 @@ function renderOrders(filter = "All") {
 function openStatusModal(orderId, currentStatus) {
   $("#statusOrderId").val(orderId);
   $("#newOrderStatus").val(mapStatusToSelectValue(currentStatus));
+  const order = (globalOrders || []).find(
+    (item) => String(item.checkout_id) === String(orderId),
+  );
+  $("#newPaymentStatus").val(order?.payment_status || "");
 }
 
 // =======================================
@@ -1024,6 +1069,7 @@ function openStatusModal(orderId, currentStatus) {
 function submitOrderStatusUpdate() {
   const orderId = $("#statusOrderId").val();
   const newStatus = $("#newOrderStatus").val();
+  const newPaymentStatus = $("#newPaymentStatus").val();
 
   $.ajax({
     url: `${ip}/api/checkout/orders/${orderId}/status`,
@@ -1033,7 +1079,10 @@ function submitOrderStatusUpdate() {
       Accept: "application/json",
     },
     contentType: "application/json",
-    data: JSON.stringify({ status: newStatus }),
+    data: JSON.stringify({
+      shipping_status: newStatus,
+      payment_status: newPaymentStatus || undefined,
+    }),
 
     success: function (response) {
       const updatedCheckout = response?.checkout || {};
@@ -1045,6 +1094,12 @@ function submitOrderStatusUpdate() {
 
       if (existingOrder) {
         existingOrder.status = updatedCheckout.status || newStatus;
+        existingOrder.shipping_status =
+          updatedCheckout.shipping_status ||
+          updatedCheckout.status ||
+          newStatus;
+        existingOrder.payment_status =
+          updatedCheckout.payment_status || existingOrder.payment_status;
         existingOrder.tracking_number =
           trackingNumber || existingOrder.tracking_number;
       }
@@ -1138,6 +1193,23 @@ $(document).ready(function () {
   $(document)
     .ajaxStart(() => $("#wait").show())
     .ajaxComplete(() => $("#wait").hide());
+
+  // --- Sidebar Toggle ---
+  $(".menu-btn").on("click", function () {
+    $(".sidebar").addClass("collapsed");
+    $(".wrapper").addClass("sidebar-collapsed");
+    $(".text-link").hide();
+    $(".close-btn").show();
+    $(".menu-btn").hide();
+  });
+
+  $(".close-btn").on("click", function () {
+    $(".sidebar").removeClass("collapsed");
+    $(".wrapper").removeClass("sidebar-collapsed");
+    $(".text-link").show();
+    $(".close-btn").hide();
+    $(".menu-btn").show();
+  });
 
   // -------------------------------
   // Load Navbar Profile Image
