@@ -41,7 +41,7 @@ class DashboardController extends Controller
             'pending' => $products->where('approval_status', 'pending')->count(),
             'low_stock' => $products
                 ->where('stock_quantity', '>', 0)
-                ->where('stock_quantity', '<=', 5)
+                ->where('stock_quantity', '<=', 3)
                 ->count(),
             'orders' => $orders->count(),
             'revenue' => $revenue

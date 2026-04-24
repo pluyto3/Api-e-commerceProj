@@ -652,7 +652,7 @@ class AuthController extends Controller
                     ->orWhere('status', 'cancelled');
             })->count();
             $data['low_stock_products'] = Product::where('stock_quantity', '>', 0)
-                ->where('stock_quantity', '<=', 5)
+                ->where('stock_quantity', '<=', 3)
                 ->count();
         }
 
@@ -674,7 +674,7 @@ class AuthController extends Controller
                 ->count();
             $data['low_stock_products'] = (clone $sellerProducts)
                 ->where('stock_quantity', '>', 0)
-                ->where('stock_quantity', '<=', 5)
+                ->where('stock_quantity', '<=', 3)
                 ->count();
 
             $sellerOrders = Checkout::whereHas('items', function ($query) use ($user) {
