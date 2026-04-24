@@ -1,5 +1,6 @@
 (function ($) {
   const apiBase = "http://localhost:8000";
+  const SELLER_CAN_SHOP = true;
 
   function getRole() {
     return String($.cookie("role") || "").toLowerCase();
@@ -77,7 +78,11 @@
   }
 
   function setBadgeCount(count) {
-    $("#cart-count").text(count || 0).show();
+    $("#cart-count, #cart-count-mobile").text(count || 0).show();
+  }
+
+  function sellerCanShop() {
+    return SELLER_CAN_SHOP;
   }
 
   function showOrderBadge() {
@@ -97,7 +102,7 @@
   }
 
   function hideBadge() {
-    $("#cart-count").hide();
+    $("#cart-count, #cart-count-mobile").hide();
     $("#cartNav").hide();
     $("#cartNavMobile").hide();
   }
@@ -159,8 +164,8 @@
       return;
     }
 
-    if (role === "seller") {
-      loadSellerOrderCount(token);
+    if (role === "seller" && sellerCanShop()) {
+      loadCartCount(token);
       return;
     }
 

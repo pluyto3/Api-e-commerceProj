@@ -165,6 +165,28 @@ function namesMatch(left, right) {
   );
 }
 
+function extractApiErrorMessage(xhr, fallback = "Something went wrong.") {
+  const response = xhr?.responseJSON || {};
+
+  if (typeof response.msg === "string" && response.msg.trim()) {
+    return response.msg.trim();
+  }
+
+  if (typeof response.message === "string" && response.message.trim()) {
+    return response.message.trim();
+  }
+
+  if (response.errors && typeof response.errors === "object") {
+    const firstError = Object.values(response.errors).flat().find(Boolean);
+
+    if (firstError) {
+      return String(firstError);
+    }
+  }
+
+  return fallback;
+}
+
 function isItemForLoggedInSeller(item = {}) {
   if (!isSellerView()) return true;
 
@@ -185,13 +207,10 @@ function isItemForLoggedInSeller(item = {}) {
     return true;
   }
 
-  const sellerNameCandidates = [
-    getDirectItemSellerName(item),
-    item.seller?.fullname,
-    item.product?.seller?.fullname,
-  ];
-
-  return sellerNameCandidates.some((candidate) => namesMatch(candidate, usr));
+  // Match backend seller authorization: seller access is based on checkout_items.seller_id.
+  // If the client does not have the current seller id cookie, trust the already
+  // seller-filtered payload returned by `/api/checkout/all`.
+  return !sellerId;
 }
 
 function getVisibleOrderItems(order = {}, itemsOverride) {
@@ -204,33 +223,16 @@ function getVisibleOrderItems(order = {}, itemsOverride) {
 function isOrderForLoggedInSeller(order = {}) {
   if (!isSellerView()) return true;
 
-  if (getVisibleOrderItems(order).length > 0) {
+  const visibleItems = getVisibleOrderItems(order);
+  if (visibleItems.length > 0) {
     return true;
   }
 
-  const sellerId = getLoggedInUserId();
-  const orderSellerIdCandidates = [
-    order.seller_id,
-    order.seller?.user_id,
-    order.seller?.id,
-  ];
-
-  if (
-    sellerId &&
-    orderSellerIdCandidates.some((candidate) =>
-      valuesMatch(candidate, sellerId),
-    )
-  ) {
-    return true;
-  }
-
-  return [
-    order.seller?.username,
-    order.seller?.fullname,
-    order.seller_username,
-    order.seller_name,
-    order.shop_name,
-  ].some((candidate) => namesMatch(candidate, usr));
+  return (
+    !getLoggedInUserId() &&
+    Array.isArray(order?.items) &&
+    order.items.length > 0
+  );
 }
 
 function filterOrdersForCurrentRole(orders = []) {
@@ -1119,7 +1121,11 @@ function submitOrderStatusUpdate() {
 
     error: function (xhr) {
       console.error(xhr);
-      Swal.fire("Error", "Failed to update status.", "error");
+      Swal.fire(
+        "Error",
+        extractApiErrorMessage(xhr, "Failed to update status."),
+        "error",
+      );
     },
   });
 }
