@@ -13,7 +13,7 @@ let profileImage = null;
 function load_user() {
   usr = $.cookie("username");
   token = $.cookie("token");
-  role = $.cookie("role");
+  role = String($.cookie("role") || "").toLowerCase();
   profileImage = $.cookie("profileImage");
 
   // DOM elements
@@ -26,6 +26,9 @@ function load_user() {
   const $navbarProfileImage = $("#navbarProfileImage");
   const $defaultProfileIcon = $("#defaultProfileIcon");
 
+  $(".guest-only, .auth-only, .user-only, .seller-only, .admin-only").hide();
+  $(".dropdown-divider").hide();
+
   // No session → show login/register
   if (!usr || !token) {
     $displayUsername.html("My Account");
@@ -36,6 +39,9 @@ function load_user() {
     $adminDashboard.hide();
     $navbarProfileImage.hide();
     $defaultProfileIcon.show();
+    if (typeof applyNavbarRoleVisibility === "function") {
+      applyNavbarRoleVisibility();
+    }
     return;
   }
 
@@ -57,6 +63,10 @@ function load_user() {
     $adminDashboard.show();
   } else {
     $adminDashboard.hide();
+  }
+
+  if (typeof applyNavbarRoleVisibility === "function") {
+    applyNavbarRoleVisibility();
   }
 }
 

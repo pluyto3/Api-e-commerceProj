@@ -981,7 +981,9 @@ function loadSupplementaryDashboardData() {
           pending_approval: pendingApprovalCount,
         };
 
-        $dashboard.find("#countedProducts").text(dashboardState.totalProducts);
+        if (!dashboardState.counts?.total_products) {
+          $dashboard.find("#countedProducts").text(dashboardState.totalProducts);
+        }
         $dashboard.find("#countedPendingApproval").text(pendingApprovalCount);
       }
 
@@ -992,7 +994,7 @@ function loadSupplementaryDashboardData() {
       dashboardState.products = [];
       dashboardState.totalProducts = 0;
 
-      if (role === "admin") {
+      if (role === "admin" && !dashboardState.counts?.total_products) {
         $dashboard.find("#countedProducts").text(0);
       }
 
@@ -1135,6 +1137,7 @@ function loadCounts() {
     success: function (res) {
       dashboardState.counts = {
         users: normalizeNumber(res.users),
+        total_products: normalizeNumber(res.total_products || res.totalProducts),
         my_products: normalizeNumber(res.my_products),
         approved_products: normalizeNumber(res.approved_products),
         pending_approval: normalizeNumber(res.pending_approval),
@@ -1185,6 +1188,9 @@ function loadCounts() {
       }
 
       $dashboard.find("#countedUsers").text(dashboardState.counts.users);
+      $dashboard
+        .find("#countedProducts")
+        .text(dashboardState.counts.total_products);
       $dashboard
         .find("#countedOrders")
         .text(dashboardState.counts.total_orders);

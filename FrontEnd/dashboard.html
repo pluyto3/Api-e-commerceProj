@@ -28,6 +28,7 @@
     <script src="assets/js/chart.js"></script>
     <script src="assets/js/dashboard.js"></script>
     <script src="assets/js/navbar-count.js"></script>
+    <script src="assets/js/navbar-role.js"></script>
 
     <script>
       if (
@@ -159,6 +160,7 @@
                 data-toggle="dropdown"
                 aria-haspopup="true"
                 aria-expanded="false">
+                <!-- Profile Image -->
                 <img
                   id="navbarProfileImage"
                   src=""
@@ -173,6 +175,7 @@
                     border: 2px solid #fff;
                     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
                   " />
+                <!-- Default Profile Icon -->
                 <span
                   id="defaultProfileIcon"
                   class="navbar-default-avatar mr-2">
@@ -186,49 +189,56 @@
               <div
                 class="dropdown-menu dropdown-menu-right dashboard-user-dropdown"
                 aria-labelledby="navbardrop">
-                <a class="dropdown-item" href="account.html">
-                  <i class="fa fa-user user-icon" aria-hidden="true"></i>
-                  Profile
+                <a class="dropdown-item auth-only" href="account.html">
+                  <i class="fas fa-user-circle mr-2"></i> Profile
                 </a>
                 <a
-                  class="dropdown-item"
-                  href="orderDetails.html"
-                  id="navbarOrdersLink">
-                  <i
-                    class="fab fa-first-order user-orders"
-                    aria-hidden="true"></i>
-                  <span id="navbarOrdersLabel">Your Orders</span>
+                  class="dropdown-item user-only seller-buyer-optional"
+                  href="orderDetails.html">
+                  <i class="fas fa-receipt mr-2"></i> My Orders
                 </a>
-                <a class="dropdown-item" href="product.html" id="productUi">
-                  <i class="fab fa-product-hunt" aria-hidden="true"></i>
-                  Your Products
+                <a class="dropdown-item buyer-seller-only" href="address.html">
+                  <i class="fas fa-map-marker-alt mr-2"></i> My Address
+                </a>
+                <div
+                  class="dropdown-divider seller-divider admin-divider"></div>
+                <a class="dropdown-item seller-only" href="dashboard.html">
+                  <i class="fas fa-store mr-2"></i> Seller Dashboard
                 </a>
                 <a
-                  class="dropdown-item"
-                  href="dashboard.html"
-                  id="dashboard"
-                  style="display: none">
-                  <i class="fas fa-home"></i> Dashboard
+                  class="dropdown-item seller-only"
+                  href="product.html"
+                  id="productUi">
+                  <i class="fas fa-box-open mr-2"></i> Your Products
                 </a>
-                <hr class="user-menu" />
-                <span class="dropdown-item-text text-muted small"
-                  >If new user please Register.</span
-                >
+                <a class="dropdown-item seller-only" href="orderDetails.html">
+                  <i class="fas fa-shipping-fast mr-2"></i> Customer Orders
+                </a>
                 <a
-                  id="register"
-                  href="register.html"
-                  class="dropdown-item text-center"
-                  >Register</a
-                >
-                <a
-                  id="login"
-                  href="login.html"
-                  class="dropdown-item text-center"
-                  >Login</a
-                >
-                <a id="logout" class="dropdown-item text-center" href="#"
-                  >Logout</a
-                >
+                  class="dropdown-item admin-only admin-dashboard-link"
+                  href="dashboard.html">
+                  <i class="fas fa-tachometer-alt mr-2"></i> Admin Dashboard
+                </a>
+                <a class="dropdown-item admin-only" href="manageAccounts.html">
+                  <i class="fas fa-users-cog mr-2"></i> Manage Accounts
+                </a>
+                <a class="dropdown-item admin-only" href="product.html">
+                  <i class="fas fa-boxes mr-2"></i> Products
+                </a>
+                <a class="dropdown-item admin-only" href="orderDetails.html">
+                  <i class="fas fa-truck mr-2"></i> Orders
+                </a>
+                <div
+                  class="dropdown-divider user-divider seller-divider admin-divider"></div>
+                <a class="dropdown-item guest-only" href="register.html">
+                  <i class="fas fa-user-plus mr-2"></i> Register
+                </a>
+                <a class="dropdown-item guest-only" href="login.html">
+                  <i class="fas fa-sign-in-alt mr-2"></i> Login
+                </a>
+                <a id="logout" class="dropdown-item auth-only" href="#">
+                  <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                </a>
               </div>
             </li>
           </ul>
@@ -276,8 +286,8 @@
               <i class="fas fa-user-shield"></i>
               <span
                 class="text-link sidebar-role-label"
-                data-admin-label="Manage Accounts">
-                Manage Accounts
+                data-admin-label="Accounts">
+                Accounts
               </span>
             </a>
           </li>

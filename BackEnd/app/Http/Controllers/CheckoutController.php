@@ -381,9 +381,10 @@ class CheckoutController extends Controller
 
         $incomingShipping = $request->input('shipping_status', $request->input('status'));
         $incomingPayment = $request->input('payment_status');
+        $incomingTracking = trim((string) $request->input('tracking_number', ''));
 
-        if (!$incomingShipping && !$incomingPayment) {
-            return response()->json(['msg' => 'Please provide a shipping or payment status.'], 422);
+        if (!$incomingShipping && !$incomingPayment && $incomingTracking === '') {
+            return response()->json(['msg' => 'Please provide a shipping status, payment status, or tracking number.'], 422);
         }
 
         $shippingStatus = $incomingShipping ? $this->normalizeShippingStatus($incomingShipping) : null;
@@ -397,6 +398,10 @@ class CheckoutController extends Controller
             return response()->json(['msg' => 'Invalid payment status value.'], 422);
         }
 
+        if ($incomingTracking !== '' && strlen($incomingTracking) > 100) {
+            return response()->json(['msg' => 'Tracking number may not be greater than 100 characters.'], 422);
+        }
+
         $checkoutForAuth = Checkout::find($checkout_id);
         if (!$checkoutForAuth) {
             return response()->json(['msg' => 'Checkout not found.'], 404);
@@ -406,7 +411,11 @@ class CheckoutController extends Controller
             return response()->json(['msg' => 'Unauthorized'], 403);
         }
 
-        $checkout = DB::transaction(function () use ($request, $checkout_id, $user, $shippingStatus, $paymentStatus) {
+        if ($user->role === 'seller' && $paymentStatus) {
+            return response()->json(['msg' => 'Sellers can update shipping status only.'], 403);
+        }
+
+        $checkout = DB::transaction(function () use ($request, $checkout_id, $user, $shippingStatus, $paymentStatus, $incomingTracking) {
             $checkout = Checkout::where('checkout_id', $checkout_id)
                 ->lockForUpdate()
                 ->first();
@@ -420,6 +429,12 @@ class CheckoutController extends Controller
             if ($currentShipping === 'cancelled' && $shippingStatus !== 'cancelled') {
                 throw ValidationException::withMessages([
                     'shipping_status' => 'Cancelled orders cannot be moved back to active shipping statuses.',
+                ]);
+            }
+
+            if ($currentShipping === 'delivered' && (($shippingStatus && $shippingStatus !== 'delivered') || $paymentStatus || $incomingTracking !== '')) {
+                throw ValidationException::withMessages([
+                    'shipping_status' => 'Delivered orders are final and cannot be changed.',
                 ]);
             }
 
@@ -447,6 +462,18 @@ class CheckoutController extends Controller
                         $checkout->payment_status = 'cancelled';
                     }
                 }
+            }
+
+            if ($incomingTracking !== '') {
+                $trackingAllowedStatus = $shippingStatus ?: $currentShipping;
+
+                if (!in_array($trackingAllowedStatus, ['packed', 'shipped'], true)) {
+                    throw ValidationException::withMessages([
+                        'tracking_number' => 'Tracking number can only be updated when the order is packed or shipped.',
+                    ]);
+                }
+
+                $checkout->tracking_number = $incomingTracking;
             }
 
             if ($paymentStatus) {

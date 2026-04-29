@@ -296,6 +296,110 @@ function mapStatusToSelectValue(status) {
   return normalized.replace(/_/g, " ");
 }
 
+function getMainOrderStatus(status) {
+  const normalized = normalizeStatus(status);
+
+  if (normalized === "processing" || normalized === "to_ship") return "packed";
+  if (normalized === "completed") return "delivered";
+  if (normalized === "pending_payment") return "pending";
+  if (
+    ["pending", "packed", "shipped", "delivered", "cancelled"].includes(
+      normalized,
+    )
+  ) {
+    return normalized;
+  }
+
+  return "pending";
+}
+
+function isFinalOrderStatus(status) {
+  const mainStatus = getMainOrderStatus(status);
+  return mainStatus === "delivered" || mainStatus === "cancelled";
+}
+
+function canCancelOrder(status) {
+  return getMainOrderStatus(status) === "pending";
+}
+
+function canEditTrackingForStatus(status) {
+  const mainStatus = getMainOrderStatus(status);
+  return mainStatus === "packed" || mainStatus === "shipped";
+}
+
+function getStatusBadgeClass(status) {
+  const mainStatus = getMainOrderStatus(status);
+  if (mainStatus === "packed") return "status-processing";
+  if (mainStatus === "shipped") return "status-shipped";
+  if (mainStatus === "delivered") return "status-delivered";
+  if (mainStatus === "cancelled") return "status-cancelled";
+  return "status-pending";
+}
+
+function getPaymentBadgeClass(status) {
+  const normalized = normalizeStatus(status || "pending");
+  if (normalized === "paid") return "status-delivered";
+  if (normalized === "failed" || normalized === "cancelled") {
+    return "status-cancelled";
+  }
+  return "status-pending";
+}
+
+function renderStatusBadge(status, type = "order") {
+  const label = formatStatusLabel(getMainOrderStatus(status));
+  const badgeClass =
+    type === "payment"
+      ? getPaymentBadgeClass(status)
+      : getStatusBadgeClass(status);
+
+  return `<span class="order-status-badge ${badgeClass}">${label}</span>`;
+}
+
+function renderPaymentBadge(status) {
+  const label = formatStatusLabel(status || "pending");
+  return `<span class="order-status-badge ${getPaymentBadgeClass(status)}">${label}</span>`;
+}
+
+function renderOrderTimeline(status) {
+  const mainStatus = getMainOrderStatus(status);
+  const steps = ["pending", "packed", "shipped", "delivered"];
+
+  if (mainStatus === "cancelled") {
+    return `
+      <div class="order-status-timeline is-cancelled">
+        <div class="order-status-timeline-step is-active is-cancelled">
+          <span class="order-status-timeline-dot"><i class="fas fa-ban"></i></span>
+          <span class="order-status-timeline-label">Cancelled</span>
+        </div>
+      </div>
+    `;
+  }
+
+  const activeIndex = Math.max(steps.indexOf(mainStatus), 0);
+
+  return `
+    <div class="order-status-timeline">
+      ${steps
+        .map((step, index) => {
+          const stateClass =
+            index < activeIndex
+              ? "is-complete"
+              : index === activeIndex
+                ? "is-active"
+                : "";
+
+          return `
+            <div class="order-status-timeline-step ${stateClass}">
+              <span class="order-status-timeline-dot">${index + 1}</span>
+              <span class="order-status-timeline-label">${formatStatusLabel(step)}</span>
+            </div>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
 function formatCurrency(amount) {
   const num = Number(amount);
   if (!Number.isFinite(num)) return String(amount || "0");
@@ -521,26 +625,39 @@ function getOrderSellerNames(order) {
 
 function populateOrderDetails(order, itemsOverride) {
   const items = getOrderItems(order, itemsOverride);
-  const shippingStatus = order.shipping_status || order.status;
+  const orderId = order.checkout_id || order.order_id || "N/A";
+  const shippingStatus = getMainOrderStatus(
+    order.shipping_status || order.status,
+  );
   const paymentStatus = order.payment_status || "pending";
 
-  $("#summaryStatus").text(formatStatusLabel(shippingStatus));
-  $("#summaryPaymentStatus").text(formatStatusLabel(paymentStatus));
+  $("#summaryOrderId").text(orderId);
+  $("#summaryStatus").html(renderStatusBadge(shippingStatus));
+  $("#summaryPaymentStatus").html(renderPaymentBadge(paymentStatus));
+  $("#summaryPaymentMethod").text(
+    formatStatusLabel(order.payment_method || "N/A"),
+  );
   $("#summaryDate").text(formatDate(order.created_at || order.updated_at));
   $("#summaryItems").text(items.length);
+  $("#orderStatusTimeline").html(renderOrderTimeline(shippingStatus));
+
   const user = order.user || currentUserProfile || {};
   const customerName =
     order.customer_name || user.fullname || user.username || usr || "N/A";
   const email = order.email || user.email || "N/A";
+  const phone = order.phone_number || user.phone_number || "N/A";
   const address = formatAddress(order, user);
   $("#summaryCustomer").text(customerName);
-  $("#summaryEmail").text(email);
+  $("#summaryContact").html(`
+    <div>${email}</div>
+    <div class="order-details-meta">${phone}</div>
+  `);
   $("#summaryAddress").text(address);
 
   if (order.tracking_number) {
-    $("#tracking").text(order.tracking_number);
+    $("#tracking").removeClass("is-empty").text(order.tracking_number);
   } else {
-    $("#tracking").text("Not yet assigned");
+    $("#tracking").addClass("is-empty").text("Not yet assigned");
   }
 
   let rows = "";
@@ -552,17 +669,20 @@ function populateOrderDetails(order, itemsOverride) {
         <td>
           <img src="${resolveImageSrc(item.image)}"
                onerror="this.src='assets/img/back.jpg'"
-               style="width:70px; height:70px; object-fit:cover; border:1px solid #ddd;">
+               class="order-details-product-image">
         </td>
-        <td>${item.productName}</td>
-        <td>${item.quantity}</td>
-        <td>&#8369;${formatCurrency(item.price)}</td>
-        <td>&#8369;${formatCurrency(item.subtotal)}</td>
+        <td><span class="order-details-product-name">${item.productName}</span></td>
+        <td class="text-center"><span class="order-details-qty">${item.quantity}</span></td>
+        <td><span class="order-details-price">&#8369;${formatCurrency(item.price)}</span></td>
+        <td><span class="order-details-subtotal">&#8369;${formatCurrency(item.subtotal)}</span></td>
       </tr>
     `;
   });
 
-  $("#orderDetailsBody").html(rows);
+  $("#orderDetailsBody").html(
+    rows ||
+      `<tr><td colspan="5" class="order-details-empty text-center">No products found for this order.</td></tr>`,
+  );
 
   $("#orderTotal").text(formatCurrency(computedTotal));
 }
@@ -583,9 +703,8 @@ function getUserOrderTotal(order) {
 }
 
 function getUserStatusBadgeClass(statusLabel) {
-  const normalized = String(statusLabel || "").toLowerCase();
+  const normalized = getMainOrderStatus(statusLabel);
 
-  if (normalized === "completed") return "status-completed";
   if (normalized === "delivered") return "status-completed";
   if (normalized === "packed") return "status-shipped";
   if (normalized === "shipped") return "status-shipped";
@@ -599,26 +718,24 @@ function getActiveUserStatusFilter() {
 
 function matchesUserStatusFilter(order, filterValue) {
   const selectedFilter = normalizeStatus(filterValue || "all");
-  const orderStatus = normalizeStatus(order?.shipping_status || order?.status);
+  const orderStatus = getMainOrderStatus(
+    order?.shipping_status || order?.status,
+  );
 
   switch (selectedFilter) {
     case "pending":
     case "pending_payment":
-      return orderStatus === "pending" || orderStatus === "pending_payment";
+      return orderStatus === "pending";
     case "to_ship":
     case "to-ship":
     case "processing":
     case "packed":
-      return (
-        orderStatus === "to_ship" ||
-        orderStatus === "processing" ||
-        orderStatus === "packed"
-      );
+      return orderStatus === "packed";
     case "shipped":
       return orderStatus === "shipped";
     case "completed":
     case "delivered":
-      return orderStatus === "completed" || orderStatus === "delivered";
+      return orderStatus === "delivered";
     case "cancelled":
       return orderStatus === "cancelled";
     case "all":
@@ -736,9 +853,8 @@ function renderUserOrders() {
     const orderId = order.checkout_id || order.order_id || "N/A";
     const seller = getOrderSellerDisplayName(order);
     const total = formatCurrency(getUserOrderTotal(order));
-    const statusLabel = formatStatusLabel(
-      order.shipping_status || order.status,
-    ).toLowerCase();
+    const statusKey = getMainOrderStatus(order.shipping_status || order.status);
+    const statusLabel = formatStatusLabel(statusKey).toLowerCase();
     const paymentLabel = formatStatusLabel(
       order.payment_status || "pending",
     ).toLowerCase();
@@ -811,7 +927,7 @@ function renderUserOrders() {
                   View Details
                 </button>
                 ${
-                  statusLabel === "pending"
+                  canCancelOrder(statusKey)
                     ? `
                   <button class="btn btn-danger btn-sm rounded px-3 btn-cancel" data-id="${orderId}">
                     Cancel
@@ -893,31 +1009,27 @@ function renderOrders(filter = "All") {
       return false;
     }
 
-    const statusKey = normalizeStatus(o.shipping_status || o.status);
+    const statusKey = getMainOrderStatus(o.shipping_status || o.status);
     switch (filterKey) {
       case "unpaid":
       case "pending":
       case "pending_payment":
-        return statusKey === "pending" || statusKey === "pending_payment";
+        return statusKey === "pending";
 
       case "to_ship":
       case "processing":
       case "packed":
-        return (
-          statusKey === "processing" ||
-          statusKey === "to_ship" ||
-          statusKey === "packed"
-        );
+        return statusKey === "packed";
 
       case "shipped":
         return statusKey === "shipped";
 
       case "completed":
       case "delivered":
-        return statusKey === "completed" || statusKey === "delivered";
+        return statusKey === "delivered";
 
       case "to_review":
-        return statusKey === "completed" || statusKey === "delivered";
+        return statusKey === "delivered";
 
       case "cancelled":
         return statusKey === "cancelled";
@@ -943,10 +1055,8 @@ function renderOrders(filter = "All") {
   const canUpdateStatus = isAdminView();
 
   filteredOrders.forEach((order) => {
-    const statusKey = normalizeStatus(order.shipping_status || order.status);
-    const statusLabel = formatStatusLabel(
-      order.shipping_status || order.status,
-    );
+    const statusKey = getMainOrderStatus(order.shipping_status || order.status);
+    const statusLabel = formatStatusLabel(statusKey);
     const orderId = order.checkout_id || order.order_id || "N/A";
     const customer = isAdminView()
       ? order.user?.username ||
@@ -972,17 +1082,23 @@ function renderOrders(filter = "All") {
       </button>
     `);
 
-    if (canUpdateStatus) {
+    if (canUpdateStatus && !isFinalOrderStatus(statusKey)) {
       actionButtons.push(`
-        <button class="btn btn-info btn-sm "
+        <button class="btn btn-warning btn-sm "
           data-toggle="modal"
           data-target="#updateStatusModal"
           onclick="openStatusModal(${orderId}, '${safeStatus}')">
           <i class="fas fa-edit"></i> Update Status
         </button>
       `);
+    } else if (canUpdateStatus) {
+      actionButtons.push(`
+        <button class="btn btn-secondary btn-sm" disabled>
+          <i class="fas fa-lock"></i> Final
+        </button>
+      `);
     } else {
-      if (statusKey === "pending" || statusKey === "pending_payment") {
+      if (canCancelOrder(statusKey)) {
         actionButtons.push(`
           <button class="btn btn-outline-danger btn-sm btn-cancel"
             data-id="${orderId}">
@@ -1030,9 +1146,9 @@ function renderOrders(filter = "All") {
           <td>${quantity}</td>
           <td>&#8369;${total}</td>
           <td>
-            <span>${statusLabel}</span>
+            ${renderStatusBadge(statusKey)}
             <br>
-            <small class="text-muted">Payment: ${formatStatusLabel(order.payment_status || "pending")}</small>
+            ${renderPaymentBadge(order.payment_status || "pending")}
           </td>
           <td>${date}</td>
           <td class="text-center">${actionButtons.join("")}</td>
@@ -1058,11 +1174,36 @@ function renderOrders(filter = "All") {
 // =======================================
 function openStatusModal(orderId, currentStatus) {
   $("#statusOrderId").val(orderId);
-  $("#newOrderStatus").val(mapStatusToSelectValue(currentStatus));
   const order = (globalOrders || []).find(
     (item) => String(item.checkout_id) === String(orderId),
   );
-  $("#newPaymentStatus").val(order?.payment_status || "");
+  const status = getMainOrderStatus(order?.shipping_status || currentStatus);
+  const finalStatus = isFinalOrderStatus(status);
+
+  $("#newOrderStatus").val(status);
+  $("#newPaymentStatus").val("");
+  $("#trackingNumberInput").val(order?.tracking_number || "");
+  $("#statusFinalMessage").text("");
+  $("#saveStatusUpdate").prop("disabled", finalStatus);
+  $("#newOrderStatus").prop("disabled", finalStatus);
+
+  if (finalStatus) {
+    $("#statusFinalMessage").text(
+      `${formatStatusLabel(status)} orders are final and can no longer be changed.`,
+    );
+  }
+
+  if (isSellerView()) {
+    $("#paymentStatusGroup").hide();
+    $("#newPaymentStatus").prop("disabled", true).val("");
+  } else {
+    $("#paymentStatusGroup").show();
+    $("#newPaymentStatus").prop("disabled", finalStatus);
+  }
+
+  const canEditTracking = !finalStatus && canEditTrackingForStatus(status);
+  $("#trackingNumberGroup").toggle(canEditTracking);
+  $("#trackingNumberInput").prop("disabled", !canEditTracking);
 }
 
 // =======================================
@@ -1072,6 +1213,33 @@ function submitOrderStatusUpdate() {
   const orderId = $("#statusOrderId").val();
   const newStatus = $("#newOrderStatus").val();
   const newPaymentStatus = $("#newPaymentStatus").val();
+  const trackingNumber = ($("#trackingNumberInput").val() || "").trim();
+  const existingOrder = (globalOrders || []).find(
+    (order) => String(order.checkout_id) === String(orderId),
+  );
+
+  if (
+    isFinalOrderStatus(existingOrder?.shipping_status || existingOrder?.status)
+  ) {
+    Swal.fire(
+      "Locked",
+      "Delivered and cancelled orders can no longer be changed.",
+      "info",
+    );
+    return;
+  }
+
+  const payload = {
+    shipping_status: getMainOrderStatus(newStatus),
+  };
+
+  if (role === "admin" && newPaymentStatus) {
+    payload.payment_status = newPaymentStatus;
+  }
+
+  if (trackingNumber && canEditTrackingForStatus(payload.shipping_status)) {
+    payload.tracking_number = trackingNumber;
+  }
 
   $.ajax({
     url: `${ip}/api/checkout/orders/${orderId}/status`,
@@ -1081,10 +1249,7 @@ function submitOrderStatusUpdate() {
       Accept: "application/json",
     },
     contentType: "application/json",
-    data: JSON.stringify({
-      shipping_status: newStatus,
-      payment_status: newPaymentStatus || undefined,
-    }),
+    data: JSON.stringify(payload),
 
     success: function (response) {
       const updatedCheckout = response?.checkout || {};
@@ -1099,7 +1264,7 @@ function submitOrderStatusUpdate() {
         existingOrder.shipping_status =
           updatedCheckout.shipping_status ||
           updatedCheckout.status ||
-          newStatus;
+          payload.shipping_status;
         existingOrder.payment_status =
           updatedCheckout.payment_status || existingOrder.payment_status;
         existingOrder.tracking_number =
@@ -1310,6 +1475,13 @@ $(document).ready(function () {
 
   $("#adminDateFilter").on("change", function () {
     renderOrders($("#statusFilter").val());
+  });
+
+  $("#newOrderStatus").on("change", function () {
+    const status = getMainOrderStatus($(this).val());
+    const canEditTracking = canEditTrackingForStatus(status);
+    $("#trackingNumberGroup").toggle(canEditTracking);
+    $("#trackingNumberInput").prop("disabled", !canEditTracking);
   });
 
   $("#userSellerFilter").on("change", function () {

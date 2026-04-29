@@ -174,12 +174,16 @@ function setupRegistrationForm() {
   $("#accountForm").on("submit", function (e) {
     e.preventDefault();
 
+    const $createButton = $("#createAcc");
+    const originalButtonText = $createButton.text();
+
     const formData = {
-      username: $("#username").val(),
-      email: $("#email").val(),
+      username: $("#username").val().trim(),
+      email: $("#email").val().trim(),
+      phone_number: $("#phone_number").val().trim(),
       password: $("#password").val(),
       password_confirmation: $("#password_confirmation").val(),
-      fullname: $("#fullname").val(),
+      fullname: $("#fullname").val().trim(),
       role: $("#role").val(),
     };
 
@@ -187,10 +191,19 @@ function setupRegistrationForm() {
       type: "POST",
       url: `${ip}/api/register`,
       contentType: "application/json",
+      headers: { Accept: "application/json" },
       data: JSON.stringify(formData),
+      beforeSend: () => {
+        $("#wait").show();
+        $createButton
+          .prop("disabled", true)
+          .html(
+            '<span class="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>Adding...',
+          );
+      },
       success: () => {
         $(".error-message").text("");
-        $(".form-control").removeClass("is-invalid");
+        $(".form-control, .custom-select").removeClass("is-invalid");
         this.reset();
 
         Swal.fire({
@@ -201,18 +214,28 @@ function setupRegistrationForm() {
       },
       error: (xhr) => {
         $(".error-message").text("");
+        $(".form-control, .custom-select").removeClass("is-invalid");
+
         if (xhr.status === 422 && xhr.responseJSON.errors) {
           const errors = xhr.responseJSON.errors;
           for (let field in errors) {
             $(`#${field}Error`).text(errors[field][0]);
+            $(`[name="${field}"]`).addClass("is-invalid");
           }
         } else {
           Swal.fire({
             title: "Registration Failed",
-            text: xhr.responseJSON?.msg || "Unknown error",
+            text:
+              xhr.responseJSON?.msg ||
+              xhr.responseJSON?.message ||
+              "Unknown error",
             icon: "error",
           });
         }
+      },
+      complete: () => {
+        $("#wait").hide();
+        $createButton.prop("disabled", false).text(originalButtonText);
       },
     });
   });
@@ -295,6 +318,7 @@ function setupEditButtons() {
     fetchData(`getAccount_id/${userId}`, (res) => {
       $("#editUsername").val(res.username);
       $("#editEmail").val(res.email);
+      $("#editPhone_number").val(res.phone_number);
       $("#editFullname").val(res.fullname);
       $("#editRole").val(res.role);
     });
@@ -309,8 +333,10 @@ function setupAccountUpdate() {
     e.preventDefault();
     const fd = new FormData(this);
     fd.append("_method", "PUT");
+    const $editButton = $("#editAccount");
+    const originalButtonText = $editButton.text();
 
-    $("#editAccount").text("Updating...");
+    $editButton.text("Updating...");
 
     $.ajax({
       url: `${ip}/api/updateAccount/${$("#user_id").val()}`,
@@ -319,6 +345,16 @@ function setupAccountUpdate() {
       data: fd,
       processData: false,
       contentType: false,
+      beforeSend: () => {
+        $("#wait").show();
+        $(".error-message").text("");
+        $(".form-control, .custom-select").removeClass("is-invalid");
+        $editButton
+          .prop("disabled", true)
+          .html(
+            '<span class="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>Updating...',
+          );
+      },
       success: (res) => {
         if (res.status === 200) {
           Swal.fire({
@@ -326,14 +362,31 @@ function setupAccountUpdate() {
             title: "Account Updated",
             text: "Changes saved successfully.",
           }).then(() => {
-            $("#editAccount").text("Update");
+            $editButton.text("Update");
             this.reset();
             location.reload();
           });
         }
       },
       error: (xhr) => {
-        Swal.fire({ icon: "error", title: "Error", text: xhr.responseText });
+        if (xhr.status === 422 && xhr.responseJSON?.errors) {
+          const errors = xhr.responseJSON.errors;
+          for (let field in errors) {
+            $(`#${field}Error`).text(errors[field][0]);
+            $(`[name="${field}"]`).addClass("is-invalid");
+          }
+          return;
+        }
+
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: xhr.responseJSON?.msg || xhr.responseText,
+        });
+      },
+      complete: () => {
+        $("#wait").hide();
+        $editButton.prop("disabled", false).text(originalButtonText);
       },
     });
   });

@@ -58,7 +58,9 @@
   function orderBelongsToSeller(order, username, userId) {
     const items = Array.isArray(order?.items) ? order.items : [];
     if (items.length > 0) {
-      return items.some((item) => itemBelongsToSeller(item, order, username, userId));
+      return items.some((item) =>
+        itemBelongsToSeller(item, order, username, userId),
+      );
     }
 
     return itemBelongsToSeller({}, order, username, userId);
@@ -70,7 +72,8 @@
     (Array.isArray(orders) ? orders : []).forEach((order, index) => {
       if (!orderBelongsToSeller(order, username, userId)) return;
 
-      const orderId = order?.checkout_id || order?.order_id || order?.id || index;
+      const orderId =
+        order?.checkout_id || order?.order_id || order?.id || index;
       seenOrderIds.add(String(orderId));
     });
 
@@ -78,7 +81,9 @@
   }
 
   function setBadgeCount(count) {
-    $("#cart-count, #cart-count-mobile").text(count || 0).show();
+    $("#cart-count, #cart-count-mobile")
+      .text(count || 0)
+      .show();
   }
 
   function sellerCanShop() {
@@ -138,7 +143,9 @@
         Accept: "application/json",
       },
       success: function (response) {
-        const orders = Array.isArray(response) ? response : response?.data || [];
+        const orders = Array.isArray(response)
+          ? response
+          : response?.data || [];
         const sellerOrderCount = countSellerOrders(
           orders,
           $.cookie("username"),
@@ -169,7 +176,7 @@
       return;
     }
 
-    if (role === "user") {
+    if (role === "user" || role === "buyer") {
       loadCartCount(token);
       return;
     }

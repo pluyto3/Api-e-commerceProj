@@ -618,6 +618,7 @@ class AuthController extends Controller
             'categories' => 0,
             'brands' => 0,
             'users' => 0,
+            'total_products' => 0,
             'my_products' => 0,
             'pending_approval' => 0,
             'approved_products' => 0,
@@ -635,6 +636,7 @@ class AuthController extends Controller
             $data['categories'] = Category::count();
             $data['brands'] = Brands::count();
             $data['users'] = User::where('role', 'user')->count();
+            $data['total_products'] = Product::count();
             
             // Admin sees ALL orders
             $data['total_orders'] = Checkout::count();

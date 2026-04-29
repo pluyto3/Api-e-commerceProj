@@ -3,6 +3,8 @@
   --secondary-color: #f9f9f9;
   --text-color: #333;
   --border-color: #ccc;
+  --sidebar-open-width: 240px;
+  --sidebar-collapsed-width: 80px;
 }
 
 *,
@@ -1329,19 +1331,19 @@ footer {
 }
 
 .bg-orange-g {
-  background: linear-gradient(to right, #ff6600, #de3a3a);
+  background: linear-gradient(to right, #ff6600, #de3a3a) !important;
 }
 
 .bg-green-g {
-  background: linear-gradient(to right, #00b09b, #96c93d);
+  background: linear-gradient(to right, #00b09b, #96c93d) !important;
 }
 
 .bg-blue-g {
-  background: linear-gradient(to right, #00c6ff, #0072ff);
+  background: linear-gradient(to right, #00c6ff, #0072ff) !important;
 }
 
 .bg-grey-g {
-  background: linear-gradient(to right, #bdc3c7, #2c3e50);
+  background: linear-gradient(to right, #bdc3c7, #2c3e50) !important;
 }
 
 /* Dashboard page upgrade */
@@ -2315,7 +2317,11 @@ footer {
   padding: 1.3rem 1.5rem;
   border-bottom: 1px solid #e8eef7;
   background:
-    radial-gradient(circle at top left, rgba(59, 130, 246, 0.12), transparent 34%),
+    radial-gradient(
+      circle at top left,
+      rgba(59, 130, 246, 0.12),
+      transparent 34%
+    ),
     linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
 }
 
@@ -2450,6 +2456,87 @@ footer {
 
 .order-details-tracking.is-empty {
   color: #64748b;
+}
+
+.order-status-timeline {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: #fff;
+}
+
+.order-status-timeline.is-cancelled {
+  grid-template-columns: minmax(0, 1fr);
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.order-status-timeline-step {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  color: #94a3b8;
+  font-weight: 700;
+}
+
+.order-status-timeline-step:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  left: calc(100% - 18px);
+  right: -12px;
+  top: 50%;
+  height: 2px;
+  background: #e2e8f0;
+  transform: translateY(-50%);
+}
+
+.order-status-timeline-step.is-complete,
+.order-status-timeline-step.is-active {
+  color: #1d4ed8;
+}
+
+.order-status-timeline-step.is-complete::after {
+  background: #93c5fd;
+}
+
+.order-status-timeline-step.is-cancelled {
+  color: #b91c1c;
+}
+
+.order-status-timeline-dot {
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
+.order-status-timeline-step.is-complete .order-status-timeline-dot,
+.order-status-timeline-step.is-active .order-status-timeline-dot {
+  background: #2563eb;
+  color: #fff;
+}
+
+.order-status-timeline-step.is-cancelled .order-status-timeline-dot {
+  background: #dc2626;
+  color: #fff;
+}
+
+.order-status-timeline-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .order-details-items-head {
@@ -2971,6 +3058,20 @@ footer {
 
   .order-details-summary-grid {
     grid-template-columns: 1fr;
+  }
+
+  .order-status-timeline {
+    grid-template-columns: 1fr;
+  }
+
+  .order-status-timeline-step:not(:last-child)::after {
+    left: 16px;
+    right: auto;
+    top: 32px;
+    bottom: -12px;
+    width: 2px;
+    height: auto;
+    transform: none;
   }
 
   .order-details-table thead th,
@@ -3696,8 +3797,17 @@ body {
   padding: 0.35rem 0.95rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   background:
-    radial-gradient(circle at top left, rgba(59, 130, 246, 0.18), transparent 32%),
-    linear-gradient(135deg, var(--ui-navy-2) 0%, #1d1c36 52%, var(--ui-navy) 100%);
+    radial-gradient(
+      circle at top left,
+      rgba(59, 130, 246, 0.18),
+      transparent 32%
+    ),
+    linear-gradient(
+      135deg,
+      var(--ui-navy-2) 0%,
+      #1d1c36 52%,
+      var(--ui-navy) 100%
+    );
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
 }
 
@@ -3833,7 +3943,10 @@ body {
 }
 
 .navbar.navbar-dark #cartNav > .nav-link,
-.navbar.navbar-dark .navbar-nav.ml-lg-3 > .nav-item > .nav-link.position-relative {
+.navbar.navbar-dark
+  .navbar-nav.ml-lg-3
+  > .nav-item
+  > .nav-link.position-relative {
   display: inline-flex !important;
   width: 40px;
   height: 40px;
@@ -3847,7 +3960,10 @@ body {
 }
 
 .navbar.navbar-dark #cartNav > .nav-link:hover,
-.navbar.navbar-dark .navbar-nav.ml-lg-3 > .nav-item > .nav-link.position-relative:hover {
+.navbar.navbar-dark
+  .navbar-nav.ml-lg-3
+  > .nav-item
+  > .nav-link.position-relative:hover {
   border-color: rgba(255, 255, 255, 0.2);
   background: rgba(255, 255, 255, 0.16);
   transform: translateY(-1px);
@@ -4052,8 +4168,7 @@ body {
   border: 1px solid var(--ui-border);
   border-radius: 22px;
   background:
-    linear-gradient(135deg, rgba(37, 99, 235, 0.08), transparent 42%),
-    #fff;
+    linear-gradient(135deg, rgba(37, 99, 235, 0.08), transparent 42%), #fff;
   color: var(--ui-heading);
   font-size: clamp(1.8rem, 2vw, 2.35rem);
   font-weight: 800;
@@ -4196,7 +4311,11 @@ label,
 .checkout-btn-custom,
 .signUp {
   border-color: var(--ui-blue);
-  background: linear-gradient(135deg, var(--ui-blue) 0%, var(--ui-blue-dark) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--ui-blue) 0%,
+    var(--ui-blue-dark) 100%
+  );
   color: #fff;
   box-shadow: 0 12px 22px rgba(37, 99, 235, 0.2);
 }
@@ -4363,7 +4482,11 @@ section.my-2.py-2 .row > [class*="col-"] {
   justify-content: center;
   padding: 32px 16px;
   background:
-    radial-gradient(circle at top left, rgba(37, 99, 235, 0.14), transparent 28%),
+    radial-gradient(
+      circle at top left,
+      rgba(37, 99, 235, 0.14),
+      transparent 28%
+    ),
     var(--ui-bg);
 }
 
@@ -4442,6 +4565,7 @@ footer {
 
   .wrapper {
     display: block;
+    background: var(--ui-bg);
   }
 
   .wrapper .sidebar {
@@ -4511,5 +4635,64 @@ footer {
 
   .table-responsive {
     border-radius: 14px;
+  }
+}
+
+/* Footer should align with the working-panel/profile-section */
+.wrapper + footer {
+  margin-left: var(--sidebar-open-width);
+  width: calc(100% - var(--sidebar-open-width));
+  transition:
+    margin-left 0.25s ease,
+    width 0.25s ease;
+}
+
+/* When sidebar is collapsed, footer follows the collapsed sidebar */
+.wrapper.sidebar-collapsed + footer {
+  margin-left: var(--sidebar-collapsed-width);
+  width: calc(100% - var(--sidebar-collapsed-width));
+}
+
+/* Keep the general-info clean and full inside the adjusted footer */
+.wrapper + footer .general-info {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 32px 48px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 32px;
+  background: #eaf3fb;
+}
+
+/* Make footer lists cleaner */
+.wrapper + footer .general-info ul {
+  list-style: none;
+  padding-left: 0;
+  margin-bottom: 0;
+}
+
+.wrapper + footer .general-info li {
+  margin-bottom: 14px;
+}
+
+/* Social icons should also follow the footer width */
+.wrapper + footer .social-share {
+  width: 100%;
+  margin-left: 0;
+}
+
+/* Mobile/tablet view */
+@media (max-width: 991.98px) {
+  .wrapper + footer,
+  .wrapper.sidebar-collapsed + footer {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .wrapper + footer .general-info {
+    flex-direction: column;
+    padding: 24px;
   }
 }
