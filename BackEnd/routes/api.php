@@ -35,6 +35,7 @@ Route::controller(AuthController::class)->group(function () {
   Route::get('/admins', 'getAdmins'); // Get all admins
   Route::get('/sellers', 'getSellers'); // Get all sellers
   Route::get('/users', 'getUsers'); // Get all users
+  Route::get('/accountsSummary', 'accountsSummary'); // Get account tables and counts
   Route::get('/countedAccounts', 'countAccounts'); // Count all users
   Route::get('/countedAdmins', 'countAdmins'); // Count all admins
   Route::get('/countedSellers', 'countSellers'); // Count all sellers

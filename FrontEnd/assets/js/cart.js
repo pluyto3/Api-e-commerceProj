@@ -6,6 +6,8 @@ let token = null;
 let usr = null;
 let role = null;
 let profileImage = null;
+let currentUserId = null;
+let latestCartItems = [];
 
 // =======================================
 // User Session Handling
@@ -15,6 +17,7 @@ function load_user() {
   token = $.cookie("token");
   role = String($.cookie("role") || "").toLowerCase();
   profileImage = $.cookie("profileImage");
+  currentUserId = $.cookie("user_id") || currentUserId;
 
   // DOM elements
   const $displayUsername = $("#displayUsername");
@@ -83,6 +86,7 @@ function loadCartItems() {
     },
     success: function (response) {
       const cartItems = response.cart || response.data || [];
+      latestCartItems = cartItems;
       const $container = $("#cart-items-container");
       $container.empty();
 
@@ -100,7 +104,8 @@ function loadCartItems() {
         }
         const isOutOfStock = stock <= 0;
         const isOverStock = !isOutOfStock && quantity > stock;
-        const cannotCheckout = isOutOfStock || isOverStock;
+        const isOwnProduct = isOwnSellerCartItem(item);
+        const cannotCheckout = isOutOfStock || isOverStock || isOwnProduct;
         if (cannotCheckout) {
           unavailableCount++;
         }
@@ -114,6 +119,11 @@ function loadCartItems() {
                 <span class="stock-warning-badge">Stock changed</span>
                 <p class="cart-stock-warning mb-0">Only ${stock} available. Reduce quantity to check out.</p>
               `
+            : isOwnProduct
+              ? `
+                <span class="stock-warning-badge">Own product</span>
+                <p class="cart-stock-warning mb-0">You cannot check out your own product.</p>
+              `
             : `<small class="text-muted">In stock: ${stock}</small>`;
 
         const subtotal = item.subtotal ?? price * quantity;
@@ -121,7 +131,7 @@ function loadCartItems() {
 
         // Note: Included the checkbox to maintain your "selected checkout" logic
         const cardHtml = `
-          <div class="cart-item-card ${cannotCheckout ? "stock-issue" : ""}" data-price="${price}" data-stock="${stock}">
+          <div class="cart-item-card ${cannotCheckout ? "stock-issue" : ""}" data-price="${price}" data-stock="${stock}" data-own-product="${isOwnProduct}">
             <div class="cart-select-cell">
                <input type="checkbox" class="select-item form-check-input m-0" style="transform: scale(1.2);" data-id="${id}" data-price="${subtotal}" data-stock-issue="${cannotCheckout}" ${cannotCheckout ? "disabled" : ""}>
             </div>
@@ -164,7 +174,7 @@ function loadCartItems() {
       if (unavailableCount > 0) {
         $(".order-summary-card .card-body").prepend(`
           <div class="cart-stock-alert" id="cart-stock-alert">
-            ${unavailableCount} item(s) cannot be checked out because stock is unavailable or below your cart quantity.
+            ${unavailableCount} item(s) cannot be checked out because stock is unavailable, below your cart quantity, or owned by your seller account.
           </div>
         `);
       }
@@ -179,6 +189,31 @@ function loadCartItems() {
   });
 }
 
+function isOwnSellerCartItem(item = {}) {
+  if (role !== "seller") return false;
+
+  const product = item.product || {};
+  const sellerId =
+    item.seller_id ||
+    item.seller?.user_id ||
+    item.seller?.id ||
+    product.seller_id ||
+    product.seller?.user_id ||
+    product.seller?.id;
+  const sellerUsername =
+    item.seller_username ||
+    item.seller?.username ||
+    product.seller_username ||
+    product.seller?.username;
+
+  return Boolean(
+    (currentUserId && sellerId && String(currentUserId) === String(sellerId)) ||
+      (usr &&
+        sellerUsername &&
+        String(usr).toLowerCase() === String(sellerUsername).toLowerCase()),
+  );
+}
+
 /* ============================================================
    MAIN SCRIPT (Document Ready)
 ============================================================ */
@@ -189,7 +224,6 @@ $(document).ready(function () {
      Load User Session
   ------------------------------ */
   load_user();
-  loadCartItems();
 
   /* ------------------------------
      Select Item Checkbox
@@ -232,6 +266,8 @@ $(document).ready(function () {
       },
       dataType: "json",
       success: function (response) {
+        currentUserId = response?.user_id || response?.id || currentUserId;
+        loadCartItems();
         const $navbarProfileImage = $("#navbarProfileImage");
         const $defaultProfileIcon = $("#defaultProfileIcon");
 
@@ -249,10 +285,12 @@ $(document).ready(function () {
         console.error("Error loading profile:", xhr.responseText);
         $("#navbarProfileImage").hide();
         $("#defaultProfileIcon").show();
+        loadCartItems();
       },
     });
   } else {
     console.error("No username found in cookie.");
+    loadCartItems();
   }
 
   /* ------------------------------
@@ -287,6 +325,21 @@ $(document).ready(function () {
       );
       return; // Stop if nothing is selected
     } // Store the selected IDs in sessionStorage
+
+    const selectedOwnProduct = latestCartItems.some(
+      (item) =>
+        selectedIds.some((id) => String(id) === String(item.addTocart_id)) &&
+        isOwnSellerCartItem(item),
+    );
+
+    if (selectedOwnProduct) {
+      Swal.fire(
+        "Not Allowed",
+        "You cannot check out products from your own shop.",
+        "warning",
+      );
+      return;
+    }
 
     sessionStorage.setItem("selectedCartItems", JSON.stringify(selectedIds)); // Now, redirect to the checkout page // UPDATE THIS to your checkout page's file name
 
@@ -469,8 +522,9 @@ $(document).ready(function () {
             .find(".plus-btn")
             .prop("disabled", newQuantity >= updatedMaxStock);
 
+          const isOwnProduct = $card.data("own-product") === true;
           const canCheckoutItem =
-            updatedMaxStock > 0 && newQuantity <= updatedMaxStock;
+            !isOwnProduct && updatedMaxStock > 0 && newQuantity <= updatedMaxStock;
 
           $card
             .toggleClass("stock-issue", !canCheckoutItem)
@@ -484,6 +538,11 @@ $(document).ready(function () {
           $card.find(".cart-stock-status").html(
             canCheckoutItem
               ? `<small class="text-muted">In stock: ${updatedMaxStock}</small>`
+              : isOwnProduct
+                ? `
+                  <span class="stock-warning-badge">Own product</span>
+                  <p class="cart-stock-warning mb-0">You cannot check out your own product.</p>
+                `
               : `
                   <span class="stock-warning-badge">Stock changed</span>
                   <p class="cart-stock-warning mb-0">Only ${updatedMaxStock} available. Reduce quantity to check out.</p>

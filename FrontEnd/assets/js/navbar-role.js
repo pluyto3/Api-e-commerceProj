@@ -50,7 +50,7 @@
       return '<div class="notification-empty-state">No new notifications.</div>';
     }
 
-    return items
+    const itemMarkup = items
       .map(
         (item) => `
           <a class="notification-item notification-item--${item.tone}" href="${item.href}">
@@ -69,6 +69,13 @@
         `,
       )
       .join("");
+
+    return `
+      <div class="notification-items-scroll">
+        ${itemMarkup}
+      </div>
+      <a class="notification-view-all" href="orderDetails.html">View all notifications</a>
+    `;
   }
 
   function renderNavbarNotifications(items) {
@@ -118,6 +125,55 @@
       (product) =>
         normalizeStatus(product?.approval_status || "pending") === "pending",
     ).length;
+  }
+
+  function getOrderStatus(order) {
+    const status = normalizeStatus(order?.shipping_status || order?.status);
+
+    if (status === "processing" || status === "to_ship") return "packed";
+    if (status === "completed") return "delivered";
+    if (status === "pending_payment") return "pending";
+
+    return status || "pending";
+  }
+
+  function countOrdersByStatus(orders, targetStatus) {
+    return getResponseData(orders).filter(
+      (order) => getOrderStatus(order) === targetStatus,
+    ).length;
+  }
+
+  function countOrdersWithPaymentUpdates(orders) {
+    return getResponseData(orders).filter((order) => {
+      const paymentStatus = normalizeStatus(order?.payment_status);
+      return paymentStatus && paymentStatus !== "pending";
+    }).length;
+  }
+
+  function countOrdersWithTracking(orders) {
+    return getResponseData(orders).filter((order) =>
+      String(order?.tracking_number || "").trim(),
+    ).length;
+  }
+
+  function countCartStockAlerts(cartResponse) {
+    const cartItems = cartResponse?.cart || getResponseData(cartResponse);
+
+    return cartItems.filter((item) => {
+      const quantity = normalizeNumber(item?.quantity || 1);
+      const stock = normalizeNumber(item?.product?.stock_quantity);
+      const productStatus = normalizeStatus(item?.product?.status || "active");
+      const approvalStatus = normalizeStatus(
+        item?.product?.approval_status || "approved",
+      );
+
+      return (
+        stock <= 0 ||
+        quantity > stock ||
+        productStatus !== "active" ||
+        approvalStatus !== "approved"
+      );
+    }).length;
   }
 
   function isDashboardPage() {
@@ -305,6 +361,105 @@
     return items;
   }
 
+  function buildBuyerNotifications(orders, cartResponse) {
+    const items = [];
+    const orderRecords = getResponseData(orders);
+    const placedOrders = orderRecords.length;
+    const paymentUpdates = countOrdersWithPaymentUpdates(orderRecords);
+    const shippedOrders = countOrdersByStatus(orderRecords, "shipped");
+    const deliveredOrders = countOrdersByStatus(orderRecords, "delivered");
+    const cancelledOrders = countOrdersByStatus(orderRecords, "cancelled");
+    const trackingUpdates = countOrdersWithTracking(orderRecords);
+    const cartStockAlerts = countCartStockAlerts(cartResponse);
+    const href = "orderDetails.html";
+
+    if (placedOrders > 0) {
+      items.push({
+        tone: "info",
+        icon: "fas fa-receipt",
+        title: "Orders placed",
+        count: placedOrders,
+        message: `${placedOrders} ${placedOrders === 1 ? "order has" : "orders have"} been placed from your account.`,
+        href,
+        ctaLabel: "View Orders",
+      });
+    }
+
+    if (paymentUpdates > 0) {
+      items.push({
+        tone: "info",
+        icon: "fas fa-credit-card",
+        title: "Payment updates",
+        count: paymentUpdates,
+        message: `${paymentUpdates} ${paymentUpdates === 1 ? "order has" : "orders have"} updated payment status.`,
+        href: "orderDetails.html?filter=payment",
+        ctaLabel: "View Payments",
+      });
+    }
+
+    if (shippedOrders > 0) {
+      items.push({
+        tone: "info",
+        icon: "fas fa-shipping-fast",
+        title: "Orders shipped",
+        count: shippedOrders,
+        message: `${shippedOrders} ${shippedOrders === 1 ? "order is" : "orders are"} on the way.`,
+        href: "orderDetails.html?status=shipped",
+        ctaLabel: "View Orders",
+      });
+    }
+
+    if (deliveredOrders > 0) {
+      items.push({
+        tone: "success",
+        icon: "fas fa-check-circle",
+        title: "Orders delivered",
+        count: deliveredOrders,
+        message: `${deliveredOrders} ${deliveredOrders === 1 ? "order has" : "orders have"} been delivered.`,
+        href: "orderDetails.html?status=delivered",
+        ctaLabel: "View Orders",
+      });
+    }
+
+    if (cancelledOrders > 0) {
+      items.push({
+        tone: "danger",
+        icon: "fas fa-ban",
+        title: "Orders cancelled",
+        count: cancelledOrders,
+        message: `${cancelledOrders} ${cancelledOrders === 1 ? "order was" : "orders were"} cancelled.`,
+        href: "orderDetails.html?status=cancelled",
+        ctaLabel: "View Orders",
+      });
+    }
+
+    if (trackingUpdates > 0) {
+      items.push({
+        tone: "info",
+        icon: "fas fa-map-marker-alt",
+        title: "Tracking added",
+        count: trackingUpdates,
+        message: `Tracking numbers are available for ${pluralize(trackingUpdates, "order")}.`,
+        href: "orderDetails.html?filter=tracking",
+        ctaLabel: "View Tracking",
+      });
+    }
+
+    if (cartStockAlerts > 0) {
+      items.push({
+        tone: "warning",
+        icon: "fas fa-shopping-cart",
+        title: "Cart stock alerts",
+        count: cartStockAlerts,
+        message: `${cartStockAlerts} ${cartStockAlerts === 1 ? "item" : "items"} in your cart ${cartStockAlerts === 1 ? "is" : "are"} out of stock or have limited stock.`,
+        href: "cart.html",
+        ctaLabel: "View Cart",
+      });
+    }
+
+    return items;
+  }
+
   function getJson(url, headers) {
     return $.ajax({ url, method: "GET", headers }).then(
       function (response) {
@@ -317,6 +472,10 @@
   }
 
   function loadNavbarNotifications(role, token) {
+    if ($("#notificationNav").length === 0) {
+      return;
+    }
+
     if (isDashboardPage()) {
       return;
     }
@@ -326,12 +485,7 @@
       return;
     }
 
-    if (isBuyerRole(role)) {
-      renderNavbarNotifications([]);
-      return;
-    }
-
-    if (role !== "admin" && role !== "seller") {
+    if (role !== "admin" && role !== "seller" && !isBuyerRole(role)) {
       renderNavbarNotifications([]);
       return;
     }
@@ -348,21 +502,35 @@
       Authorization: `Bearer ${token}`,
     };
 
-    $.when(
+    if (isBuyerRole(role)) {
+      $.when(
+        getJson(`${apiBase}/api/checkout/orders`, headers),
+        getJson(`${apiBase}/api/cart`, headers),
+      ).done(function (orders, cartResponse) {
+        renderNavbarNotifications(
+          buildBuyerNotifications(orders, cartResponse),
+        );
+      });
+      return;
+    }
+
+    const requests = [
       getJson(`${apiBase}/api/counts`, headers),
       getJson(`${apiBase}/api/products`, headers),
       getJson(`${apiBase}/api/category`, headers),
       getJson(`${apiBase}/api/brands`, headers),
-    )
+    ];
+
+    $.when(...requests)
       .done(function (counts, products, categories, brands) {
-        renderNavbarNotifications(
-          buildRoleNotifications(role, {
-            counts: counts || {},
-            products,
-            categories,
-            brands,
-          }),
-        );
+        const roleNotifications = buildRoleNotifications(role, {
+          counts: counts || {},
+          products,
+          categories,
+          brands,
+        });
+
+        renderNavbarNotifications(roleNotifications);
       })
       .fail(function () {
         notificationRequestKey = null;

@@ -6,6 +6,8 @@ let token = null;
 let usr = null;
 let role = null;
 let profileImage = null;
+let accountInfoRequest = null;
+let accountInfoLoaded = false;
 
 // ==========================
 // Load User Session and Update UI
@@ -126,11 +128,29 @@ function displayProfileImage(imageFilename) {
   }
 }
 
+function displayNavbarProfileImage(imageFilename) {
+  const baseUrl = `${ip}/FrontEnd/assets/img/user/`;
+  const $navbarProfileImage = $("#navbarProfileImage");
+  const $defaultProfileIcon = $("#defaultProfileIcon");
+
+  if (imageFilename && String(imageFilename).trim() !== "") {
+    $navbarProfileImage.attr("src", baseUrl + imageFilename).show();
+    $defaultProfileIcon.hide();
+  } else {
+    $navbarProfileImage.hide();
+    $defaultProfileIcon.show();
+  }
+}
+
 // ==========================
 // Fetch User Account Info
 // ==========================
 function loadAccountInfo(usr, token) {
-  $.ajax({
+  if (accountInfoLoaded || accountInfoRequest) {
+    return accountInfoRequest;
+  }
+
+  accountInfoRequest = $.ajax({
     url: `${ip}/api/getAccount_username/${usr}`,
     method: "GET",
     headers: {
@@ -147,15 +167,24 @@ function loadAccountInfo(usr, token) {
       $("#role").val(res.role);
 
       displayProfileImage(res.image);
+      displayNavbarProfileImage(res.image);
 
       // Clear password fields
       $("#password, #password_confirmation").val("");
+      accountInfoLoaded = true;
     },
     error: function (xhr) {
       console.error("Error fetching account info:", xhr);
-      alert("Failed to load account details. Please try again later.");
+      if (xhr.status !== 429) {
+        alert("Failed to load account details. Please try again later.");
+      }
+    },
+    complete: function () {
+      accountInfoRequest = null;
     },
   });
+
+  return accountInfoRequest;
 }
 
 // ==========================
@@ -305,48 +334,6 @@ $(document).ready(function () {
     $(".close-btn").hide();
     $(".menu-btn").show();
   });
-
-  // -------------------------------
-  // Global AJAX Loading Animation
-  // -------------------------------
-  $(document)
-    .ajaxStart(() => $("#wait").show())
-    .ajaxComplete(() => $("#wait").hide());
-
-  // --- Load Navbar Profile Image ---
-  if (usr) {
-    $.ajax({
-      url: `${ip}/api/getAccount_username/${usr}`,
-      type: "GET",
-      headers: {
-        Accept: "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      dataType: "json",
-      success: function (response) {
-        // console.log("User data:", response);
-        const $navbarProfileImage = $("#navbarProfileImage");
-        const $defaultProfileIcon = $("#defaultProfileIcon");
-
-        if (response?.image) {
-          $navbarProfileImage
-            .attr("src", `${ip}/FrontEnd/assets/img/user/${response.image}`)
-            .show();
-          $defaultProfileIcon.hide();
-        } else {
-          $navbarProfileImage.hide();
-          $defaultProfileIcon.show();
-        }
-      },
-      error: function (xhr) {
-        console.error("Error loading profile:", xhr.responseText);
-        $("#navbarProfileImage").hide();
-        $("#defaultProfileIcon").show();
-      },
-    });
-  } else {
-    console.error("No username found in cookie.");
-  }
 
   // --- Profile Image Preview ---
   $("#image").on("change", function (e) {
@@ -620,29 +607,6 @@ $(document).ready(function () {
       }
     });
   });
-
-  // -------------------------------
-  // Fetch Cart Count
-  // -------------------------------
-  function updateCartCount(count) {
-    $("#cart-count").text(count);
-  }
-
-  // Fetch cart count on page load for regular users.
-  if (role === "user" && token) {
-    $.ajax({
-      url: `${ip}/api/cart`,
-      method: "GET",
-      headers: {
-        Authorization: "Bearer " + token,
-        Accept: "application/json",
-      },
-      success: function (response) {
-        console.log("Cart items fetched successfully:", response);
-        updateCartCount(response.count);
-      },
-    });
-  }
 
   /* -----------------------------
      LOGOUT HANDLER

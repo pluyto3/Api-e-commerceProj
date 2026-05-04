@@ -277,32 +277,18 @@ function appendTableRow(tableId, user) {
 }
 
 // =======================================
-// LOAD ADMINS / SELLERS / USERS
+// LOAD ACCOUNT SUMMARY
 // =======================================
-function loadAdmins() {
-  fetchData("admins", (res) => {
-    const admins = res.admins || [];
-    const tableId = "#admin-table";
+function loadAccountsSummary() {
+  fetchData("accountsSummary", (res) => {
+    $("#countedAccounts").text(res.totalAccounts ?? 0);
+    $("#countedAdmins").text(res.totalAdmins ?? 0);
+    $("#countedSellers").text(res.totalSellers ?? 0);
+    $("#countedUsers").text(res.totalUsers ?? 0);
 
-    renderAccountsTable(tableId, admins);
-  });
-}
-
-function loadSellers() {
-  fetchData("sellers", (res) => {
-    const sellers = res.sellers || [];
-    const tableId = "#seller-table";
-
-    renderAccountsTable(tableId, sellers);
-  });
-}
-
-function loadUsers() {
-  fetchData("users", (res) => {
-    const users = res.users || [];
-    const tableId = "#user-table";
-
-    renderAccountsTable(tableId, users);
+    renderAccountsTable("#admin-table", res.admins || []);
+    renderAccountsTable("#seller-table", res.sellers || []);
+    renderAccountsTable("#user-table", res.users || []);
   });
 }
 
@@ -430,22 +416,6 @@ function setupDeleteButtons() {
 }
 
 // =======================================
-// COUNT DASHBOARD STATS
-// =======================================
-function loadCounts() {
-  fetchData("countedAccounts", (res) =>
-    $("#countedAccounts").text(res.totalAccounts),
-  );
-  fetchData("countedAdmins", (res) =>
-    $("#countedAdmins").text(res.totalAdmins),
-  );
-  fetchData("countedSellers", (res) =>
-    $("#countedSellers").text(res.totalSellers),
-  );
-  fetchData("countedUsers", (res) => $("#countedUsers").text(res.totalUsers));
-}
-
-// =======================================
 // INITIALIZE ON DOCUMENT READY
 // =======================================
 $(document).ready(() => {
@@ -463,11 +433,8 @@ $(document).ready(() => {
   setupAccountUpdate();
   setupDeleteButtons();
 
-  // Load all tables and counts
-  loadAdmins();
-  loadSellers();
-  loadUsers();
-  loadCounts();
+  // Load all account tables and counts
+  loadAccountsSummary();
 
   // -------------------------------
   // Fetch Cart Count

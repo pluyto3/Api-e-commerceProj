@@ -98,6 +98,42 @@
               </a>
             </li>
 
+            <li
+              class="nav-item dropdown mr-3"
+              id="notificationNav"
+              style="display: none">
+              <a
+                class="nav-link position-relative d-flex align-items-center"
+                href="#"
+                id="notificationBellToggle"
+                data-toggle="dropdown"
+                aria-haspopup="true"
+                aria-expanded="false">
+                <i class="far fa-bell white-icon fa-lg"></i>
+                <span
+                  id="notification-count"
+                  class="badge bg-danger rounded-pill position-absolute"
+                  aria-live="polite">
+                  0
+                </span>
+              </a>
+              <div
+                class="dropdown-menu dropdown-menu-right notification-dropdown"
+                aria-labelledby="notificationBellToggle">
+                <div class="notification-dropdown-header">
+                  <div>
+                    <p class="notification-dropdown-kicker mb-0">Alerts</p>
+                    <h6 class="mb-0">Notifications</h6>
+                  </div>
+                </div>
+                <div id="notificationList" class="notification-dropdown-body">
+                  <div class="notification-empty-state">
+                    No new notifications.
+                  </div>
+                </div>
+              </div>
+            </li>
+
             <!-- User Dropdown -->
             <li class="nav-item dropdown">
               <a

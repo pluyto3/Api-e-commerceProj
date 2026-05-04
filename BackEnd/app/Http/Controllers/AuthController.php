@@ -509,6 +509,27 @@ class AuthController extends Controller
     }
 
     /**
+     * Get account tables and counts in one request.
+     */
+    public function accountsSummary(){
+
+        $columns = ['user_id', 'username', 'email', 'fullname', 'phone_number', 'role', 'image'];
+        $admins = User::where('role', 'admin')->get($columns);
+        $sellers = User::where('role', 'seller')->get($columns);
+        $users = User::where('role', 'user')->get($columns);
+
+        return response()->json([
+            'admins' => $admins,
+            'sellers' => $sellers,
+            'users' => $users,
+            'totalAccounts' => User::count(),
+            'totalAdmins' => $admins->count(),
+            'totalSellers' => $sellers->count(),
+            'totalUsers' => $users->count(),
+        ], 200);
+    }
+
+    /**
      * Get All Account Counts
      */
     public function countAccounts(){

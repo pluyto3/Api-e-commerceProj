@@ -6,6 +6,7 @@ let token = null;
 let usr = null;
 let role = null;
 let profileImage = null;
+let currentUserId = null;
 
 // =======================================
 // User Session Handling
@@ -15,6 +16,7 @@ function load_user() {
   token = $.cookie("token");
   role = $.cookie("role");
   profileImage = $.cookie("profileImage");
+  currentUserId = $.cookie("user_id") || currentUserId;
 
   // DOM elements
   const $displayUsername = $("#displayUsername");
@@ -58,6 +60,31 @@ function load_user() {
   } else {
     $adminDashboard.hide();
   }
+}
+
+function isOwnSellerCheckoutItem(item = {}) {
+  if (String(role || "").toLowerCase() !== "seller") return false;
+
+  const product = item.product || {};
+  const sellerId =
+    item.seller_id ||
+    item.seller?.user_id ||
+    item.seller?.id ||
+    product.seller_id ||
+    product.seller?.user_id ||
+    product.seller?.id;
+  const sellerUsername =
+    item.seller_username ||
+    item.seller?.username ||
+    product.seller_username ||
+    product.seller?.username;
+
+  return Boolean(
+    (currentUserId && sellerId && String(currentUserId) === String(sellerId)) ||
+      (usr &&
+        sellerUsername &&
+        String(usr).toLowerCase() === String(sellerUsername).toLowerCase()),
+  );
 }
 
 // Data Tables Initialization
@@ -106,6 +133,7 @@ $(document).ready(function () {
       },
       dataType: "json",
       success: function (response) {
+        currentUserId = response?.user_id || response?.id || currentUserId;
         const $navbarProfileImage = $("#navbarProfileImage");
         const $defaultProfileIcon = $("#defaultProfileIcon");
 
@@ -152,6 +180,7 @@ $(document).ready(function () {
     .done(function (accountAjax, locationAjax) {
       const accountResponse = accountAjax[0];
       const locationResponse = locationAjax[0];
+      currentUserId = accountResponse?.user_id || accountResponse?.id || currentUserId;
 
       // Store default account info
       defaultAccountInfo = {
@@ -325,8 +354,9 @@ $(document).ready(function () {
           productStatus === "active" &&
           stock > 0 &&
           stock >= quantity;
+        const isOwnProduct = isOwnSellerCheckoutItem(item);
 
-        if (!isAvailable) {
+        if (!isAvailable || isOwnProduct) {
           checkoutBlocked = true;
         }
         totalAmount += subtotal;
@@ -340,8 +370,14 @@ $(document).ready(function () {
                   <h6 class="font-weight-bold mb-1" style="font-size: 0.95rem;">${name}</h6>
                   <small class="text-muted d-block">Price: ₱${price.toLocaleString()}</small>
                   <small class="text-muted d-block">Qty: ${quantity}</small>
-                  <small class="${isAvailable ? "text-muted" : "text-danger font-weight-bold"} d-block">
-                    ${isAvailable ? `Stock: ${stock}` : "Stock changed. Please update your cart."}
+                  <small class="${isAvailable && !isOwnProduct ? "text-muted" : "text-danger font-weight-bold"} d-block">
+                    ${
+                      isOwnProduct
+                        ? "You cannot check out your own product."
+                        : isAvailable
+                          ? `Stock: ${stock}`
+                          : "Stock changed. Please update your cart."
+                    }
                   </small>
               </div>
               <div class="font-weight-bold ml-2">
@@ -360,7 +396,7 @@ $(document).ready(function () {
         );
       } else if (checkoutBlocked) {
         $(".cartItems").prepend(
-          '<div class="alert alert-warning">Some selected items are no longer available. Please return to your cart and update the quantity.</div>',
+          '<div class="alert alert-warning">Some selected items are no longer available or belong to your own shop. Please return to your cart and update your selection.</div>',
         );
       }
 
@@ -398,7 +434,7 @@ $(document).ready(function () {
     if (checkoutBlocked) {
       Swal.fire(
         "Review Cart",
-        "Some selected items are no longer available. Please update your cart before checking out.",
+        "Some selected items are no longer available or belong to your own shop. Please update your cart before checking out.",
         "warning",
       );
       return;
@@ -434,6 +470,21 @@ $(document).ready(function () {
     if (!Array.isArray(selectedItemIDs) || selectedItemIDs.length === 0) {
       alert(
         "No items are selected. Please select items from your cart to check out.",
+      );
+      return;
+    }
+
+    const selectedOwnProduct = allCartItems.some(
+      (item) =>
+        selectedItemIDs.some((id) => String(id) === String(item.addTocart_id)) &&
+        isOwnSellerCheckoutItem(item),
+    );
+
+    if (selectedOwnProduct) {
+      Swal.fire(
+        "Not Allowed",
+        "You cannot place an order for products from your own shop.",
+        "warning",
       );
       return;
     }

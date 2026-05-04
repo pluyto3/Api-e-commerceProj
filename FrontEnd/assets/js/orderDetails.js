@@ -10,6 +10,8 @@ let globalOrders = [];
 let ordersTable = null;
 let currentUserProfile = null;
 let currentUserId = null;
+let currentSellerOrderView = "sales";
+let activeUserUrlFilter = "";
 
 // =======================================
 // User Session Handling
@@ -41,6 +43,7 @@ function load_user() {
   const $sidebarProduct = $("#product");
   const $adminWorkingPanel = $("#adminWorkingPanel");
   const $userWorkingPanel = $("#userWorkingPanel");
+  const $sellerOrderViewSwitcher = $(".seller-order-view-switcher");
 
   // No session → show login/register
   if (!usr || !token) {
@@ -63,6 +66,7 @@ function load_user() {
     $sidebarProduct.hide();
     $adminWorkingPanel.hide();
     $userWorkingPanel.hide();
+    $sellerOrderViewSwitcher.hide();
     return;
   }
 
@@ -116,9 +120,16 @@ function load_user() {
     $productUi.hide();
   }
 
+  applySellerOrderView();
+
+  if (role === "seller") {
+    return;
+  }
+
   if (isRegularUser) {
     $adminWorkingPanel.hide();
     $userWorkingPanel.show();
+    $("#userWorkingPanel h1").text("My Orders");
   } else {
     $adminWorkingPanel.show();
     $userWorkingPanel.hide();
@@ -129,15 +140,89 @@ function load_user() {
 // Helpers
 // =======================================
 function isAdminView() {
-  return role === "admin" || isSellerView();
+  return role === "admin" || isSellerSalesView();
 }
 
 function isSellerView() {
   return role === "seller";
 }
 
+function isSellerSalesView() {
+  return isSellerView() && currentSellerOrderView === "sales";
+}
+
+function isSellerPurchasesView() {
+  return isSellerView() && currentSellerOrderView === "purchases";
+}
+
 function isUserView() {
-  return !!usr && !!token && !isAdminView();
+  return !!usr && !!token && (isSellerPurchasesView() || !isAdminView());
+}
+
+function getOrderDetailsUrlParams() {
+  return new URLSearchParams(window.location.search || "");
+}
+
+function initializeUserOrderUrlFilters() {
+  const params = getOrderDetailsUrlParams();
+  const requestedStatus = normalizeStatus(params.get("status"));
+  const requestedFilter = normalizeStatus(params.get("filter"));
+  const validStatuses = [
+    "all",
+    "pending",
+    "pending_payment",
+    "packed",
+    "processing",
+    "to_ship",
+    "shipped",
+    "delivered",
+    "completed",
+    "cancelled",
+  ];
+
+  activeUserUrlFilter = ["payment", "tracking"].includes(requestedFilter)
+    ? requestedFilter
+    : "";
+
+  if (requestedStatus && validStatuses.includes(requestedStatus)) {
+    const statusTab = getMainOrderStatus(requestedStatus);
+    $(".order-status-tabs .nav-link").removeClass("active");
+    $(`.order-status-tabs .nav-link[data-status="${statusTab}"]`).addClass(
+      "active",
+    );
+  }
+
+  if (role === "seller" && (activeUserUrlFilter || requestedStatus)) {
+    currentSellerOrderView = "purchases";
+  }
+}
+
+function applySellerOrderView() {
+  const $switcher = $(".seller-order-view-switcher");
+  const $adminWorkingPanel = $("#adminWorkingPanel");
+  const $userWorkingPanel = $("#userWorkingPanel");
+
+  if (!isSellerView()) {
+    $switcher.hide();
+    return;
+  }
+
+  $switcher.show();
+  $(".seller-order-view-btn")
+    .removeClass("active btn-dark")
+    .addClass("btn-outline-dark");
+  $(`.seller-order-view-btn[data-view="${currentSellerOrderView}"]`)
+    .addClass("active btn-dark")
+    .removeClass("btn-outline-dark");
+
+  if (isSellerPurchasesView()) {
+    $adminWorkingPanel.hide();
+    $userWorkingPanel.show();
+    $("#userWorkingPanel h1").text("My Purchases");
+  } else {
+    $adminWorkingPanel.show();
+    $userWorkingPanel.hide();
+  }
 }
 
 function getLoggedInUserId() {
@@ -188,7 +273,7 @@ function extractApiErrorMessage(xhr, fallback = "Something went wrong.") {
 }
 
 function isItemForLoggedInSeller(item = {}) {
-  if (!isSellerView()) return true;
+  if (!isSellerSalesView()) return true;
 
   const sellerId = getLoggedInUserId();
   const sellerIdCandidates = [
@@ -199,10 +284,24 @@ function isItemForLoggedInSeller(item = {}) {
     item.product?.seller?.user_id,
     item.product?.seller?.id,
   ];
+  const sellerNameCandidates = [
+    item.seller_username,
+    item.seller_name,
+    item.seller?.username,
+    item.product?.seller_username,
+    item.product?.seller?.username,
+  ];
 
   if (
     sellerId &&
     sellerIdCandidates.some((candidate) => valuesMatch(candidate, sellerId))
+  ) {
+    return true;
+  }
+
+  if (
+    usr &&
+    sellerNameCandidates.some((candidate) => namesMatch(candidate, usr))
   ) {
     return true;
   }
@@ -217,11 +316,13 @@ function getVisibleOrderItems(order = {}, itemsOverride) {
   const rawItems = itemsOverride || order.items || [];
   if (!Array.isArray(rawItems)) return [];
 
-  return isSellerView() ? rawItems.filter(isItemForLoggedInSeller) : rawItems;
+  return isSellerSalesView()
+    ? rawItems.filter(isItemForLoggedInSeller)
+    : rawItems;
 }
 
 function isOrderForLoggedInSeller(order = {}) {
-  if (!isSellerView()) return true;
+  if (!isSellerSalesView()) return true;
 
   const visibleItems = getVisibleOrderItems(order);
   if (visibleItems.length > 0) {
@@ -242,7 +343,7 @@ function filterOrdersForCurrentRole(orders = []) {
     return filterOrdersForLoggedInUser(normalizedOrders);
   }
 
-  if (isSellerView()) {
+  if (isSellerSalesView()) {
     return normalizedOrders.filter(isOrderForLoggedInSeller);
   }
 
@@ -280,6 +381,14 @@ function normalizeStatus(status) {
 function formatStatusLabel(status) {
   if (!status) return "N/A";
   return String(status).replace(/_/g, " ").toUpperCase();
+}
+
+function formatStatusText(status) {
+  if (!status) return "N/A";
+  return String(status)
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function mapStatusToSelectValue(status) {
@@ -358,6 +467,66 @@ function renderStatusBadge(status, type = "order") {
 function renderPaymentBadge(status) {
   const label = formatStatusLabel(status || "pending");
   return `<span class="order-status-badge ${getPaymentBadgeClass(status)}">${label}</span>`;
+}
+
+function hasPaymentUpdate(order = {}) {
+  const paymentStatus = normalizeStatus(order.payment_status);
+  return Boolean(paymentStatus && paymentStatus !== "pending");
+}
+
+function getOrderTrackingNumber(order = {}) {
+  return (
+    order.tracking_number ||
+    order.tracking_no ||
+    order.trackingCode ||
+    order.tracking_code ||
+    order.tracking?.number ||
+    order.tracking?.tracking_number ||
+    ""
+  );
+}
+
+function getOrderCourier(order = {}) {
+  return (
+    order.courier ||
+    order.courier_name ||
+    order.shipping_courier ||
+    order.delivery_courier ||
+    order.tracking?.courier ||
+    order.tracking?.courier_name ||
+    ""
+  );
+}
+
+function getOrderShippingDate(order = {}) {
+  return (
+    order.delivery_date ||
+    order.delivered_at ||
+    order.shipping_date ||
+    order.shipped_at ||
+    order.tracking?.delivery_date ||
+    order.tracking?.shipped_at ||
+    ""
+  );
+}
+
+function hasTrackingInfo(order = {}) {
+  return Boolean(
+    String(getOrderTrackingNumber(order) || "").trim() ||
+    String(getOrderCourier(order) || "").trim(),
+  );
+}
+
+function matchesUserUrlFilter(order = {}) {
+  if (activeUserUrlFilter === "payment") {
+    return hasPaymentUpdate(order);
+  }
+
+  if (activeUserUrlFilter === "tracking") {
+    return hasTrackingInfo(order);
+  }
+
+  return true;
 }
 
 function renderOrderTimeline(status) {
@@ -616,7 +785,7 @@ function getOrderSellerNames(order) {
     return [...sellerSet];
   }
 
-  if (role === "seller" && usr) {
+  if (isSellerSalesView() && usr) {
     return [usr];
   }
 
@@ -748,7 +917,9 @@ function getUserOrderSearchText(order) {
   const orderId = order?.checkout_id || order?.order_id || "N/A";
   const sellerDisplay = getOrderSellerDisplayName(order);
   const sellerNames = getOrderSellerNames(order).join(" ");
-  const tracking = order?.tracking_number || "Not available";
+  const tracking = getOrderTrackingNumber(order) || "Not available";
+  const courier = getOrderCourier(order) || "";
+  const shippingDate = getOrderShippingDate(order) || "";
   const items = getOrderItems(order);
   const itemNames = items.map((item) => item.productName).join(" ");
   const headerTitle =
@@ -773,6 +944,8 @@ function getUserOrderSearchText(order) {
     sellerDisplay,
     sellerNames,
     tracking,
+    courier,
+    shippingDate,
     order?.shipping_status || order?.status || "",
     order?.payment_status || "",
     formattedStatus,
@@ -834,12 +1007,19 @@ function renderUserOrders() {
     const searchHaystack = getUserOrderSearchText(order);
 
     const statusMatches = matchesUserStatusFilter(order, activeStatus);
+    const urlFilterMatches = matchesUserUrlFilter(order);
     const sellerMatches =
       !selectedSeller || sellerNames.includes(selectedSeller);
     const dateMatches = !selectedDate || dateValue === selectedDate;
     const searchMatches = !searchTerm || searchHaystack.includes(searchTerm);
 
-    return statusMatches && sellerMatches && dateMatches && searchMatches;
+    return (
+      statusMatches &&
+      urlFilterMatches &&
+      sellerMatches &&
+      dateMatches &&
+      searchMatches
+    );
   });
 
   if (filteredOrders.length === 0) {
@@ -855,11 +1035,17 @@ function renderUserOrders() {
     const total = formatCurrency(getUserOrderTotal(order));
     const statusKey = getMainOrderStatus(order.shipping_status || order.status);
     const statusLabel = formatStatusLabel(statusKey).toLowerCase();
-    const paymentLabel = formatStatusLabel(
+    const statusDisplayLabel = formatStatusText(statusKey);
+    const paymentDisplayLabel = formatStatusText(
       order.payment_status || "pending",
-    ).toLowerCase();
+    );
     const date = formatDate(order.created_at || order.updated_at);
-    const tracking = order.tracking_number || "Not available";
+    const tracking = getOrderTrackingNumber(order) || "Not available";
+    const courier = getOrderCourier(order) || "Not available";
+    const shippingDate = getOrderShippingDate(order);
+    const deliveryDate = shippingDate
+      ? formatDate(shippingDate)
+      : "Not available";
     const items = getOrderItems(order);
     const headerTitle =
       items.length > 0
@@ -919,8 +1105,11 @@ function renderUserOrders() {
             <div class="order-card-footer d-flex flex-column flex-md-row justify-content-between align-items-start">
               <div class="small text-muted order-card-meta mb-3 mb-md-0">
                 <div>Date: ${date}</div>
-                <div>Tracking: ${tracking}</div>
-                <div>Payment: ${paymentLabel}</div>
+                <div>Payment Status: ${paymentDisplayLabel}</div>
+                <div>Tracking Number: ${tracking}</div>
+                <div>Courier: ${courier}</div>
+                <div>Order Status: ${statusDisplayLabel}</div>
+                <div>Delivery/Shipping Date: ${deliveryDate}</div>
               </div>
               <div class="d-flex">
                 <button class="btn btn-dark btn-sm rounded px-3 mr-2" data-toggle="modal" data-target="#orderDetailsModal" data-id="${orderId}">
@@ -948,7 +1137,8 @@ function renderUserOrders() {
 // =======================================
 function fetchBuyerOrders() {
   console.log("Attempting to fetch orders...");
-  const endpoint = isAdminView()
+  const managementView = isAdminView();
+  const endpoint = managementView
     ? `${ip}/api/checkout/all`
     : `${ip}/api/checkout/orders`;
 
@@ -961,12 +1151,12 @@ function fetchBuyerOrders() {
     },
     success: function (res) {
       console.log("Buyer Orders:", res);
-      const orders = isAdminView() ? res : res.data || res;
+      const orders = managementView ? res : res.data || res;
       const normalizedOrders = Array.isArray(orders) ? orders : [];
 
       globalOrders = filterOrdersForCurrentRole(normalizedOrders);
 
-      if (isAdminView()) {
+      if (managementView) {
         renderOrders($("#statusFilter").val() || "all");
       } else if (isUserView()) {
         populateUserSellerFilter();
@@ -977,10 +1167,12 @@ function fetchBuyerOrders() {
       console.error("Error loading orders:", err);
       const errorRow = `<tr><td colspan="8" class="text-center text-danger py-4">Failed to load orders.</td></tr>`;
 
-      if (isAdminView()) {
+      if (managementView) {
         $("#buyerOrders").html(errorRow);
       } else {
-        $("#userOrderListBody").html(errorRow);
+        $("#userOrderListCards").html(
+          `<div class="text-center text-danger py-5">Failed to load orders.</div>`,
+        );
       }
     },
   });
@@ -1052,7 +1244,7 @@ function renderOrders(filter = "All") {
     return;
   }
 
-  const canUpdateStatus = isAdminView();
+  const canUpdateStatus = role === "admin" || isSellerSalesView();
 
   filteredOrders.forEach((order) => {
     const statusKey = getMainOrderStatus(order.shipping_status || order.status);
@@ -1193,7 +1385,7 @@ function openStatusModal(orderId, currentStatus) {
     );
   }
 
-  if (isSellerView()) {
+  if (isSellerSalesView()) {
     $("#paymentStatusGroup").hide();
     $("#newPaymentStatus").prop("disabled", true).val("");
   } else {
@@ -1210,6 +1402,15 @@ function openStatusModal(orderId, currentStatus) {
 // Submit Status Update Logic
 // =======================================
 function submitOrderStatusUpdate() {
+  if (isSellerPurchasesView() || isUserView()) {
+    Swal.fire(
+      "Not Allowed",
+      "Purchases cannot be managed from this view.",
+      "warning",
+    );
+    return;
+  }
+
   const orderId = $("#statusOrderId").val();
   const newStatus = $("#newOrderStatus").val();
   const newPaymentStatus = $("#newPaymentStatus").val();
@@ -1358,6 +1559,8 @@ function cancelOrder(orderId) {
 // =======================================
 $(document).ready(function () {
   load_user();
+  initializeUserOrderUrlFilters();
+  applySellerOrderView();
   fetchBuyerOrders();
 
   // Global AJAX handlers for loading indicator
@@ -1417,7 +1620,7 @@ $(document).ready(function () {
         if (isUserView() && globalOrders.length > 0) {
           populateUserSellerFilter();
           renderUserOrders();
-        } else if (isSellerView() && globalOrders.length > 0) {
+        } else if (isSellerSalesView() && globalOrders.length > 0) {
           renderOrders($("#statusFilter").val() || "all");
         }
       },
@@ -1441,7 +1644,7 @@ $(document).ready(function () {
   }
 
   // Fetch cart count on page load for regular users.
-  if (role === "user" && token) {
+  if ((role === "user" || role === "seller") && token) {
     $.ajax({
       url: `${ip}/api/cart`,
       method: "GET",
@@ -1461,9 +1664,22 @@ $(document).ready(function () {
   // -------------------------------
   $(".order-status-tabs .nav-link").on("click", function (e) {
     e.preventDefault();
+    activeUserUrlFilter = "";
     $(".order-status-tabs .nav-link").removeClass("active");
     $(this).addClass("active");
     renderUserOrders();
+  });
+
+  $(".seller-order-view-btn").on("click", function () {
+    const selectedView = $(this).data("view");
+    if (!isSellerView() || selectedView === currentSellerOrderView) {
+      return;
+    }
+
+    currentSellerOrderView = selectedView;
+    applySellerOrderView();
+    globalOrders = [];
+    fetchBuyerOrders();
   });
 
   // -------------------------------

@@ -8,6 +8,9 @@ let role = null;
 let profileImage = null;
 let currentProductStock = 0;
 let currentProductAvailable = false;
+let currentUserId = null;
+let currentProductSellerId = null;
+let currentProductSellerUsername = "";
 
 function getApiHeaders(extraHeaders = {}) {
   return {
@@ -25,6 +28,7 @@ function load_user() {
   token = $.cookie("token");
   role = $.cookie("role");
   profileImage = $.cookie("profileImage");
+  currentUserId = $.cookie("user_id") || currentUserId;
 
   // DOM elements
   const $displayUsername = $("#displayUsername");
@@ -93,6 +97,7 @@ $(document).ready(function () {
       headers: getApiHeaders(),
       dataType: "json",
       success: function (response) {
+        currentUserId = response?.user_id || response?.id || currentUserId;
         const $navbarProfileImage = $("#navbarProfileImage");
         const $defaultProfileIcon = $("#defaultProfileIcon");
 
@@ -163,6 +168,10 @@ $(document).ready(function () {
         ? `${ip}/FrontEnd/assets/img/product/${product.image}`
         : "assets/img/back.jpg";
       const price = parseFloat(product.product_price || product.price || 0);
+      currentProductSellerId =
+        product.seller?.user_id || product.seller?.id || product.seller_id || "";
+      currentProductSellerUsername =
+        product.seller?.username || product.seller_username || "";
 
       $("#main-img").attr("src", imgUrl);
       $("#category-name").text(category);
@@ -305,6 +314,30 @@ $(document).ready(function () {
     $("#cart-count").text(count);
   }
 
+  function isOwnSellerProduct() {
+    if (String(role || "").toLowerCase() !== "seller") return false;
+
+    const sellerIdMatches =
+      currentUserId &&
+      currentProductSellerId &&
+      String(currentUserId) === String(currentProductSellerId);
+    const sellerUsernameMatches =
+      usr &&
+      currentProductSellerUsername &&
+      String(usr).toLowerCase() ===
+        String(currentProductSellerUsername).toLowerCase();
+
+    return Boolean(sellerIdMatches || sellerUsernameMatches);
+  }
+
+  function warnOwnSellerProduct() {
+    Swal.fire(
+      "Not Allowed",
+      "You cannot buy or add your own product to the cart.",
+      "warning",
+    );
+  }
+
   // --- Add to Cart ---
   $(".product-add-to-cart-btn").on("click", function () {
     const quantity =
@@ -331,6 +364,11 @@ $(document).ready(function () {
           window.location.href = "login.html";
         }
       });
+      return;
+    }
+
+    if (isOwnSellerProduct()) {
+      warnOwnSellerProduct();
       return;
     }
 
@@ -388,6 +426,11 @@ $(document).ready(function () {
           window.location.href = "login.html";
         }
       });
+      return;
+    }
+
+    if (isOwnSellerProduct()) {
+      warnOwnSellerProduct();
       return;
     }
 

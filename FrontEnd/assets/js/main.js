@@ -6,6 +6,7 @@ let token = null;
 let usr = null;
 let role = null;
 let profileImage = null;
+let currentUserId = null;
 
 function getApiHeaders(extraHeaders = {}) {
   return {
@@ -62,15 +63,34 @@ function updateCartCount(count) {
 
 function renderHomepageCartButton(product) {
   const productId = product.product_id;
+  const sellerId =
+    product.seller?.user_id || product.seller?.id || product.seller_id || "";
+  const sellerUsername = product.seller?.username || product.seller_username || "";
 
   return `
     <button type="button"
             class="btn homepage-cart-btn add-to-cart"
-            data-product-id="${productId}">
+            data-product-id="${productId}"
+            data-seller-id="${escapeHtml(sellerId)}"
+            data-seller-username="${escapeHtml(sellerUsername)}">
       <i class="fas fa-cart-plus"></i>
       <span>Add to Cart</span>
     </button>
   `;
+}
+
+function isOwnSellerProductButton($button) {
+  if (String(role || "").toLowerCase() !== "seller") return false;
+
+  const sellerId = $button.data("seller-id");
+  const sellerUsername = $button.data("seller-username");
+
+  return Boolean(
+    (currentUserId && sellerId && String(currentUserId) === String(sellerId)) ||
+      (usr &&
+        sellerUsername &&
+        String(usr).toLowerCase() === String(sellerUsername).toLowerCase()),
+  );
 }
 
 function resetOwlCarousel($carousel) {
@@ -288,6 +308,7 @@ function load_user() {
   token = $.cookie("token");
   role = $.cookie("role");
   profileImage = $.cookie("profileImage");
+  currentUserId = $.cookie("user_id") || currentUserId;
 
   const $displayUsername = $("#displayUsername");
   const $login = $("#login");
@@ -349,6 +370,7 @@ $(document).ready(() => {
       type: "GET",
       headers: getApiHeaders(),
       success: (response) => {
+        currentUserId = response?.user_id || response?.id || currentUserId;
         const $navbarProfileImage = $("#navbarProfileImage");
         const $defaultProfileIcon = $("#defaultProfileIcon");
 
@@ -455,6 +477,15 @@ $(document).ready(() => {
 
     if (!token) {
       Swal.fire("Warning", "Please login to add items to the cart.", "warning");
+      return;
+    }
+
+    if (isOwnSellerProductButton($(this))) {
+      Swal.fire(
+        "Not Allowed",
+        "You cannot add your own product to the cart.",
+        "warning",
+      );
       return;
     }
 
