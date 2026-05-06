@@ -562,10 +562,10 @@
       $dropdown.find(".guest-only").show();
       setCartVisibility(false);
       setNotificationVisibility(false);
-      $("#displayUsername").text("My Account");
-      $("#username").text("My Account");
+      $("#displayUsername").html("Sign In");
+      $("#username").html("Sign In");
       $("#navbarProfileImage").hide();
-      $("#defaultProfileIcon").show();
+      $("#defaultProfileIcon").hide();
       return;
     }
 

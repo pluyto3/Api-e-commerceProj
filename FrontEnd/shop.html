@@ -145,27 +145,37 @@
               </a>
 
               <!-- Dropdown Menu -->
-              <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbardrop">
+              <div
+                class="dropdown-menu dropdown-menu-right"
+                aria-labelledby="navbardrop">
                 <a class="dropdown-item auth-only" href="account.html">
                   <i class="fas fa-user-circle mr-2"></i> Profile
                 </a>
-                <a class="dropdown-item user-only seller-buyer-optional" href="orderDetails.html">
+                <a
+                  class="dropdown-item user-only seller-buyer-optional"
+                  href="orderDetails.html">
                   <i class="fas fa-receipt mr-2"></i> My Orders
                 </a>
                 <a class="dropdown-item buyer-seller-only" href="address.html">
                   <i class="fas fa-map-marker-alt mr-2"></i> My Address
                 </a>
-                <div class="dropdown-divider seller-divider admin-divider"></div>
+                <div
+                  class="dropdown-divider seller-divider admin-divider"></div>
                 <a class="dropdown-item seller-only" href="dashboard.html">
                   <i class="fas fa-store mr-2"></i> Seller Dashboard
                 </a>
-                <a class="dropdown-item seller-only" href="product.html" id="productUi">
+                <a
+                  class="dropdown-item seller-only"
+                  href="product.html"
+                  id="productUi">
                   <i class="fas fa-box-open mr-2"></i> Your Products
                 </a>
                 <a class="dropdown-item seller-only" href="orderDetails.html">
                   <i class="fas fa-shipping-fast mr-2"></i> Customer Orders
                 </a>
-                <a class="dropdown-item admin-only admin-dashboard-link" href="dashboard.html">
+                <a
+                  class="dropdown-item admin-only admin-dashboard-link"
+                  href="dashboard.html">
                   <i class="fas fa-tachometer-alt mr-2"></i> Admin Dashboard
                 </a>
                 <a class="dropdown-item admin-only" href="manageAccounts.html">
@@ -177,7 +187,8 @@
                 <a class="dropdown-item admin-only" href="orderDetails.html">
                   <i class="fas fa-truck mr-2"></i> Orders
                 </a>
-                <div class="dropdown-divider user-divider seller-divider admin-divider"></div>
+                <div
+                  class="dropdown-divider user-divider seller-divider admin-divider"></div>
                 <a class="dropdown-item guest-only" href="register.html">
                   <i class="fas fa-user-plus mr-2"></i> Register
                 </a>
@@ -195,7 +206,7 @@
     </nav>
 
     <main class="bg-light pb-5 shop-main">
-      <div class="container-fluid px-4 mt-5 pt-5">
+      <div class="container-fluid px-3 pt-2">
         <div
           id="promoCarousel"
           class="carousel slide shadow-sm rounded overflow-hidden mb-4"
@@ -351,29 +362,47 @@
       </div>
     </main>
 
-    <!--Footer-->
+    <!-- Footer -->
     <footer class="footer-shop">
-      <div class="social-share">
+      <div class="footer-shop-social">
         <ul>
-          <li><i class="fab fa-facebook"></i></li>
-          <li><i class="fab fa-twitter"></i></li>
-          <li><i class="fab fa-instagram-square"></i></li>
-          <li><i class="fab fa-pinterest"></i></li>
-          <li><i class="fab fa-youtube"></i></li>
+          <li>
+            <a href="#" aria-label="Facebook"
+              ><i class="fab fa-facebook"></i
+            ></a>
+          </li>
+          <li>
+            <a href="#" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
+          </li>
+          <li>
+            <a href="#" aria-label="Instagram"
+              ><i class="fab fa-instagram-square"></i
+            ></a>
+          </li>
+          <li>
+            <a href="#" aria-label="Pinterest"
+              ><i class="fab fa-pinterest"></i
+            ></a>
+          </li>
+          <li>
+            <a href="#" aria-label="YouTube"><i class="fab fa-youtube"></i></a>
+          </li>
         </ul>
       </div>
+
       <div class="general-info-shop">
-        <div class="help">
+        <div class="footer-column help">
           <h3>Help</h3>
           <ul>
-            <li>Frequently Ask Questions</li>
-            <li>Delivered Information</li>
-            <li>Arrange a Return</li>
-            <li>Product Recall</li>
-            <li>Customer Services</li>
+            <li><a href="#">Frequently Asked Questions</a></li>
+            <li><a href="#">Delivery Information</a></li>
+            <li><a href="#">Arrange a Return</a></li>
+            <li><a href="#">Product Recall</a></li>
+            <li><a href="#">Customer Services</a></li>
           </ul>
         </div>
-        <div class="store-location">
+
+        <div class="footer-column store-location">
           <h3>Our Locations</h3>
           <ul>
             <li>Tangub</li>
@@ -383,14 +412,38 @@
             <li>Mukas</li>
           </ul>
         </div>
-        <div class="legal">
+
+        <div class="footer-column legal">
           <h3>Privacy</h3>
           <ul>
-            <li>Cookies & Privacy Policy</li>
-            <li>Terms & Conditions</li>
+            <li><a href="#">Cookies & Privacy Policy</a></li>
+            <li><a href="#">Terms & Conditions</a></li>
           </ul>
         </div>
       </div>
+
+      <div class="footer-shop-bottom">
+        <p>© 2026 Hanz-Go. All rights reserved.</p>
+      </div>
     </footer>
+
+    <!-- loader and scripts -->
+    <div
+      id="wait"
+      style="
+        display: none;
+        width: 69px;
+        height: 89px;
+        border: 1px solid black;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        padding: 2px;
+      ">
+      <img
+        src="assets/img/demo_wait.gif"
+        width="64"
+        height="64" /><br />Loading..
+    </div>
   </body>
 </html>

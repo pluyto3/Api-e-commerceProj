@@ -52,6 +52,7 @@ Route::controller(AuthController::class)->group(function () {
   Route::post('/reset-password/{token}', 'resetPassword'); // Reset Password
   Route::get('/getAccount_username/{username}', 'getAccount_username'); // Get a specific user by username
   Route::put('/updateImageAccount/{id}', 'updateImageAccount'); // Update Account Image
+  Route::post('/contact/send-email', 'sendContactEmail'); // Send Contact Message
 });
 
 // Product Routes
