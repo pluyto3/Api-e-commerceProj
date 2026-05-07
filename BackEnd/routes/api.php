@@ -164,5 +164,6 @@ Route::group(['prefix' => 'seller'], function($router) {
 // FCM Token Routes
 Route::post('/fcm-token', [FcmTokenController::class, 'store']);
 
-
+// Test Notification Route
+Route::post('/test-push/{userId}', [FcmTokenController::class, 'sendTestNotification']);
     

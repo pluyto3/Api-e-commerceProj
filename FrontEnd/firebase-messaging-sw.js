@@ -24,9 +24,10 @@ messaging.onBackgroundMessage(function (payload) {
 
   const notificationOptions = {
     body: payload.notification?.body || "",
-    icon: "assets/img/hanz-goLogo.png",
+    icon: "http://localhost/e-commerce/FrontEnd/assets/img/hanz-goLogo.png",
     data: {
-      url: payload.data?.url || "index.html",
+      url:
+        payload.data?.url || "http://localhost/e-commerce/FrontEnd/index.html",
     },
   };
 

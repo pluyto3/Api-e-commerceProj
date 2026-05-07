@@ -5,9 +5,52 @@ namespace App\Http\Controllers;
 use App\Models\FcmToken;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Kreait\Laravel\Firebase\Facades\Firebase;
+use Kreait\Firebase\Messaging\CloudMessage;
+use Kreait\Firebase\Messaging\Notification;
+use Kreait\Firebase\Messaging\WebPushConfig;
 
 class FcmTokenController extends Controller
 {
+    public function sendTestNotification($userId) {
+        $fcmToken = FcmToken::where('user_id', $userId)
+            ->latest('last_used_at')
+            ->value('token');
+
+        if (!$fcmToken) {
+            return response()->json([
+                'message' => 'No FCM token found for this user.',
+            ], 404);
+        }
+
+        $message = CloudMessage::new()
+            ->withNotification(Notification::create(
+                'Hanz-Go Notification',
+                'This is a test push notification from your Laravel backend.'
+            ))
+            ->withData([
+                'type' => 'test',
+                'url' => 'orderDetails.html',
+            ])
+            ->withWebPushConfig(WebPushConfig::fromArray([
+                'notification' => [
+                    'title' => 'Hanz-Go Notification',
+                    'body' => 'This is a test push notification from your Laravel backend.',
+                    'icon' => 'http://localhost/e-commerce/FrontEnd/assets/img/hanz-goLogo.png',
+                ],
+                'fcm_options' => [
+                    'link' => 'http://localhost/e-commerce/FrontEnd/orderDetails.html',
+                ],
+            ]))
+            ->toToken($fcmToken);
+
+        Firebase::messaging()->send($message);
+
+        return response()->json([
+            'message' => 'Test notification sent successfully.',
+        ]);
+    }
+
     public function store(Request $request)
     {
         $request->validate([
