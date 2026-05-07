@@ -11,6 +11,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\AddToCartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\FcmTokenController;
 
 /*
 |--------------------------------------------------------------------------
@@ -159,6 +160,9 @@ Route::group(['prefix' => 'seller'], function($router) {
         Route::get('/dashboard', 'sellerDashboard'); // Get seller dashboard data
     });
 });
+
+// FCM Token Routes
+Route::post('/fcm-token', [FcmTokenController::class, 'store']);
 
 
     
