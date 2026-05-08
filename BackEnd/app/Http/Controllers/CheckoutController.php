@@ -11,6 +11,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use App\Services\PushNotificationService;
 
 class CheckoutController extends Controller
 {
@@ -502,6 +503,42 @@ class CheckoutController extends Controller
         }
 
         $checkout->load(['user', 'items.product.brand', 'items.product.seller', 'items.seller']);
+
+        $buyerUserId = $checkout->user_id;
+        $orderId = $checkout->checkout_id;
+
+        if ($shippingStatus) {
+            app(PushNotificationService::class)->sendToUser(
+                $buyerUserId,
+                'Order Status Updated',
+                'Your order #' . $orderId . ' is now ' . ucfirst(str_replace('_', ' ', $shippingStatus)) . '.',
+                'orderDetails.html',
+                'order_status',
+                $orderId
+            );
+        }
+
+        if ($paymentStatus) {
+            app(PushNotificationService::class)->sendToUser(
+                $buyerUserId,
+                'Payment Status Updated',
+                'Your payment for order #' . $orderId . ' is now ' . ucfirst($paymentStatus) . '.',
+                'orderDetails.html',
+                'payment_status',
+                $orderId
+            );
+        }
+
+        if ($incomingTracking !== '') {
+            app(PushNotificationService::class)->sendToUser(
+                $buyerUserId,
+                'Tracking Number Updated',
+                'Tracking number was added for your order #' . $orderId . '.',
+                'orderDetails.html',
+                'tracking_update',
+                $orderId
+            );
+        }
 
         return response()->json([
             'msg' => 'Order status updated successfully.',

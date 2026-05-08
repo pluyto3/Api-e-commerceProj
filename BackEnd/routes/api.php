@@ -12,6 +12,7 @@ use App\Http\Controllers\AddToCartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FcmTokenController;
+use App\Http\Controllers\NotificationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -166,4 +167,13 @@ Route::post('/fcm-token', [FcmTokenController::class, 'store']);
 
 // Test Notification Route
 Route::post('/test-push/{userId}', [FcmTokenController::class, 'sendTestNotification']);
+
+// Notification Routes
+Route::group(['prefix' => 'notifications'], function($router) {
+    Route::controller(NotificationController::class)->group(function () {
+        Route::get('/notifications', 'index');
+        Route::post('/notifications/{id}/read', 'markAsRead');
+        Route::post('/notifications/read-all', 'markAllAsRead');
+    });
+});
     
