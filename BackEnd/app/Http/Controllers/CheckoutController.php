@@ -57,7 +57,7 @@ class CheckoutController extends Controller
         $checkout->status = $checkout->shipping_status ?: $checkout->status ?: 'pending';
     }
 
-    private function ensureCheckoutItemsCanBePurchased($cartItems, $products): void
+    private function ensureCheckoutItemsCanBePurchased($cartItems, $products, User $user): void
     {
         foreach ($cartItems as $item) {
             $product = $products->get($item->product_id);
@@ -66,6 +66,12 @@ class CheckoutController extends Controller
             if (!$product) {
                 throw ValidationException::withMessages([
                     'item_ids' => 'One of the selected products no longer exists.',
+                ]);
+            }
+
+            if ((int) $product->seller_id === (int) $user->user_id) {
+                throw ValidationException::withMessages([
+                    'item_ids' => "You cannot check out your own product: {$product->product_name}.",
                 ]);
             }
 
@@ -259,7 +265,27 @@ class CheckoutController extends Controller
                 ->get()
                 ->keyBy('product_id');
 
-            $this->ensureCheckoutItemsCanBePurchased($cartItems, $products);
+            $this->ensureCheckoutItemsCanBePurchased($cartItems, $products, $user);
+
+            $requestedQuantities = $cartItems
+                ->groupBy('product_id')
+                ->map(fn ($items) => $items->sum('quantity'));
+
+            foreach ($requestedQuantities as $productId => $requestedQuantity) {
+                $product = $products->get($productId);
+
+                if (!$product) {
+                    throw ValidationException::withMessages([
+                        'item_ids' => 'One of the selected products no longer exists.',
+                    ]);
+                }
+
+                if ((int) $requestedQuantity > (int) $product->stock_quantity) {
+                    throw ValidationException::withMessages([
+                        'item_ids' => "Only {$product->stock_quantity} item(s) left for {$product->product_name}.",
+                    ]);
+                }
+            }
 
             $computedTotal = $cartItems->sum(function ($item) use ($products) {
                 $product = $products->get($item->product_id);
@@ -451,8 +477,9 @@ class CheckoutController extends Controller
                 }
 
                 if ($shippingStatus === 'cancelled') {
-                    if (!$checkout->cancelled_at) {
+                    if (!$checkout->stock_restored_at) {
                         $this->restoreCheckoutStock($checkout);
+                        $checkout->stock_restored_at = now();
                     }
 
                     $checkout->cancelled_at = now();
@@ -481,8 +508,9 @@ class CheckoutController extends Controller
                 $checkout->payment_status = $paymentStatus;
 
                 if (in_array($paymentStatus, ['failed', 'cancelled'], true) && $this->normalizeShippingStatus($checkout->shipping_status) !== 'cancelled') {
-                    if (!$checkout->cancelled_at) {
+                    if (!$checkout->stock_restored_at) {
                         $this->restoreCheckoutStock($checkout);
+                        $checkout->stock_restored_at = now();
                     }
 
                     $checkout->shipping_status = 'cancelled';
@@ -586,8 +614,9 @@ class CheckoutController extends Controller
                 ]);
             }
 
-            if (!$checkout->cancelled_at) {
+            if (!$checkout->stock_restored_at) {
                 $this->restoreCheckoutStock($checkout);
+                $checkout->stock_restored_at = now();
             }
 
             $checkout->shipping_status = 'cancelled';
