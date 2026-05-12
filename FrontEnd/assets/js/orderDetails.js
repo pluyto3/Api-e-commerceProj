@@ -1415,6 +1415,8 @@ function submitOrderStatusUpdate() {
   const newStatus = $("#newOrderStatus").val();
   const newPaymentStatus = $("#newPaymentStatus").val();
   const trackingNumber = ($("#trackingNumberInput").val() || "").trim();
+  const $saveButton = $("#saveStatusUpdate");
+  const originalButtonText = $saveButton.text();
   const existingOrder = (globalOrders || []).find(
     (order) => String(order.checkout_id) === String(orderId),
   );
@@ -1451,6 +1453,14 @@ function submitOrderStatusUpdate() {
     },
     contentType: "application/json",
     data: JSON.stringify(payload),
+    beforeSend: () => {
+      $("#wait").show();
+      $saveButton
+        .prop("disabled", true)
+        .html(
+          '<span class="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>Saving...',
+        );
+    },
 
     success: function (response) {
       const updatedCheckout = response?.checkout || {};
@@ -1492,6 +1502,10 @@ function submitOrderStatusUpdate() {
         extractApiErrorMessage(xhr, "Failed to update status."),
         "error",
       );
+    },
+    complete: () => {
+      $("#wait").hide();
+      $saveButton.prop("disabled", false).text(originalButtonText);
     },
   });
 }
@@ -1544,12 +1558,17 @@ function cancelOrder(orderId) {
       Accept: "application/json",
     },
     success: function (res) {
-      Swal.fire("Order Cancelled!", "", "success");
+      Swal.fire("Order Cancelled!", res.msg || "", "success");
       fetchBuyerOrders();
     },
     error: function (xhr) {
-      console.error(xhr);
-      Swal.fire("Error", "Unable to cancel order.", "error");
+      console.error("Cancel order failed:", xhr.status, xhr.responseText);
+
+      Swal.fire(
+        "Error",
+        extractApiErrorMessage(xhr, "Unable to cancel order."),
+        "error",
+      );
     },
   });
 }
@@ -1741,23 +1760,31 @@ $(document).ready(function () {
   /* -----------------------------
      LOGOUT HANDLER
   ----------------------------- */
-  $("#logout").click(() => {
-    $.ajax({
-      url: `${ip}/api/logout`,
-      type: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-      data: { token },
-      success: () => {
-        Swal.fire({ icon: "success", title: "Logout Successful" }).then(() => {
-          // Clear all cookies
-          Object.keys($.cookie()).forEach((cookie) => $.removeCookie(cookie));
-          window.location.replace("login.html");
-        });
-      },
-      error: (res) => {
-        const msg = res.responseJSON?.msg || "Logout failed. Please try again.";
-        Swal.fire({ icon: "error", title: "Error", text: msg });
-      },
+  $("#logout").click((e) => {
+    e.preventDefault();
+
+    removeFcmTokenFromServer(function () {
+      $.ajax({
+        url: `${ip}/api/logout`,
+        type: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        data: { token },
+        success: () => {
+          Swal.fire({ icon: "success", title: "Logout Successful" }).then(
+            () => {
+              Object.keys($.cookie()).forEach((cookie) =>
+                $.removeCookie(cookie),
+              );
+              window.location.replace("login.html");
+            },
+          );
+        },
+        error: (res) => {
+          const msg =
+            res.responseJSON?.msg || "Logout failed. Please try again.";
+          Swal.fire({ icon: "error", title: "Error", text: msg });
+        },
+      });
     });
   });
 });

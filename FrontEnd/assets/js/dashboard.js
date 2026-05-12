@@ -982,7 +982,9 @@ function loadSupplementaryDashboardData() {
         };
 
         if (!dashboardState.counts?.total_products) {
-          $dashboard.find("#countedProducts").text(dashboardState.totalProducts);
+          $dashboard
+            .find("#countedProducts")
+            .text(dashboardState.totalProducts);
         }
         $dashboard.find("#countedPendingApproval").text(pendingApprovalCount);
       }
@@ -1137,7 +1139,9 @@ function loadCounts() {
     success: function (res) {
       dashboardState.counts = {
         users: normalizeNumber(res.users),
-        total_products: normalizeNumber(res.total_products || res.totalProducts),
+        total_products: normalizeNumber(
+          res.total_products || res.totalProducts,
+        ),
         my_products: normalizeNumber(res.my_products),
         approved_products: normalizeNumber(res.approved_products),
         pending_approval: normalizeNumber(res.pending_approval),
@@ -1765,33 +1769,31 @@ $(document).ready(function () {
     console.error("No username found in cookie.");
   }
 
-  $("#logout").click(function () {
-    $.ajax({
-      beforeSend: function (xhr) {
-        xhr.setRequestHeader("Authorization", "Bearer " + token);
-      },
-      type: "POST",
-      url: ip + "/api/logout",
-      data: { token: token },
-      success: function () {
-        Swal.fire({
-          icon: "success",
-          title: "Logout Successful",
-        }).then(() => {
-          var cookies = $.cookie();
-          for (var cookie in cookies) {
-            $.removeCookie(cookie);
-          }
-          window.location.replace("login.html");
-        });
-      },
-      error: function (res) {
-        let msg =
-          res.responseJSON && res.responseJSON.msg
-            ? res.responseJSON.msg
-            : "Logout failed. Please try again.";
-        alert(msg);
-      },
+  $("#logout").click((e) => {
+    e.preventDefault();
+
+    removeFcmTokenFromServer(function () {
+      $.ajax({
+        url: `${ip}/api/logout`,
+        type: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        data: { token },
+        success: () => {
+          Swal.fire({ icon: "success", title: "Logout Successful" }).then(
+            () => {
+              Object.keys($.cookie()).forEach((cookie) =>
+                $.removeCookie(cookie),
+              );
+              window.location.replace("login.html");
+            },
+          );
+        },
+        error: (res) => {
+          const msg =
+            res.responseJSON?.msg || "Logout failed. Please try again.";
+          Swal.fire({ icon: "error", title: "Error", text: msg });
+        },
+      });
     });
   });
 });

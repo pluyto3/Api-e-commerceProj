@@ -65,7 +65,8 @@ function renderHomepageCartButton(product) {
   const productId = product.product_id;
   const sellerId =
     product.seller?.user_id || product.seller?.id || product.seller_id || "";
-  const sellerUsername = product.seller?.username || product.seller_username || "";
+  const sellerUsername =
+    product.seller?.username || product.seller_username || "";
 
   return `
     <button type="button"
@@ -87,9 +88,9 @@ function isOwnSellerProductButton($button) {
 
   return Boolean(
     (currentUserId && sellerId && String(currentUserId) === String(sellerId)) ||
-      (usr &&
-        sellerUsername &&
-        String(usr).toLowerCase() === String(sellerUsername).toLowerCase()),
+    (usr &&
+      sellerUsername &&
+      String(usr).toLowerCase() === String(sellerUsername).toLowerCase()),
   );
 }
 
@@ -513,23 +514,31 @@ $(document).ready(() => {
   /* -----------------------------
      LOGOUT HANDLER
   ----------------------------- */
-  $("#logout").click(() => {
-    $.ajax({
-      url: `${ip}/api/logout`,
-      type: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-      data: { token },
-      success: () => {
-        Swal.fire({ icon: "success", title: "Logout Successful" }).then(() => {
-          // Clear all cookies
-          Object.keys($.cookie()).forEach((cookie) => $.removeCookie(cookie));
-          window.location.replace("index.html");
-        });
-      },
-      error: (res) => {
-        const msg = res.responseJSON?.msg || "Logout failed. Please try again.";
-        Swal.fire({ icon: "error", title: "Error", text: msg });
-      },
+  $("#logout").click((e) => {
+    e.preventDefault();
+
+    removeFcmTokenFromServer(function () {
+      $.ajax({
+        url: `${ip}/api/logout`,
+        type: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        data: { token },
+        success: () => {
+          Swal.fire({ icon: "success", title: "Logout Successful" }).then(
+            () => {
+              Object.keys($.cookie()).forEach((cookie) =>
+                $.removeCookie(cookie),
+              );
+              window.location.replace("index.html");
+            },
+          );
+        },
+        error: (res) => {
+          const msg =
+            res.responseJSON?.msg || "Logout failed. Please try again.";
+          Swal.fire({ icon: "error", title: "Error", text: msg });
+        },
+      });
     });
   });
 });

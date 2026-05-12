@@ -81,9 +81,9 @@ function isOwnSellerCheckoutItem(item = {}) {
 
   return Boolean(
     (currentUserId && sellerId && String(currentUserId) === String(sellerId)) ||
-      (usr &&
-        sellerUsername &&
-        String(usr).toLowerCase() === String(sellerUsername).toLowerCase()),
+    (usr &&
+      sellerUsername &&
+      String(usr).toLowerCase() === String(sellerUsername).toLowerCase()),
   );
 }
 
@@ -180,7 +180,8 @@ $(document).ready(function () {
     .done(function (accountAjax, locationAjax) {
       const accountResponse = accountAjax[0];
       const locationResponse = locationAjax[0];
-      currentUserId = accountResponse?.user_id || accountResponse?.id || currentUserId;
+      currentUserId =
+        accountResponse?.user_id || accountResponse?.id || currentUserId;
 
       // Store default account info
       defaultAccountInfo = {
@@ -476,8 +477,9 @@ $(document).ready(function () {
 
     const selectedOwnProduct = allCartItems.some(
       (item) =>
-        selectedItemIDs.some((id) => String(id) === String(item.addTocart_id)) &&
-        isOwnSellerCheckoutItem(item),
+        selectedItemIDs.some(
+          (id) => String(id) === String(item.addTocart_id),
+        ) && isOwnSellerCheckoutItem(item),
     );
 
     if (selectedOwnProduct) {
@@ -534,8 +536,7 @@ $(document).ready(function () {
 
         // Prepare data for the confirmation page
         const confirmedOrderDetails = {
-          orderId:
-            response.order_id || confirmedCheckout.checkout_id || "N/A",
+          orderId: response.order_id || confirmedCheckout.checkout_id || "N/A",
           customerName: $("#name").val(),
           totalAmount: Number(confirmedCheckout.total_amount || totalAmount),
           paymentMethod: paymentMethod,
@@ -617,33 +618,31 @@ $(document).ready(function () {
   });
 
   // --- Logout Functionality ---
-  $("#logout").click(function () {
-    $.ajax({
-      beforeSend: function (xhr) {
-        xhr.setRequestHeader("Authorization", "Bearer " + token);
-      },
-      type: "POST",
-      url: ip + "/api/logout",
-      data: { token: token },
-      success: function () {
-        Swal.fire({
-          icon: "success",
-          title: "Logout Successful",
-        }).then(() => {
-          var cookies = $.cookie();
-          for (var cookie in cookies) {
-            $.removeCookie(cookie);
-          }
-          window.location.replace("index.html");
-        });
-      },
-      error: function (res) {
-        let msg =
-          res.responseJSON && res.responseJSON.msg
-            ? res.responseJSON.msg
-            : "Logout failed. Please try again.";
-        alert(msg);
-      },
+  $("#logout").click((e) => {
+    e.preventDefault();
+
+    removeFcmTokenFromServer(function () {
+      $.ajax({
+        url: `${ip}/api/logout`,
+        type: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        data: { token },
+        success: () => {
+          Swal.fire({ icon: "success", title: "Logout Successful" }).then(
+            () => {
+              Object.keys($.cookie()).forEach((cookie) =>
+                $.removeCookie(cookie),
+              );
+              window.location.replace("index.html");
+            },
+          );
+        },
+        error: (res) => {
+          const msg =
+            res.responseJSON?.msg || "Logout failed. Please try again.";
+          Swal.fire({ icon: "error", title: "Error", text: msg });
+        },
+      });
     });
   });
 });

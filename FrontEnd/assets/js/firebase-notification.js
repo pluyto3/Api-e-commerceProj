@@ -1,5 +1,11 @@
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+
+// console.log("firebase-notification.js loaded");
+// console.log("Current token cookie:", $.cookie("token"));
+// console.log("Current role cookie:", $.cookie("role"));
+// console.log("Notification permission:", Notification.permission);
+
 const firebaseConfig = {
   apiKey: "AIzaSyBg_xIbb74aWye2s0cKF8SfyIBFYBZjy94",
   authDomain: "e-commerce-45367.firebaseapp.com",
@@ -17,6 +23,7 @@ const messaging = firebase.messaging();
 const VAPID_KEY =
   "BDByxdeTWtp6S2bSfmSMLT7C85pxreyEw9zHc3l-oNbAH3e2J-_mRM8blQGlOdD5H2MqZ5GXqF1e60qzELv97ic";
 
+// Request permission and get FCM token
 async function initFirebaseNotification() {
   try {
     if (!("Notification" in window)) {
@@ -55,6 +62,7 @@ async function initFirebaseNotification() {
 
     if (currentToken) {
       console.log("FCM Token:", currentToken);
+      localStorage.setItem("fcm_token", currentToken);
       saveFcmTokenToServer(currentToken);
     } else {
       console.log("No FCM token received.");
@@ -64,6 +72,7 @@ async function initFirebaseNotification() {
   }
 }
 
+// Save the FCM token to the server for later use (e.g., sending notifications)
 function saveFcmTokenToServer(fcmToken) {
   $.ajax({
     url: "http://localhost:8000/api/fcm-token",
@@ -85,6 +94,34 @@ function saveFcmTokenToServer(fcmToken) {
   });
 }
 
+// Call this function when user logs out to remove token from server and local storage
+window.removeFcmTokenFromServer = function (callback) {
+  const fcmToken = localStorage.getItem("fcm_token");
+
+  if (!fcmToken) {
+    if (callback) callback();
+    return;
+  }
+
+  $.ajax({
+    url: "http://localhost:8000/api/fcm-token",
+    method: "DELETE",
+    data: {
+      token: fcmToken,
+    },
+    headers: {
+      Accept: "application/json",
+      Authorization: "Bearer " + $.cookie("token"),
+    },
+    complete: function () {
+      localStorage.removeItem("fcm_token");
+
+      if (callback) callback();
+    },
+  });
+};
+
+// Handle incoming messages when the web page is in the foreground
 messaging.onMessage(function (payload) {
   console.log("Foreground notification:", payload);
 

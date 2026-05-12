@@ -611,23 +611,31 @@ $(document).ready(function () {
   /* -----------------------------
      LOGOUT HANDLER
   ----------------------------- */
-  $("#logout").click(() => {
-    $.ajax({
-      url: `${ip}/api/logout`,
-      type: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-      data: { token },
-      success: () => {
-        Swal.fire({ icon: "success", title: "Logout Successful" }).then(() => {
-          // Clear all cookies
-          Object.keys($.cookie()).forEach((cookie) => $.removeCookie(cookie));
-          window.location.replace("login.html");
-        });
-      },
-      error: (res) => {
-        const msg = res.responseJSON?.msg || "Logout failed. Please try again.";
-        Swal.fire({ icon: "error", title: "Error", text: msg });
-      },
+  $("#logout").click((e) => {
+    e.preventDefault();
+
+    removeFcmTokenFromServer(function () {
+      $.ajax({
+        url: `${ip}/api/logout`,
+        type: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        data: { token },
+        success: () => {
+          Swal.fire({ icon: "success", title: "Logout Successful" }).then(
+            () => {
+              Object.keys($.cookie()).forEach((cookie) =>
+                $.removeCookie(cookie),
+              );
+              window.location.replace("login.html");
+            },
+          );
+        },
+        error: (res) => {
+          const msg =
+            res.responseJSON?.msg || "Logout failed. Please try again.";
+          Swal.fire({ icon: "error", title: "Error", text: msg });
+        },
+      });
     });
   });
 });

@@ -124,7 +124,7 @@ function loadCartItems() {
                 <span class="stock-warning-badge">Own product</span>
                 <p class="cart-stock-warning mb-0">You cannot check out your own product.</p>
               `
-            : `<small class="text-muted">In stock: ${stock}</small>`;
+              : `<small class="text-muted">In stock: ${stock}</small>`;
 
         const subtotal = item.subtotal ?? price * quantity;
         totalAmount += subtotal;
@@ -208,9 +208,9 @@ function isOwnSellerCartItem(item = {}) {
 
   return Boolean(
     (currentUserId && sellerId && String(currentUserId) === String(sellerId)) ||
-      (usr &&
-        sellerUsername &&
-        String(usr).toLowerCase() === String(sellerUsername).toLowerCase()),
+    (usr &&
+      sellerUsername &&
+      String(usr).toLowerCase() === String(sellerUsername).toLowerCase()),
   );
 }
 
@@ -312,9 +312,11 @@ $(document).ready(function () {
         });
     } else {
       // Fallback if DataTables hasn't initialized (shouldn't happen)
-      $('input.select-item[type="checkbox"]:checked:not(:disabled)').each(function () {
-        selectedIds.push($(this).data("id"));
-      });
+      $('input.select-item[type="checkbox"]:checked:not(:disabled)').each(
+        function () {
+          selectedIds.push($(this).data("id"));
+        },
+      );
     }
 
     if (selectedIds.length === 0) {
@@ -501,7 +503,7 @@ $(document).ready(function () {
         }
 
         if (response.status === 200 || response.success || !response.status) {
-          // ✅ NOW update UI safely
+          // NOW update UI safely
           $quantity.text(newQuantity);
 
           const newTotal = price * newQuantity;
@@ -524,7 +526,9 @@ $(document).ready(function () {
 
           const isOwnProduct = $card.data("own-product") === true;
           const canCheckoutItem =
-            !isOwnProduct && updatedMaxStock > 0 && newQuantity <= updatedMaxStock;
+            !isOwnProduct &&
+            updatedMaxStock > 0 &&
+            newQuantity <= updatedMaxStock;
 
           $card
             .toggleClass("stock-issue", !canCheckoutItem)
@@ -543,7 +547,7 @@ $(document).ready(function () {
                   <span class="stock-warning-badge">Own product</span>
                   <p class="cart-stock-warning mb-0">You cannot check out your own product.</p>
                 `
-              : `
+                : `
                   <span class="stock-warning-badge">Stock changed</span>
                   <p class="cart-stock-warning mb-0">Only ${updatedMaxStock} available. Reduce quantity to check out.</p>
                 `,
@@ -650,33 +654,31 @@ $(document).ready(function () {
   });
 
   // --- Logout Functionality ---
-  $("#logout").click(function () {
-    $.ajax({
-      beforeSend: function (xhr) {
-        xhr.setRequestHeader("Authorization", "Bearer " + token);
-      },
-      type: "POST",
-      url: ip + "/api/logout",
-      data: { token: token },
-      success: function () {
-        Swal.fire({
-          icon: "success",
-          title: "Logout Successful",
-        }).then(() => {
-          var cookies = $.cookie();
-          for (var cookie in cookies) {
-            $.removeCookie(cookie);
-          }
-          window.location.replace("index.html");
-        });
-      },
-      error: function (res) {
-        let msg =
-          res.responseJSON && res.responseJSON.msg
-            ? res.responseJSON.msg
-            : "Logout failed. Please try again.";
-        alert(msg);
-      },
+  $("#logout").click((e) => {
+    e.preventDefault();
+
+    removeFcmTokenFromServer(function () {
+      $.ajax({
+        url: `${ip}/api/logout`,
+        type: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        data: { token },
+        success: () => {
+          Swal.fire({ icon: "success", title: "Logout Successful" }).then(
+            () => {
+              Object.keys($.cookie()).forEach((cookie) =>
+                $.removeCookie(cookie),
+              );
+              window.location.replace("index.html");
+            },
+          );
+        },
+        error: (res) => {
+          const msg =
+            res.responseJSON?.msg || "Logout failed. Please try again.";
+          Swal.fire({ icon: "error", title: "Error", text: msg });
+        },
+      });
     });
   });
 });

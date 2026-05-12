@@ -51,8 +51,8 @@ class FcmTokenController extends Controller
         ]);
     }
 
-    public function store(Request $request)
-    {
+    public function store(Request $request) {
+
         $request->validate([
             'token' => 'required|string',
             'platform' => 'nullable|string',
@@ -88,6 +88,19 @@ class FcmTokenController extends Controller
         return response()->json([
             'message' => 'FCM token saved successfully.',
             'user_id' => $user->user_id,
+        ]);
+    }
+
+    public function destroy(Request $request) {
+
+        $request->validate([
+            'token' => 'required|string',
+        ]);
+
+        FcmToken::where('token', $request->token)->delete();
+
+        return response()->json([
+            'message' => 'FCM token removed successfully.',
         ]);
     }
 }

@@ -334,6 +334,25 @@ class CheckoutController extends Controller
         $checkout->load(['user', 'items.product.brand', 'items.product.seller', 'items.seller']);
         $formatted = $this->formatOrder($checkout);
 
+        $orderId = $checkout->checkout_id;
+
+        $sellerIds = $checkout->items
+            ->pluck('seller_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        foreach ($sellerIds as $sellerId) {
+            app(PushNotificationService::class)->sendToUser(
+                $sellerId,
+                'New Order Received',
+                'You received a new order #' . $orderId . '.',
+                'orderDetails.html',
+                'new_order',
+                $orderId
+            );
+        }
+
         return response()->json([
             'message' => 'Order placed successfully.',
             'order_id' => $checkout->checkout_id,
