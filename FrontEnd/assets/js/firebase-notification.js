@@ -72,14 +72,31 @@ async function initFirebaseNotification() {
   }
 }
 
+// Utility function to get browser name from user agent
+function getBrowserName() {
+  const userAgent = navigator.userAgent;
+
+  if (userAgent.includes("Edg")) return "Microsoft Edge";
+  if (userAgent.includes("Chrome")) return "Google Chrome";
+  if (userAgent.includes("Firefox")) return "Mozilla Firefox";
+  if (userAgent.includes("Safari")) return "Safari";
+
+  return "Unknown Browser";
+}
+
 // Save the FCM token to the server for later use (e.g., sending notifications)
 function saveFcmTokenToServer(fcmToken) {
+  localStorage.setItem("fcm_token", fcmToken);
+
   $.ajax({
     url: "http://localhost:8000/api/fcm-token",
     method: "POST",
     data: {
       token: fcmToken,
       platform: "web",
+      browser_name: getBrowserName(),
+      device_name: navigator.platform,
+      user_agent: navigator.userAgent,
     },
     headers: {
       Accept: "application/json",

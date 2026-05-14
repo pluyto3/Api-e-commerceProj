@@ -1485,8 +1485,8 @@ function submitOrderStatusUpdate() {
       Swal.fire(
         "Updated!",
         trackingNumber
-          ? `Order status updated. Tracking Number: ${trackingNumber}`
-          : "Order status updated.",
+          ? `Order details updated successfully. Tracking Number: ${trackingNumber}`
+          : "Order details updated successfully.",
         "success",
       );
 
