@@ -14,6 +14,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\File;
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
+use App\Services\PushNotificationService;
 
 class AuthController extends Controller
 {
@@ -855,11 +856,6 @@ class AuthController extends Controller
                 $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
             }
 
-            $mail->setFrom(
-                config('mail.from.address'),
-                config('mail.from.name')
-            );
-
             // Set recipient to App Name
             $mail->setFrom(
                 config('mail.from.address'),
@@ -890,6 +886,34 @@ class AuthController extends Controller
             ";
 
             $mail->send();
+
+            // Notify admin through FCM after the email is successfully sent
+            try {
+                $admin = User::where('email', env('CONTACT_ADMIN_EMAIL'))->first();
+
+                \Log::info('Contact notification admin lookup:', [
+                    'contact_admin_email' => env('CONTACT_ADMIN_EMAIL'),
+                    'admin_found' => $admin ? true : false,
+                    'admin_user_id' => $admin ? $admin->user_id : null,
+                ]);
+
+                if ($admin) {
+                    app(PushNotificationService::class)->sendToUser(
+                        $admin->user_id,
+                        'New Contact Message',
+                        'A customer sent a message through Contact Us.',
+                        '',
+                        'contact_message',
+                        null
+                    );
+                } else {
+                    \Log::warning('Contact FCM notification not sent: admin email not found in users table.', [
+                        'contact_admin_email' => env('CONTACT_ADMIN_EMAIL'),
+                    ]);
+                }
+            } catch (\Exception $notificationError) {
+                \Log::error('Contact FCM notification failed: ' . $notificationError->getMessage());
+            }
 
             return response()->json([
                 'msg' => 'Message sent successfully!'   

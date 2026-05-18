@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Http\FileException;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Auth\AuthenticationException;
+use App\Services\PushNotificationService;
 
 
 class CategoryController extends Controller
@@ -124,6 +125,26 @@ class CategoryController extends Controller
         }
 
         $category->save();
+
+        if ($user->role === 'seller') {
+            try {
+                $admins = User::where('role', 'admin')->get();
+
+                foreach ($admins as $admin) {
+                    app(PushNotificationService::class)->sendToUser(
+                        $admin->user_id,
+                        'New Category Request',
+                        'A seller submitted a new category for approval.',
+                        'category.html',
+                        'category_request',
+                        $category->category_id
+                    );
+                }
+            } catch (\Exception $notificationError) {
+                \Log::error('Category request FCM notification failed: ' . $notificationError->getMessage());
+            }
+        }
+
         $category->load(['seller', 'approver']);
 
         return response()->json([
@@ -240,6 +261,19 @@ class CategoryController extends Controller
         $category->approved_by = $user->user_id;
         $category->save();
 
+        try {
+            app(PushNotificationService::class)->sendToUser(
+                $category->seller_id,
+                'Category Approved',
+                'Your category "' . $category->name . '" has been approved.',
+                'category.html',
+                'category_approved',
+                $category->category_id
+            );
+        } catch (\Exception $notificationError) {
+            \Log::error('Category approval FCM notification failed: ' . $notificationError->getMessage());
+        }
+        
         return response()->json(['msg' => 'Category approved.'], 200);
     }
 
@@ -269,6 +303,19 @@ class CategoryController extends Controller
         $category->approval_reason = $reason;
         $category->approved_by = $user->user_id;
         $category->save();
+
+        try {
+            app(PushNotificationService::class)->sendToUser(
+                $category->seller_id,
+                'Category Rejected',
+                'Your category "' . $category->name . '" was rejected.',
+                'category.html',
+                'category_rejected',
+                $category->category_id
+            );
+        } catch (\Exception $notificationError) {
+            \Log::error('Category rejection FCM notification failed: ' . $notificationError->getMessage());
+        }
 
         return response()->json(['msg' => 'Category rejected.'], 200);
     }

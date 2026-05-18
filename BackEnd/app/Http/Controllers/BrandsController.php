@@ -6,6 +6,7 @@ use App\Models\Brands;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
+use App\Services\PushNotificationService;
 
 class BrandsController extends Controller
 {
@@ -82,8 +83,7 @@ class BrandsController extends Controller
     /**
      * Create brand.
      */
-    public function createBrands(Request $request)
-    {
+    public function createBrands(Request $request) {
         $user = $this->getAuthenticatedUser($request);
         if (!$user) {
             return response()->json(['msg' => 'Token is required.'], 401);
@@ -120,6 +120,25 @@ class BrandsController extends Controller
 
         $brand->image = $imageName;
         $brand->save();
+        
+        if ($user->role === 'seller') {
+            try {
+                $admins = User::where('role', 'admin')->get();
+
+                foreach ($admins as $admin) {
+                    app(PushNotificationService::class)->sendToUser(
+                        $admin->user_id,
+                        'New Brand Request',
+                        'A seller submitted a new brand for approval.',
+                        'brand.html',
+                        'brand_request',
+                        $brand->brand_id
+                    );
+                }
+            } catch (\Exception $notificationError) {
+                \Log::error('Brand request FCM notification failed: ' . $notificationError->getMessage());
+            }
+        }
 
         $brand->load(['seller', 'approver']);
 
@@ -230,6 +249,20 @@ class BrandsController extends Controller
         $brand->approved_by = $user->user_id;
         $brand->save();
 
+        try {
+                app(PushNotificationService::class)->sendToUser(
+                $brand->seller_id,
+                'Brand Approved',
+                'Your brand "' . $brand->name . '" has been approved.',
+                'brand.html',
+                'brand_approved',
+                $brand->brand_id
+            );
+        } catch (\Exception $notificationError) {
+            \Log::error('Brand approval FCM notification failed: ' . $notificationError->getMessage());
+        }
+
+
         return response()->json(['msg' => 'Brand approved.'], 200);
     }
 
@@ -259,6 +292,19 @@ class BrandsController extends Controller
         $brand->approval_reason = $reason;
         $brand->approved_by = $user->user_id;
         $brand->save();
+
+        try { 
+            app(PushNotificationService::class)->sendToUser(
+                $brand->seller_id,
+                'Brand Rejected',
+                'Your brand "' . $brand->name . '" was rejected.',
+                'brand.html',
+                'brand_rejected',
+                $brand->brand_id
+        );
+        } catch (\Exception $notificationError) {
+            \Log::error('Brand rejection FCM notification failed: ' . $notificationError->getMessage());
+        }
 
         return response()->json(['msg' => 'Brand rejected.'], 200);
     }

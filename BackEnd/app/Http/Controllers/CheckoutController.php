@@ -221,8 +221,7 @@ class CheckoutController extends Controller
     /**
      * Create checkout, order items, and stock deduction atomically.
      */
-    public function createCheckout(Request $request)
-    {
+    public function createCheckout(Request $request) {
         $user = $this->getAuthenticatedUser($request);
 
         if (!$user) {
@@ -247,7 +246,17 @@ class CheckoutController extends Controller
             ->unique()
             ->values();
 
-        $checkout = DB::transaction(function () use ($request, $user, $selectedIds, $validated) {
+        $stockAlerts = [];
+        $lowStockThreshold = 3;
+
+        $checkout = DB::transaction(function () use (
+            $request,
+            $user,
+            $selectedIds,
+            $validated,
+            &$stockAlerts,
+            $lowStockThreshold
+        ) {
             $cartItems = addToCart::where('user_id', $user->user_id)
                 ->whereIn('addTocart_id', $selectedIds)
                 ->lockForUpdate()
@@ -321,7 +330,35 @@ class CheckoutController extends Controller
                     'subtotal' => $quantity * $price,
                 ]);
 
+                $oldStock = (int) $product->stock_quantity;
+
                 $this->reduceProductStock($product, $quantity);
+
+                $product->refresh();
+
+                $newStock = (int) $product->stock_quantity;
+
+                if ($product->seller_id) {
+                    if ($oldStock > 0 && $newStock <= 0) {
+                        $stockAlerts[$product->product_id] = [
+                            'seller_id' => $product->seller_id,
+                            'title' => 'Out of Stock',
+                            'message' => $product->product_name . ' is now out of stock.',
+                            'link' => 'product.html',
+                            'type' => 'out_of_stock',
+                            'related_id' => $product->product_id,
+                        ];
+                    } elseif ($oldStock > $lowStockThreshold && $newStock <= $lowStockThreshold) {
+                        $stockAlerts[$product->product_id] = [
+                            'seller_id' => $product->seller_id,
+                            'title' => 'Low Stock Alert',
+                            'message' => $product->product_name . ' has only ' . $newStock . ' stocks left.',
+                            'link' => 'product.html',
+                            'type' => 'low_stock',
+                            'related_id' => $product->product_id,
+                        ];
+                    }
+                }
             }
 
             addToCart::where('user_id', $user->user_id)
@@ -333,6 +370,17 @@ class CheckoutController extends Controller
 
         $checkout->load(['user', 'items.product.brand', 'items.product.seller', 'items.seller']);
         $formatted = $this->formatOrder($checkout);
+
+        foreach ($stockAlerts as $alert) {
+            app(PushNotificationService::class)->sendToUser(
+                $alert['seller_id'],
+                $alert['title'],
+                $alert['message'],
+                $alert['link'],
+                $alert['type'],
+                $alert['related_id']
+            );
+        }
 
         $orderId = $checkout->checkout_id;
 

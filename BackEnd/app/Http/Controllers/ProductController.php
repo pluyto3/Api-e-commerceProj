@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Http\FileException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use App\Services\PushNotificationService;
 
 class ProductController extends Controller
 {
@@ -295,6 +296,26 @@ class ProductController extends Controller
                     return response()->json(['msg' => 'Failed to upload image.', 'path' => $destinationPath], 400);
                 }
                 $product->save();
+
+                if ($user->role === 'seller') {
+                    try {
+                        $admins = User::where('role', 'admin')->get();
+
+                        foreach ($admins as $admin) {
+                            app(PushNotificationService::class)->sendToUser(
+                                $admin->user_id,
+                                'New Product Request',
+                                'A seller submitted a new product for approval.',
+                                'product.html',
+                                'product_request',
+                                $product->product_id
+                            );
+                        }
+                    } catch (\Exception $notificationError) {
+                        \Log::error('Product request FCM notification failed: ' . $notificationError->getMessage());
+                    }
+                }
+                
                 return response()->json([
                     'msg' => 'New Product was successfully saved.',
                     'category' => $product
@@ -493,6 +514,19 @@ class ProductController extends Controller
         $product->status = $this->productStatusFromStock((int) $product->stock_quantity, $product->status);
         $product->save();
 
+        try {
+            app(PushNotificationService::class)->sendToUser(
+                $product->seller_id,
+                'Product Approved',
+                'Your product "' . $product->product_name . '" has been approved.',
+                'product.html',
+                'product_approved',
+                $product->product_id
+            );
+        } catch (\Exception $notificationError) {
+            \Log::error('Product approval FCM notification failed: ' . $notificationError->getMessage());
+        }
+
         return response()->json(['msg' => 'Product approved.'], 200);
     }
 
@@ -524,6 +558,19 @@ class ProductController extends Controller
         $product->approved_at = now();
         $product->approved_by = $user->user_id;
         $product->save();
+
+        try {
+            app(PushNotificationService::class)->sendToUser(
+                $product->seller_id,
+                'Product Rejected',
+                'Your product "' . $product->product_name . '" has been rejected.',
+                'product.html',
+                'product_rejected',
+                $product->product_id
+            );
+        } catch (\Exception $notificationError) {
+            \Log::error('Product rejection FCM notification failed: ' . $notificationError->getMessage());
+        }
 
         return response()->json(['msg' => 'Product rejected.'], 200);
     }

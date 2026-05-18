@@ -26,8 +26,7 @@ messaging.onBackgroundMessage(function (payload) {
     body: payload.notification?.body || "",
     icon: "http://localhost/e-commerce/FrontEnd/assets/img/hanz-goLogo.png",
     data: {
-      url:
-        payload.data?.url || "http://localhost/e-commerce/FrontEnd/index.html",
+      url: payload.data?.url || "",
     },
   };
 
@@ -37,7 +36,9 @@ messaging.onBackgroundMessage(function (payload) {
 self.addEventListener("notificationclick", function (event) {
   event.notification.close();
 
-  const url = event.notification.data?.url || "index.html";
+  const url = event.notification.data?.url;
 
-  event.waitUntil(clients.openWindow(url));
+  if (url) {
+    event.waitUntil(clients.openWindow(url));
+  }
 });
