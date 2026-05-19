@@ -631,47 +631,75 @@ $(document).ready(function () {
     });
   });
 
+  // -------------------------------
+  // Reject Brand Prompt
+  // -------------------------------
   function openRejectBrandPrompt(brandId) {
-    Swal.fire({
-      title: "Reject Brand?",
-      input: "textarea",
-      inputLabel: "Reason (optional)",
-      inputPlaceholder: "Enter reason for rejection...",
-      inputAttributes: {
-        "aria-label": "Enter reason for rejection",
-      },
-      showCancelButton: true,
-      confirmButtonText: "Reject",
-      confirmButtonColor: "#d33",
-    }).then((result) => {
-      if (!result.isConfirmed) return;
+    const showRejectAlert = () => {
+      Swal.fire({
+        title: "Reject Brand?",
+        input: "textarea",
+        inputLabel: "Reason for rejection",
+        inputPlaceholder: "Enter the reason why this brand is rejected...",
+        inputAttributes: {
+          "aria-label": "Enter reason for rejection",
+        },
+        showCancelButton: true,
+        confirmButtonText: "Reject",
+        confirmButtonColor: "#d33",
+        focusConfirm: false,
+        didOpen: () => {
+          const input = Swal.getInput();
+          if (input) input.focus();
+        },
+        inputValidator: (value) => {
+          if (!value || !value.trim()) {
+            return "Please enter a reason for rejecting this brand.";
+          }
+        },
+      }).then((result) => {
+        if (!result.isConfirmed) return;
 
-      $.ajax({
-        url: `${ip}/api/brands/${brandId}/reject`,
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/json",
-        },
-        data: {
-          reason: result.value || "",
-        },
-        success: function (res) {
-          Swal.fire(
-            "Rejected",
-            res?.msg || "Brand rejected successfully.",
-            "success",
-          ).then(() => location.reload());
-        },
-        error: function (xhr) {
-          Swal.fire(
-            "Error",
-            getAjaxErrorMessage(xhr, "Rejection failed"),
-            "error",
-          );
-        },
+        $.ajax({
+          url: `${ip}/api/brands/${brandId}/reject`,
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+          },
+          data: {
+            reason: result.value.trim(),
+          },
+          success: function (res) {
+            Swal.fire(
+              "Rejected",
+              res?.msg || "Brand rejected successfully.",
+              "success",
+            ).then(() => location.reload());
+          },
+          error: function (xhr) {
+            Swal.fire(
+              "Error",
+              getAjaxErrorMessage(xhr, "Rejection failed"),
+              "error",
+            );
+          },
+        });
       });
-    });
+    };
+
+    // If a Bootstrap modal is open, close it first
+    const $openModal = $(".modal.show");
+
+    if ($openModal.length) {
+      $openModal.one("hidden.bs.modal", function () {
+        showRejectAlert();
+      });
+
+      $openModal.modal("hide");
+    } else {
+      showRejectAlert();
+    }
   }
 
   // -------------------------------

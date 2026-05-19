@@ -5282,3 +5282,7 @@ footer {
     padding: 24px;
   }
 }
+
+.swal2-container {
+  z-index: 20000 !important;
+}

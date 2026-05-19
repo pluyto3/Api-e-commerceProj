@@ -507,6 +507,8 @@ class ProductController extends Controller
             return response()->json(['msg' => 'Product not found.'], 404);
         }
 
+        $oldApprovalStatus = $product->approval_status;
+
         $product->approval_status = 'approved';
         $product->approval_reason = null;
         $product->approved_at = now();
@@ -514,27 +516,27 @@ class ProductController extends Controller
         $product->status = $this->productStatusFromStock((int) $product->stock_quantity, $product->status);
         $product->save();
 
-        try {
-            app(PushNotificationService::class)->sendToUser(
-                $product->seller_id,
-                'Product Approved',
-                'Your product "' . $product->product_name . '" has been approved.',
-                'product.html',
-                'product_approved',
-                $product->product_id
-            );
-        } catch (\Exception $notificationError) {
-            \Log::error('Product approval FCM notification failed: ' . $notificationError->getMessage());
+        if ($product->seller_id && $oldApprovalStatus !== 'approved') {
+            try {
+                app(PushNotificationService::class)->sendToUser(
+                    $product->seller_id,
+                    'Product Approved',
+                    'Your product "' . $product->product_name . '" has been approved.',
+                    'product.html',
+                    'product_approved',
+                    $product->product_id
+                );
+            } catch (\Exception $notificationError) {
+                \Log::error('Product approval FCM notification failed: ' . $notificationError->getMessage());
+            }
         }
-
         return response()->json(['msg' => 'Product approved.'], 200);
     }
 
     /**
      * Reject a product with reason (admin action)
      */
-    public function rejectProduct(Request $request, $id)
-    {
+    public function rejectProduct(Request $request, $id) {
         $token = $request->bearerToken();
         if (!$token) {
             return response()->json(['msg' => 'No Token Provided.'], 400);
@@ -550,6 +552,8 @@ class ProductController extends Controller
             return response()->json(['msg' => 'Product not found.'], 404);
         }
 
+        $oldApprovalStatus = $product->approval_status;
+
         $data = $request->all();
         $reason = $data['reason'] ?? null;
 
@@ -559,19 +563,20 @@ class ProductController extends Controller
         $product->approved_by = $user->user_id;
         $product->save();
 
-        try {
-            app(PushNotificationService::class)->sendToUser(
-                $product->seller_id,
-                'Product Rejected',
-                'Your product "' . $product->product_name . '" has been rejected.',
-                'product.html',
-                'product_rejected',
-                $product->product_id
-            );
-        } catch (\Exception $notificationError) {
-            \Log::error('Product rejection FCM notification failed: ' . $notificationError->getMessage());
+        if ($product->seller_id && $oldApprovalStatus !== 'rejected') {
+            try {
+                app(PushNotificationService::class)->sendToUser(
+                    $product->seller_id,
+                    'Product Rejected',
+                    'Your product "' . $product->product_name . '" has been rejected.',
+                    'product.html',
+                    'product_rejected',
+                    $product->product_id
+                );
+            } catch (\Exception $notificationError) {
+                \Log::error('Product rejection FCM notification failed: ' . $notificationError->getMessage());
+            }
         }
-
         return response()->json(['msg' => 'Product rejected.'], 200);
     }
 

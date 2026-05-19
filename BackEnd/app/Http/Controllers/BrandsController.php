@@ -244,25 +244,27 @@ class BrandsController extends Controller
             return response()->json(['msg' => 'Brand not found.'], 404);
         }
 
+        $oldStatus = $brand->status;
+
         $brand->status = 'approved';
         $brand->approval_reason = null;
         $brand->approved_by = $user->user_id;
         $brand->save();
 
-        try {
-                app(PushNotificationService::class)->sendToUser(
-                $brand->seller_id,
-                'Brand Approved',
-                'Your brand "' . $brand->name . '" has been approved.',
-                'brand.html',
-                'brand_approved',
-                $brand->brand_id
-            );
-        } catch (\Exception $notificationError) {
-            \Log::error('Brand approval FCM notification failed: ' . $notificationError->getMessage());
+        if ($brand->seller_id && $oldStatus !== 'approved') {
+            try {
+                    app(PushNotificationService::class)->sendToUser(
+                    $brand->seller_id,
+                    'Brand Approved',
+                    'Your brand "' . $brand->name . '" has been approved.',
+                    'brand.html',
+                    'brand_approved',
+                    $brand->brand_id
+                );
+            } catch (\Exception $notificationError) {
+                \Log::error('Brand approval FCM notification failed: ' . $notificationError->getMessage());
+            }
         }
-
-
         return response()->json(['msg' => 'Brand approved.'], 200);
     }
 
@@ -285,6 +287,8 @@ class BrandsController extends Controller
             return response()->json(['msg' => 'Brand not found.'], 404);
         }
 
+        $oldStatus = $brand->status;
+
         $data = $request->all();
         $reason = $data['reason'] ?? null;
 
@@ -293,19 +297,21 @@ class BrandsController extends Controller
         $brand->approved_by = $user->user_id;
         $brand->save();
 
-        try { 
-            app(PushNotificationService::class)->sendToUser(
-                $brand->seller_id,
-                'Brand Rejected',
-                'Your brand "' . $brand->name . '" was rejected.',
-                'brand.html',
-                'brand_rejected',
-                $brand->brand_id
-        );
-        } catch (\Exception $notificationError) {
-            \Log::error('Brand rejection FCM notification failed: ' . $notificationError->getMessage());
+        if ($brand->seller_id && $oldStatus !== 'rejected') {
+            try { 
+                app(PushNotificationService::class)->sendToUser(
+                    $brand->seller_id,
+                    'Brand Rejected',
+                    'Your brand "' . $brand->name . '" was rejected.',
+                    'brand.html',
+                    'brand_rejected',
+                    $brand->brand_id
+            );
+            } catch (\Exception $notificationError) {
+                \Log::error('Brand rejection FCM notification failed: ' . $notificationError->getMessage());
+            }
         }
-
+        
         return response()->json(['msg' => 'Brand rejected.'], 200);
     }
 

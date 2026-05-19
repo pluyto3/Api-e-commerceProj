@@ -256,24 +256,27 @@ class CategoryController extends Controller
             return response()->json(['msg' => 'Category not found.'], 404);
         }
 
+        $oldStatus = $category->status;
+
         $category->status = 'approved';
         $category->approval_reason = null;
         $category->approved_by = $user->user_id;
         $category->save();
 
-        try {
-            app(PushNotificationService::class)->sendToUser(
-                $category->seller_id,
-                'Category Approved',
-                'Your category "' . $category->name . '" has been approved.',
-                'category.html',
-                'category_approved',
-                $category->category_id
-            );
-        } catch (\Exception $notificationError) {
-            \Log::error('Category approval FCM notification failed: ' . $notificationError->getMessage());
+        if ($category->seller_id && $oldStatus !== 'approved') {
+            try {
+                app(PushNotificationService::class)->sendToUser(
+                    $category->seller_id,
+                    'Category Approved',
+                    'Your category "' . $category->name . '" has been approved.',
+                    'category.html',
+                    'category_approved',
+                    $category->category_id
+                );
+            } catch (\Exception $notificationError) {
+                \Log::error('Category approval FCM notification failed: ' . $notificationError->getMessage());
+            }
         }
-        
         return response()->json(['msg' => 'Category approved.'], 200);
     }
 
@@ -296,6 +299,8 @@ class CategoryController extends Controller
             return response()->json(['msg' => 'Category not found.'], 404);
         }
 
+        $oldStatus = $category->status;
+
         $data = $request->all();
         $reason = $data['reason'] ?? null;
 
@@ -304,19 +309,20 @@ class CategoryController extends Controller
         $category->approved_by = $user->user_id;
         $category->save();
 
-        try {
-            app(PushNotificationService::class)->sendToUser(
-                $category->seller_id,
-                'Category Rejected',
-                'Your category "' . $category->name . '" was rejected.',
-                'category.html',
-                'category_rejected',
-                $category->category_id
-            );
-        } catch (\Exception $notificationError) {
-            \Log::error('Category rejection FCM notification failed: ' . $notificationError->getMessage());
+        if ($category->seller_id && $oldStatus !== 'rejected') {
+            try {
+                app(PushNotificationService::class)->sendToUser(
+                    $category->seller_id,
+                    'Category Rejected',
+                    'Your category "' . $category->name . '" was rejected.',
+                    'category.html',
+                    'category_rejected',
+                    $category->category_id
+                );
+            } catch (\Exception $notificationError) {
+                \Log::error('Category rejection FCM notification failed: ' . $notificationError->getMessage());
+            }
         }
-
         return response()->json(['msg' => 'Category rejected.'], 200);
     }
 
