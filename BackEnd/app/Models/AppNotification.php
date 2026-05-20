@@ -20,4 +20,8 @@ class AppNotification extends Model
         'url',
         'read_at',
     ];
+
+    protected $casts = [
+        'read_at' => 'datetime',
+    ];
 }

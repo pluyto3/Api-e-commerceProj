@@ -41,6 +41,7 @@
 
     <!-- Custom Scripts -->
     <script src="assets/js/dashboard.js"></script>
+    <script src="assets/js/notification-bell.js"></script>
     <script src="assets/js/navbar-count.js"></script>
     <script src="assets/js/navbar-role.js"></script>
 
@@ -55,6 +56,7 @@
   </head>
 
   <body>
+    <!-- Navbar -->
     <nav
       class="navbar navbar-expand-lg navbar-dark sticky-top dashboard-navbar">
       <div class="container-fluid">
@@ -143,12 +145,13 @@
                 aria-expanded="false">
                 <i class="far fa-bell white-icon fa-lg"></i>
                 <span
-                  id="notification-count"
+                  id="notificationBellCount"
                   class="badge badge-danger rounded-pill position-absolute"
-                  aria-live="polite">
-                  0
+                  aria-live="polite"
+                  style="display: none">
                 </span>
               </a>
+
               <div
                 class="dropdown-menu dropdown-menu-right notification-dropdown"
                 aria-labelledby="notificationBellToggle">
@@ -157,8 +160,18 @@
                     <p class="notification-dropdown-kicker mb-0">Alerts</p>
                     <h6 class="mb-0">Notifications</h6>
                   </div>
+
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-link p-0"
+                    id="markAllNotificationsRead">
+                    Mark all as read
+                  </button>
                 </div>
-                <div id="notificationList" class="notification-dropdown-body">
+
+                <div
+                  id="notificationBellList"
+                  class="notification-dropdown-body">
                   <div class="notification-empty-state">
                     No new notifications.
                   </div>

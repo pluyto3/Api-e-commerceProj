@@ -617,8 +617,8 @@ function syncNavbarVisibility() {
 
   $notificationNav.toggle(showNotifications);
   if (!showNotifications) {
-    $("#notification-count").hide().text("0");
-    $("#notificationList").html(
+    $("#notificationBellCount").hide().text("");
+    $("#notificationBellList").html(
       `<div class="notification-empty-state">No new notifications.</div>`,
     );
   }
@@ -903,7 +903,7 @@ function renderNotificationItem(item) {
   `;
 }
 
-function renderNotifications() {
+function renderDashboardNotifications() {
   if (!canShowNotifications()) {
     return;
   }
@@ -913,8 +913,8 @@ function renderNotifications() {
     (sum, item) => sum + normalizeNumber(item.count),
     0,
   );
-  const $badge = $("#notification-count");
-  const $list = $("#notificationList");
+  const $badge = $("#notificationBellCount");
+  const $list = $("#notificationBellList");
 
   if (!items.length) {
     $badge.hide().text("0");
@@ -989,7 +989,7 @@ function loadSupplementaryDashboardData() {
         $dashboard.find("#countedPendingApproval").text(pendingApprovalCount);
       }
 
-      renderNotifications();
+      renderDashboardNotifications();
     },
     error: function (xhr) {
       console.warn("Could not load products for dashboard:", xhr.responseText);
@@ -1000,7 +1000,7 @@ function loadSupplementaryDashboardData() {
         $dashboard.find("#countedProducts").text(0);
       }
 
-      renderNotifications();
+      renderDashboardNotifications();
     },
   });
 
@@ -1012,7 +1012,7 @@ function loadSupplementaryDashboardData() {
       dashboardState.categories = Array.isArray(response?.data)
         ? response.data
         : [];
-      renderNotifications();
+      renderDashboardNotifications();
     },
     error: function (xhr) {
       console.warn(
@@ -1020,7 +1020,7 @@ function loadSupplementaryDashboardData() {
         xhr.responseText,
       );
       dashboardState.categories = [];
-      renderNotifications();
+      renderDashboardNotifications();
     },
   });
 
@@ -1032,12 +1032,12 @@ function loadSupplementaryDashboardData() {
       dashboardState.brands = Array.isArray(response?.data)
         ? response.data
         : [];
-      renderNotifications();
+      renderDashboardNotifications();
     },
     error: function (xhr) {
       console.warn("Could not load brands for dashboard:", xhr.responseText);
       dashboardState.brands = [];
-      renderNotifications();
+      renderDashboardNotifications();
     },
   });
 }
@@ -1186,7 +1186,7 @@ function loadCounts() {
           .find("#countedSellerLowStock")
           .text(dashboardState.counts.low_stock_products);
 
-        renderNotifications();
+        renderDashboardNotifications();
         loadSupplementaryDashboardData();
         return;
       }
@@ -1214,7 +1214,7 @@ function loadCounts() {
       $dashboard.find("#countedCategory").text(res.categories || 0);
       $dashboard.find("#countedBrand").text(res.brands || 0);
 
-      renderNotifications();
+      renderDashboardNotifications();
       loadSupplementaryDashboardData();
       console.log("Dashboard counts loaded successfully:", res);
     },

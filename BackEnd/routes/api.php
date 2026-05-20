@@ -174,9 +174,10 @@ Route::post('/test-push/{userId}', [FcmTokenController::class, 'sendTestNotifica
 // Notification Routes
 Route::group(['prefix' => 'notifications'], function($router) {
     Route::controller(NotificationController::class)->group(function () {
-        Route::get('/notifications', 'index');
-        Route::post('/notifications/{id}/read', 'markAsRead');
-        Route::post('/notifications/read-all', 'markAllAsRead');
+        Route::get('/', 'index');
+        Route::get('/unread-count', 'unreadCount');
+        Route::post('/{id}/read', 'markAsRead');
+        Route::post('/read-all', 'markAllAsRead');
     });
 });
     

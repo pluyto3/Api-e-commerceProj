@@ -9,10 +9,17 @@ class FcmToken extends Model
 {
     use HasFactory;
 
-        protected $fillable = [
+    protected $fillable = [
         'user_id',
         'token',
         'platform',
+        'browser_name',
+        'device_name',
+        'user_agent',
         'last_used_at',
+    ];
+
+    protected $casts = [
+        'last_used_at' => 'datetime',
     ];
 }

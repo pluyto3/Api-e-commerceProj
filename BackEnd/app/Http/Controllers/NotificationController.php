@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 
 class NotificationController extends Controller
 {
-    private function authenticatedUser(Request $request)
+    private function getAuthenticatedUser(Request $request)
     {
         $token = $request->bearerToken();
 
@@ -19,39 +19,61 @@ class NotificationController extends Controller
         return User::where('token', $token)->first();
     }
 
+    /**
+     * Get latest notifications of logged-in user.
+     */
     public function index(Request $request)
     {
-        $user = $this->authenticatedUser($request);
+        $user = $this->getAuthenticatedUser($request);
 
         if (!$user) {
-            return response()->json([
-                'msg' => 'Invalid or missing token.',
-            ], 401);
+            return response()->json(['msg' => 'Invalid Token.'], 401);
         }
 
         $notifications = AppNotification::where('user_id', $user->user_id)
-            ->latest()
+            ->orderByDesc('created_at')
             ->limit(20)
             ->get();
 
         $unreadCount = AppNotification::where('user_id', $user->user_id)
-            ->whereNull('read_at')
+            ->where('is_read', false)
             ->count();
 
         return response()->json([
-            'unread_count' => $unreadCount,
             'notifications' => $notifications,
-        ]);
+            'unread_count' => $unreadCount,
+        ], 200);
     }
 
-    public function markAsRead(Request $request, $id)
+    /**
+     * Get unread notification count.
+     */
+    public function unreadCount(Request $request)
     {
-        $user = $this->authenticatedUser($request);
+        $user = $this->getAuthenticatedUser($request);
 
         if (!$user) {
-            return response()->json([
-                'msg' => 'Invalid or missing token.',
-            ], 401);
+            return response()->json(['msg' => 'Invalid Token.'], 401);
+        }
+
+        $count = AppNotification::where('user_id', $user->user_id)
+            ->where('is_read', false)
+            ->count();
+
+        return response()->json([
+            'unread_count' => $count,
+        ], 200);
+    }
+
+    /**
+     * Mark one notification as read.
+     */
+    public function markAsRead(Request $request, $id)
+    {
+        $user = $this->getAuthenticatedUser($request);
+
+        if (!$user) {
+            return response()->json(['msg' => 'Invalid Token.'], 401);
         }
 
         $notification = AppNotification::where('id', $id)
@@ -59,37 +81,39 @@ class NotificationController extends Controller
             ->first();
 
         if (!$notification) {
-            return response()->json([
-                'msg' => 'Notification not found.',
-            ], 404);
+            return response()->json(['msg' => 'Notification not found.'], 404);
         }
 
+        $notification->is_read = true;
         $notification->read_at = now();
         $notification->save();
 
         return response()->json([
             'msg' => 'Notification marked as read.',
-        ]);
+            'notification' => $notification,
+        ], 200);
     }
 
+    /**
+     * Mark all notifications as read.
+     */
     public function markAllAsRead(Request $request)
     {
-        $user = $this->authenticatedUser($request);
+        $user = $this->getAuthenticatedUser($request);
 
         if (!$user) {
-            return response()->json([
-                'msg' => 'Invalid or missing token.',
-            ], 401);
+            return response()->json(['msg' => 'Invalid Token.'], 401);
         }
 
         AppNotification::where('user_id', $user->user_id)
-            ->whereNull('read_at')
+            ->where('is_read', false)
             ->update([
+                'is_read' => true,
                 'read_at' => now(),
             ]);
 
         return response()->json([
             'msg' => 'All notifications marked as read.',
-        ]);
+        ], 200);
     }
 }

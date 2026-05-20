@@ -23,7 +23,7 @@
     $("#notificationNav").toggle(showNotifications);
 
     if (!showNotifications) {
-      $("#notification-count").hide().text("0");
+      $("#notificationBellCount").hide().text("0");
       $("#notificationList").html(
         '<div class="notification-empty-state">No new notifications.</div>',
       );
@@ -85,9 +85,9 @@
     );
 
     if (total > 0) {
-      $("#notification-count").show().text(total);
+      $("#notificationBellCount").show().text(total);
     } else {
-      $("#notification-count").hide().text("0");
+      $("#notificationBellCount").hide().text("0");
     }
 
     $("#notificationList").html(buildNotificationMarkup(items));

@@ -88,6 +88,21 @@ function getBrowserName() {
 function saveFcmTokenToServer(fcmToken) {
   localStorage.setItem("fcm_token", fcmToken);
 
+  const authToken = $.cookie("token") || "";
+  const savedTokenKey = "saved_fcm_token";
+  const savedAuthKey = "saved_fcm_auth_token";
+  const savedAtKey = "saved_fcm_token_at";
+  const savedAt = Number(localStorage.getItem(savedAtKey) || 0);
+  const oneDay = 24 * 60 * 60 * 1000;
+
+  if (
+    localStorage.getItem(savedTokenKey) === fcmToken &&
+    localStorage.getItem(savedAuthKey) === authToken &&
+    Date.now() - savedAt < oneDay
+  ) {
+    return;
+  }
+
   $.ajax({
     url: "http://localhost:8000/api/fcm-token",
     method: "POST",
@@ -100,9 +115,12 @@ function saveFcmTokenToServer(fcmToken) {
     },
     headers: {
       Accept: "application/json",
-      Authorization: "Bearer " + $.cookie("token"),
+      Authorization: "Bearer " + authToken,
     },
     success: function (response) {
+      localStorage.setItem(savedTokenKey, fcmToken);
+      localStorage.setItem(savedAuthKey, authToken);
+      localStorage.setItem(savedAtKey, String(Date.now()));
       console.log("FCM token saved:", response);
     },
     error: function (xhr) {
@@ -132,6 +150,9 @@ window.removeFcmTokenFromServer = function (callback) {
     },
     complete: function () {
       localStorage.removeItem("fcm_token");
+      localStorage.removeItem("saved_fcm_token");
+      localStorage.removeItem("saved_fcm_auth_token");
+      localStorage.removeItem("saved_fcm_token_at");
 
       if (callback) callback();
     },
@@ -149,6 +170,10 @@ messaging.onMessage(function (payload) {
     timer: 4000,
     showConfirmButton: false,
   });
+
+  if (typeof window.reloadNotificationBell === "function") {
+    window.reloadNotificationBell();
+  }
 });
 
 $(document).ready(function () {
