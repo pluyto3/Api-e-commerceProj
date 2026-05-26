@@ -171,8 +171,8 @@ messaging.onMessage(function (payload) {
     showConfirmButton: false,
   });
 
-  if (typeof window.reloadNotificationBell === "function") {
-    window.reloadNotificationBell();
+  if (typeof window.reloadAppNotificationBell === "function") {
+    window.reloadAppNotificationBell();
   }
 });
 

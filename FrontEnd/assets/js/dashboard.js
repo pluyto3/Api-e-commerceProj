@@ -616,12 +616,6 @@ function syncNavbarVisibility() {
   }
 
   $notificationNav.toggle(showNotifications);
-  if (!showNotifications) {
-    $("#notificationBellCount").hide().text("");
-    $("#notificationBellList").html(
-      `<div class="notification-empty-state">No new notifications.</div>`,
-    );
-  }
 
   $("#dashboard").toggle(showDashboardLink);
   $("#productUi").toggle(showProductLink);
@@ -904,30 +898,8 @@ function renderNotificationItem(item) {
 }
 
 function renderDashboardNotifications() {
-  if (!canShowNotifications()) {
-    return;
-  }
-
-  const items = buildNotificationItems();
-  const totalNotificationCount = items.reduce(
-    (sum, item) => sum + normalizeNumber(item.count),
-    0,
-  );
-  const $badge = $("#notificationBellCount");
-  const $list = $("#notificationBellList");
-
-  if (!items.length) {
-    $badge.hide().text("0");
-    $list.html(
-      `<div class="notification-empty-state">No new notifications.</div>`,
-    );
-    return;
-  }
-
-  $badge
-    .text(totalNotificationCount > 99 ? "99+" : totalNotificationCount)
-    .show();
-  $list.html(items.map(renderNotificationItem).join(""));
+  // Dashboard summary alerts must not control the app notification bell.
+  // The bell is owned by notification-bell.js and /api/notifications only.
 }
 
 function loadSupplementaryDashboardData() {

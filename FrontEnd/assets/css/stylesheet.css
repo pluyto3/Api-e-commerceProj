@@ -4306,6 +4306,8 @@ body {
   padding: 0 0.35rem;
   border: 2px solid var(--ui-navy);
   font-size: 0.68rem;
+  background: #ef4444 !important;
+  color: #fff !important;
 }
 
 #cart-count,

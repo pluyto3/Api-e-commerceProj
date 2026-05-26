@@ -23,10 +23,7 @@
     $("#notificationNav").toggle(showNotifications);
 
     if (!showNotifications) {
-      $("#notificationBellCount").hide().text("0");
-      $("#notificationList").html(
-        '<div class="notification-empty-state">No new notifications.</div>',
-      );
+      $("#appNotificationBellCount").hide().text("");
     }
   }
 
@@ -79,18 +76,8 @@
   }
 
   function renderNavbarNotifications(items) {
-    const total = items.reduce(
-      (sum, item) => sum + normalizeNumber(item.count),
-      0,
-    );
-
-    if (total > 0) {
-      $("#notificationBellCount").show().text(total);
-    } else {
-      $("#notificationBellCount").hide().text("0");
-    }
-
-    $("#notificationList").html(buildNotificationMarkup(items));
+    // Deprecated: dashboard/order summary values must not update the real
+    // app notification bell. notification-bell.js owns that UI.
   }
 
   function getResponseData(response) {
@@ -472,70 +459,8 @@
   }
 
   function loadNavbarNotifications(role, token) {
-    if ($("#notificationNav").length === 0) {
-      return;
-    }
-
-    if (isDashboardPage()) {
-      return;
-    }
-
-    if (!token) {
-      renderNavbarNotifications([]);
-      return;
-    }
-
-    if (role !== "admin" && role !== "seller" && !isBuyerRole(role)) {
-      renderNavbarNotifications([]);
-      return;
-    }
-
-    const requestKey = `${role}:${token}`;
-    if (notificationRequestKey === requestKey) {
-      return;
-    }
-
-    notificationRequestKey = requestKey;
-
-    const headers = {
-      Accept: "application/json",
-      Authorization: `Bearer ${token}`,
-    };
-
-    if (isBuyerRole(role)) {
-      $.when(
-        getJson(`${apiBase}/api/checkout/orders`, headers),
-        getJson(`${apiBase}/api/cart`, headers),
-      ).done(function (orders, cartResponse) {
-        renderNavbarNotifications(
-          buildBuyerNotifications(orders, cartResponse),
-        );
-      });
-      return;
-    }
-
-    const requests = [
-      getJson(`${apiBase}/api/counts`, headers),
-      getJson(`${apiBase}/api/products`, headers),
-      getJson(`${apiBase}/api/category`, headers),
-      getJson(`${apiBase}/api/brands`, headers),
-    ];
-
-    $.when(...requests)
-      .done(function (counts, products, categories, brands) {
-        const roleNotifications = buildRoleNotifications(role, {
-          counts: counts || {},
-          products,
-          categories,
-          brands,
-        });
-
-        renderNavbarNotifications(roleNotifications);
-      })
-      .fail(function () {
-        notificationRequestKey = null;
-        renderNavbarNotifications([]);
-      });
+    // The real app notification bell is owned by notification-bell.js.
+    // Its count must come only from /api/notifications unread_count.
   }
 
   window.applyNavbarRoleVisibility = function () {

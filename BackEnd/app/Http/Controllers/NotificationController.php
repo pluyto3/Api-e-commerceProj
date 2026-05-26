@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AppNotification;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class NotificationController extends Controller
 {
@@ -36,8 +37,14 @@ class NotificationController extends Controller
             ->get();
 
         $unreadCount = AppNotification::where('user_id', $user->user_id)
-            ->where('is_read', false)
+            ->whereNull('read_at')
             ->count();
+
+        Log::info('Notification user', [
+            'user_id' => $user->user_id,
+            'role' => $user->role,
+            'unread_count' => $unreadCount,
+        ]);
 
         return response()->json([
             'notifications' => $notifications,
@@ -57,7 +64,7 @@ class NotificationController extends Controller
         }
 
         $count = AppNotification::where('user_id', $user->user_id)
-            ->where('is_read', false)
+            ->whereNull('read_at')
             ->count();
 
         return response()->json([
@@ -106,7 +113,7 @@ class NotificationController extends Controller
         }
 
         AppNotification::where('user_id', $user->user_id)
-            ->where('is_read', false)
+            ->whereNull('read_at')
             ->update([
                 'is_read' => true,
                 'read_at' => now(),
