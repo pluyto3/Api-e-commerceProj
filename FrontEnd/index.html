@@ -41,6 +41,7 @@
     <!-- Custom Script LAST -->
     <script src="assets/js/main.js"></script>
     <script src="assets/js/navbar-role.js"></script>
+    <script src="assets/js/notification-bell.js"></script>
   </head>
   <body onload="load_user()">
     <!--Navbar-->
@@ -124,7 +125,7 @@
                 aria-expanded="false">
                 <i class="far fa-bell white-icon fa-lg"></i>
                 <span
-                  id="notification-count"
+                  id="appNotificationBellCount"
                   class="badge bg-danger rounded-pill position-absolute"
                   aria-live="polite">
                   0
@@ -138,8 +139,17 @@
                     <p class="notification-dropdown-kicker mb-0">Alerts</p>
                     <h6 class="mb-0">Notifications</h6>
                   </div>
+
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-link p-0"
+                    id="markAllNotificationsRead">
+                    Mark all as read
+                  </button>
                 </div>
-                <div id="notificationList" class="notification-dropdown-body">
+                <div
+                  id="appNotificationBellList"
+                  class="notification-dropdown-body">
                   <div class="notification-empty-state">
                     No new notifications.
                   </div>

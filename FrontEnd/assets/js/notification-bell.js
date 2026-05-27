@@ -41,7 +41,7 @@
   }
 
   function updateNotificationBadge(count) {
-    const badge = $("#appNotificationBellCount");
+    const badge = $("#appNotificationBellCount, #notification-count").first();
 
     count = Number(count) || 0;
 
@@ -55,7 +55,7 @@
   }
 
   function renderNotificationBell(notifications) {
-    const list = $("#appNotificationBellList");
+    const list = $("#appNotificationBellList, #notificationList").first();
     list.empty();
 
     if (!Array.isArray(notifications) || notifications.length === 0) {
@@ -174,7 +174,7 @@
   }
 
   $(document).ready(function () {
-    $("#appNotificationBellCount").hide().text("");
+    $("#appNotificationBellCount, #notification-count").hide().text("");
 
     if (!$.cookie("token")) {
       $("#notificationNav").hide();
