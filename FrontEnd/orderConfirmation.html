@@ -15,6 +15,7 @@
     <link rel="stylesheet" href="assets/css/jquery.bxslider.min.css" />
     <link rel="stylesheet" href="assets/css/datatables.min.css" />
     <link rel="stylesheet" href="assets/css/stylesheet.css" />
+    <link rel="stylesheet" href="assets/css/responsive-fixes.css" />
 
     <!-- jQuery -->
     <script src="assets/js/jquery-3.5.1.min.js"></script>
@@ -39,6 +40,7 @@
     <script src="assets/js/firebase-notification.js"></script>
 
     <!-- Custom Script LAST -->
+    <script src="assets/js/notification-bell.js"></script>
     <script src="assets/js/orderConfirmation.js"></script>
     <script src="assets/js/navbar-role.js"></script>
 
@@ -54,12 +56,25 @@
   </head>
   <body onload="load_user()">
     <!--Navbar-->
-    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+    <nav
+      class="navbar navbar-expand-lg navbar-dark sticky-top dashboard-navbar">
       <div class="container-fluid">
-        <!-- Brand -->
-        <a class="navbar-brand d-flex align-items-center" href="index.html">
-          <img src="assets/img/hanz-goLogo.png" alt="" style="height: 40px" />
+        <a
+          class="navbar-brand d-flex align-items-center dashboard-navbar-brand"
+          href="index.html">
+          <img
+            src="assets/img/hanz-goLogo.png"
+            alt="Hanz-Go"
+            style="height: 40px" />
         </a>
+
+        <div class="toggle-btns dashboard-sidebar-toggle">
+          <i class="fas fa-bars text-white menu-btn"></i>
+          <i
+            class="fas fa-arrow-right text-white close-btn"
+            style="display: none"></i>
+        </div>
+
         <button
           class="navbar-toggler"
           type="button"
@@ -70,70 +85,74 @@
           aria-label="Toggle navigation">
           <span class="navbar-toggler-icon"></span>
         </button>
-        <!-- Navbar links -->
+
         <div
           class="collapse navbar-collapse navbar-buttons"
           id="collapsibleNavbar">
-          <ul class="navbar-nav mr-auto">
+          <ul class="navbar-nav mr-auto dashboard-primary-nav">
             <li class="nav-item">
-              <a class="nav-link" href="index.html" style="margin-left: 29px"
-                >Home</a
-              >
+              <a class="nav-link dashboard-nav-link" href="index.html">Home</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="shop.html">Shop</a>
+              <a class="nav-link dashboard-nav-link" href="shop.html">Shop</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="contact.html" style="width: 100px"
+              <a class="nav-link dashboard-nav-link" href="contact.html"
                 >Contact Us</a
               >
             </li>
-            <li class="nav-item d-lg-none">
-              <a class="nav-link" href="#"
-                ><i class="fa fa-shopping-cart white-icon"></i
-              ></a>
+            <li class="nav-item d-lg-none" id="cartNavMobile">
+              <a
+                class="nav-link d-flex align-items-center dashboard-mobile-cart-link"
+                href="cart.html">
+                <i class="fa fa-shopping-cart white-icon"></i>
+                <span class="ml-2">Cart</span>
+                <span
+                  id="cart-count-mobile"
+                  class="badge badge-danger rounded-pill ml-2"
+                  >0</span
+                >
+              </a>
             </li>
           </ul>
-          <!-- Search bar (responsive) -->
-          <!-- <form class="form-inline my-2 my-lg-0 mx-lg-2 w-100 w-lg-auto search-form">
-              <input id="searchInput" class="form-control mr-sm-2" type="search" placeholder="Search products..." aria-label="Search">
-              <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
-            </form> -->
 
-          <ul class="navbar-nav ml-lg-3 d-flex align-items-center">
-            <!-- Cart Icon -->
-            <li class="nav-item mr-3" id="cartNav">
+          <ul
+            class="navbar-nav ml-lg-3 d-flex align-items-center dashboard-navbar-actions">
+            <li class="nav-item mr-2" id="cartNav">
               <a
-                class="nav-link position-relative d-flex align-items-center"
+                class="nav-link position-relative d-flex align-items-center justify-content-center dashboard-icon-btn"
                 href="cart.html">
                 <i class="fa fa-shopping-cart white-icon fa-lg"></i>
                 <span
                   id="cart-count"
-                  class="badge bg-danger rounded-pill position-absolute">
-                  0
-                </span>
+                  class="badge badge-danger rounded-pill position-absolute"
+                  >0</span
+                >
               </a>
             </li>
 
+            <!-- Notification Section -->
             <li
-              class="nav-item dropdown mr-3"
+              class="nav-item dropdown mr-2"
               id="notificationNav"
               style="display: none">
               <a
-                class="nav-link position-relative d-flex align-items-center"
+                class="nav-link position-relative d-flex align-items-center justify-content-center dashboard-icon-btn"
                 href="#"
                 id="notificationBellToggle"
                 data-toggle="dropdown"
                 aria-haspopup="true"
                 aria-expanded="false">
                 <i class="far fa-bell white-icon fa-lg"></i>
+
                 <span
-                  id="notification-count"
-                  class="badge bg-danger rounded-pill position-absolute"
-                  aria-live="polite">
-                  0
+                  id="appNotificationBellCount"
+                  class="badge badge-danger rounded-pill position-absolute"
+                  aria-live="polite"
+                  style="display: none">
                 </span>
               </a>
+
               <div
                 class="dropdown-menu dropdown-menu-right notification-dropdown"
                 aria-labelledby="notificationBellToggle">
@@ -142,19 +161,29 @@
                     <p class="notification-dropdown-kicker mb-0">Alerts</p>
                     <h6 class="mb-0">Notifications</h6>
                   </div>
+
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-link p-0"
+                    id="markAllNotificationsRead">
+                    Mark all as read
+                  </button>
                 </div>
-                <div id="notificationList" class="notification-dropdown-body">
+
+                <div
+                  id="appNotificationBellList"
+                  class="notification-dropdown-body">
                   <div class="notification-empty-state">
-                    No new notifications.
+                    No notifications yet.
                   </div>
                 </div>
               </div>
             </li>
 
-            <!-- User Dropdown -->
+            <!-- Dropdown -->
             <li class="nav-item dropdown">
               <a
-                class="nav-link dropdown-toggle d-flex align-items-center"
+                class="nav-link dropdown-toggle d-flex align-items-center dashboard-profile-pill"
                 href="#"
                 id="navbardrop"
                 data-toggle="dropdown"
@@ -163,6 +192,7 @@
                 <!-- Profile Image -->
                 <img
                   id="navbarProfileImage"
+                  src=""
                   alt="Profile"
                   class="rounded-circle mr-2"
                   style="
@@ -174,69 +204,71 @@
                     border: 2px solid #fff;
                     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
                   " />
-
-                <!-- Username -->
+                <!-- Default Profile Icon -->
+                <span
+                  id="defaultProfileIcon"
+                  class="navbar-default-avatar mr-2">
+                  <i class="fas fa-user-circle"></i>
+                </span>
                 <span
                   id="displayUsername"
-                  class="text-white font-weight-bold"></span>
+                  class="text-white font-weight-bold dashboard-username"></span>
               </a>
 
-              <!-- Dropdown Menu -->
+              <!-- Dropdown Menu List -->
               <div
-                class="dropdown-menu dropdown-menu-right"
+                class="dropdown-menu dropdown-menu-right dashboard-user-dropdown"
                 aria-labelledby="navbardrop">
-                <a class="dropdown-item auth-only" href="account.html"
-                  ><i class="fas fa-user-circle mr-2"></i> Profile</a
-                >
+                <a class="dropdown-item auth-only" href="account.html">
+                  <i class="fas fa-user-circle mr-2"></i> Profile
+                </a>
                 <a
                   class="dropdown-item user-only seller-buyer-optional"
-                  href="orderDetails.html"
-                  ><i class="fas fa-receipt mr-2"></i> My Orders</a
-                >
-                <a class="dropdown-item buyer-seller-only" href="address.html"
-                  ><i class="fas fa-map-marker-alt mr-2"></i> My Address</a
-                >
+                  href="orderDetails.html">
+                  <i class="fas fa-receipt mr-2"></i> My Orders
+                </a>
+                <a class="dropdown-item buyer-seller-only" href="address.html">
+                  <i class="fas fa-map-marker-alt mr-2"></i> My Address
+                </a>
                 <div
                   class="dropdown-divider seller-divider admin-divider"></div>
+                <a class="dropdown-item seller-only" href="dashboard.html">
+                  <i class="fas fa-store mr-2"></i> Seller Dashboard
+                </a>
                 <a
-                  class="dropdown-item seller-only seller-dashboard-link"
-                  href="dashboard.html"
-                  ><i class="fas fa-store mr-2"></i> Seller Dashboard</a
-                >
-                <a
-                  id="productUi"
                   class="dropdown-item seller-only"
                   href="product.html"
-                  ><i class="fas fa-box-open mr-2"></i> Your Products</a
-                >
-                <a class="dropdown-item seller-only" href="orderDetails.html"
-                  ><i class="fas fa-shipping-fast mr-2"></i> Customer Orders</a
-                >
+                  id="productUi">
+                  <i class="fas fa-box-open mr-2"></i> Your Products
+                </a>
+                <a class="dropdown-item seller-only" href="orderDetails.html">
+                  <i class="fas fa-shipping-fast mr-2"></i> Customer Orders
+                </a>
                 <a
                   class="dropdown-item admin-only admin-dashboard-link"
-                  href="dashboard.html"
-                  ><i class="fas fa-tachometer-alt mr-2"></i> Admin Dashboard</a
-                >
-                <a class="dropdown-item admin-only" href="manageAccounts.html"
-                  ><i class="fas fa-users-cog mr-2"></i> Manage Accounts</a
-                >
-                <a class="dropdown-item admin-only" href="product.html"
-                  ><i class="fas fa-boxes mr-2"></i> Products</a
-                >
-                <a class="dropdown-item admin-only" href="orderDetails.html"
-                  ><i class="fas fa-truck mr-2"></i> Orders</a
-                >
+                  href="dashboard.html">
+                  <i class="fas fa-tachometer-alt mr-2"></i> Admin Dashboard
+                </a>
+                <a class="dropdown-item admin-only" href="manageAccounts.html">
+                  <i class="fas fa-users-cog mr-2"></i> Manage Accounts
+                </a>
+                <a class="dropdown-item admin-only" href="product.html">
+                  <i class="fas fa-boxes mr-2"></i> Products
+                </a>
+                <a class="dropdown-item admin-only" href="orderDetails.html">
+                  <i class="fas fa-truck mr-2"></i> Orders
+                </a>
                 <div
                   class="dropdown-divider user-divider seller-divider admin-divider"></div>
-                <a class="dropdown-item guest-only" href="register.html"
-                  ><i class="fas fa-user-plus mr-2"></i> Register</a
-                >
-                <a class="dropdown-item guest-only" href="login.html"
-                  ><i class="fas fa-sign-in-alt mr-2"></i> Login</a
-                >
-                <a id="logout" class="dropdown-item auth-only" href="#"
-                  ><i class="fas fa-sign-out-alt mr-2"></i> Logout</a
-                >
+                <a class="dropdown-item guest-only" href="register.html">
+                  <i class="fas fa-user-plus mr-2"></i> Register
+                </a>
+                <a class="dropdown-item guest-only" href="login.html">
+                  <i class="fas fa-sign-in-alt mr-2"></i> Login
+                </a>
+                <a id="logout" class="dropdown-item auth-only" href="#">
+                  <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                </a>
               </div>
             </li>
           </ul>

@@ -1,0 +1,345 @@
+/* =========================================================
+   FINAL RESPONSIVE FIXES
+   Add this at the very bottom of stylesheet.css
+   ========================================================= */
+
+/* Prevent accidental horizontal scrolling */
+html {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+body {
+  max-width: 100%;
+  overflow-x: visible;
+}
+
+/* Make images and tables safer on small screens */
+img {
+  max-width: 100%;
+}
+
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* General containers */
+.container,
+.container-fluid {
+  max-width: 100%;
+}
+
+/* Navbar mobile fix */
+@media (max-width: 991.98px) {
+  .navbar.navbar-dark .container-fluid {
+    flex-wrap: wrap;
+  }
+
+  .navbar-collapse {
+    width: 100%;
+  }
+
+  .navbar.navbar-dark .navbar-nav.mr-auto,
+  .navbar.navbar-dark .navbar-nav.ml-lg-3 {
+    width: 100%;
+    align-items: stretch;
+    gap: 8px;
+    margin: 10px 0 0 !important;
+    flex-wrap: wrap;
+  }
+
+  .navbar.navbar-dark .navbar-nav .nav-item,
+  .navbar.navbar-dark .navbar-nav .nav-link {
+    width: 100%;
+  }
+
+  .navbar.navbar-dark .navbar-nav.mr-auto .nav-link {
+    margin-left: 0 !important;
+    justify-content: flex-start;
+  }
+
+  .navbar.navbar-dark .nav-item.dropdown > .dropdown-toggle {
+    width: 100%;
+    max-width: none;
+    justify-content: flex-start;
+  }
+
+  .dropdown-menu {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  #displayUsername {
+    max-width: 180px;
+  }
+}
+
+/* Sidebar and working panel mobile fix */
+@media (max-width: 991.98px) {
+  .wrapper {
+    display: block;
+  }
+
+  .wrapper .sidebar,
+  .sidebar {
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    margin: 12px;
+    border-radius: 18px;
+  }
+
+  .wrapper .working-panel,
+  .working-panel,
+  .sidebar.collapsed ~ .working-panel,
+  .wrapper.sidebar-collapsed .working-panel {
+    width: auto !important;
+    margin: 12px !important;
+    padding: 16px !important;
+  }
+
+  .wrapper + footer,
+  .wrapper.sidebar-collapsed + footer,
+  footer {
+    width: auto !important;
+    margin: 20px 12px !important;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .wrapper .sidebar .nav-bar {
+    grid-template-columns: 1fr !important;
+  }
+
+  .sidebar .nav-bar li a,
+  .wrapper .sidebar .nav-bar li a {
+    justify-content: flex-start;
+  }
+}
+
+/* Account/profile responsive fix */
+@media (max-width: 991.98px) {
+  .profile-card {
+    max-width: 100%;
+    margin: 0 auto 20px !important;
+  }
+
+  .profile-section,
+  .category-section,
+  .brand-section,
+  .manangeAccount-section,
+  .product-section {
+    width: 100%;
+    margin: 0 auto;
+    padding: 16px;
+  }
+}
+
+/* Login/register responsive fix */
+@media (max-width: 991.98px) {
+  .loginform {
+    max-width: 90% !important;
+    width: 90% !important;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .loginform {
+    max-width: 100% !important;
+    width: calc(100% - 24px) !important;
+    padding: 18px !important;
+  }
+
+  .loginform img {
+    width: 120px;
+    height: 120px;
+  }
+}
+
+/* Cart responsive fix */
+@media (max-width: 767.98px) {
+  .cart-item-card {
+    display: grid !important;
+    grid-template-columns: 34px 80px 1fr;
+    align-items: start;
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .cart-select-cell,
+  .cart-image-cell {
+    margin-right: 0;
+  }
+
+  .cart-image-cell,
+  .cart-item-img {
+    width: 80px;
+    height: 80px;
+  }
+
+  .cart-item-card > .mx-4 {
+    grid-column: 2 / 4;
+    margin: 8px 0 0 !important;
+  }
+
+  .cart-item-card > .text-end {
+    grid-column: 1 / 4;
+    width: 100%;
+    min-width: 0 !important;
+    text-align: left !important;
+  }
+
+  .quantity-pill-container {
+    width: 130px;
+  }
+
+  .order-summary-card {
+    position: static;
+    margin-top: 20px;
+  }
+}
+
+/* Checkout responsive fix */
+@media (max-width: 767.98px) {
+  .checkout-stepper {
+    margin-top: 82px;
+    border-radius: 18px;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .checkout-stepper .step {
+    width: 100%;
+    margin: 0;
+    text-align: center;
+  }
+
+  .checkout-stepper i.fa-chevron-right {
+    transform: rotate(90deg);
+  }
+
+  #checkout-form .checkout-small-element,
+  #checkout-form .checkout-large-element {
+    width: 100%;
+    display: block;
+  }
+
+  #checkout-form .checkout-btn-container {
+    margin-right: 0;
+    text-align: center;
+  }
+
+  #placeOrder,
+  #checkout-form #checkout-btn {
+    width: 100%;
+  }
+}
+
+/* Shop/product cards responsive fix */
+@media (max-width: 767.98px) {
+  #dailyProducts-container,
+  #shop-products-container {
+    justify-content: center;
+  }
+
+  .dailyProductCard,
+  .product-card {
+    width: 100%;
+    max-width: 320px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .product-card {
+    height: auto;
+  }
+
+  .product-card .product-img,
+  .brand-card .brand-img {
+    height: auto;
+  }
+
+  .product-card .product-img img,
+  .brand-card .brand-img img {
+    height: 220px;
+  }
+}
+
+/* Contact/footer mobile fix */
+@media (max-width: 575.98px) {
+  .contact-page {
+    margin-top: 88px !important;
+  }
+
+  .contact-form,
+  .contact-form-copy,
+  .contact-info-card {
+    padding: 18px !important;
+  }
+
+  .general-info,
+  .general-info-shop,
+  .footer-main .general-info {
+    grid-template-columns: 1fr !important;
+    flex-direction: column !important;
+    gap: 20px;
+    padding: 22px !important;
+  }
+
+  .footer-shop,
+  .footer-main {
+    margin-left: 12px !important;
+    margin-right: 12px !important;
+  }
+}
+
+/* Notification dropdown mobile fix */
+@media (max-width: 575.98px) {
+  .notification-dropdown {
+    width: min(92vw, 340px) !important;
+    min-width: 0 !important;
+    max-width: 92vw !important;
+    right: 0 !important;
+    left: auto !important;
+  }
+
+  .notification-dropdown-body {
+    max-height: 360px;
+  }
+}
+
+/* Modal mobile fix */
+@media (max-width: 575.98px) {
+  .modal-dialog {
+    margin: 10px;
+  }
+
+  .modal-content {
+    border-radius: 16px;
+  }
+
+  .modal-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .modal-footer .btn {
+    width: 100%;
+  }
+}
+
+/* Keep Bootstrap sticky-top working */
+nav.navbar.sticky-top {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 3000 !important;
+}
+
+/* Sidebar top only on desktop */
+@media (min-width: 992px) {
+  .wrapper .sidebar,
+  .sidebar {
+    top: 66px !important;
+  }
+}
