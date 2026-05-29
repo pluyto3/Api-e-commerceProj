@@ -343,3 +343,62 @@ nav.navbar.sticky-top {
     top: 66px !important;
   }
 }
+
+/* ===============================
+   DESKTOP SIDEBAR BEHAVIOR
+   992px and above
+================================ */
+@media (min-width: 992px) {
+  .toggle-btns {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .sidebar.collapsed .text-link {
+    display: none !important;
+  }
+}
+
+/* ===============================
+   MOBILE SIDEBAR BEHAVIOR
+   below 992px
+================================ */
+@media (max-width: 991.98px) {
+  /* Hide the desktop sidebar collapse buttons on mobile */
+  .toggle-btns {
+    display: none !important;
+  }
+
+  /* Keep Bootstrap hamburger visible for navbar */
+  .navbar-toggler {
+    display: block;
+  }
+
+  /* Do not allow desktop collapsed sidebar to affect mobile */
+  .sidebar,
+  .sidebar.collapsed {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Always show sidebar text on mobile */
+  .sidebar .text-link,
+  .sidebar.collapsed .text-link {
+    display: inline-block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+
+  /* Reset wrapper/content spacing on mobile */
+  .wrapper,
+  .wrapper.sidebar-collapsed {
+    display: block;
+  }
+
+  .working-panel,
+  .wrapper.sidebar-collapsed .working-panel {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+}

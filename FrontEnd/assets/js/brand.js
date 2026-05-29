@@ -284,31 +284,85 @@ function load_user() {
 }
 
 // =======================================
+// Sidebar Toggle
+// =======================================
+function setupSidebarToggle() {
+  function isMobileScreen() {
+    return window.matchMedia("(max-width: 991.98px)").matches;
+  }
+
+  function resetSidebarForMobile() {
+    if (isMobileScreen()) {
+      $(".sidebar").removeClass("collapsed");
+      $(".wrapper").removeClass("sidebar-collapsed");
+
+      // Remove old inline display:none caused by previous jQuery .hide()
+      $(".text-link").removeAttr("style");
+
+      $(".menu-btn").show();
+      $(".close-btn").hide();
+    }
+  }
+
+  $(".menu-btn")
+    .off("click.sidebarToggle")
+    .on("click.sidebarToggle", function () {
+      if (isMobileScreen()) return;
+
+      $(".sidebar").addClass("collapsed");
+      $(".wrapper").addClass("sidebar-collapsed");
+
+      // Do not use $(".text-link").hide() here
+      $(".close-btn").show();
+      $(".menu-btn").hide();
+    });
+
+  $(".close-btn")
+    .off("click.sidebarToggle")
+    .on("click.sidebarToggle", function () {
+      if (isMobileScreen()) return;
+
+      $(".sidebar").removeClass("collapsed");
+      $(".wrapper").removeClass("sidebar-collapsed");
+
+      // Do not use $(".text-link").show() here
+      $(".close-btn").hide();
+      $(".menu-btn").show();
+    });
+
+  resetSidebarForMobile();
+  $(window)
+    .off("resize.sidebarToggle")
+    .on("resize.sidebarToggle", resetSidebarForMobile);
+}
+
+// =======================================
 // Document Ready
 // =======================================
 $(document).ready(function () {
   // Initialize user session
   load_user();
   loadSellerLookup();
+  setupSidebarToggle();
 
   // -------------------------------
   // Sidebar Toggle
   // -------------------------------
-  $(".menu-btn").on("click", function () {
-    $(".sidebar").addClass("collapsed");
-    $(".wrapper").addClass("sidebar-collapsed");
-    $(".text-link").hide();
-    $(".close-btn").show();
-    $(".menu-btn").hide();
-  });
+  // $(".menu-btn").on("click", function () {
+  //   $(".sidebar").addClass("collapsed");
+  //   $(".wrapper").addClass("sidebar-collapsed");
+  //   $(".text-link").hide();
+  //   $(".close-btn").show();
+  //   $(".menu-btn").hide();
+  // });
 
-  $(".close-btn").on("click", function () {
-    $(".sidebar").removeClass("collapsed");
-    $(".wrapper").removeClass("sidebar-collapsed");
-    $(".text-link").show();
-    $(".close-btn").hide();
-    $(".menu-btn").show();
-  });
+  // $(".close-btn").on("click", function () {
+  //   $(".sidebar").removeClass("collapsed");
+  //   $(".wrapper").removeClass("sidebar-collapsed");
+  //   $(".text-link").show();
+  //   $(".close-btn").hide();
+  //   $(".menu-btn").show();
+  // });
 
   // -------------------------------
   // Global AJAX Loading Animation

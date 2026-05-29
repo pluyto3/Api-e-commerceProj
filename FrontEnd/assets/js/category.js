@@ -255,25 +255,77 @@ function load_user() {
   }
 }
 
+function setupSidebarToggle() {
+  function isMobileScreen() {
+    return window.matchMedia("(max-width: 991.98px)").matches;
+  }
+
+  function resetSidebarForMobile() {
+    if (isMobileScreen()) {
+      $(".sidebar").removeClass("collapsed");
+      $(".wrapper").removeClass("sidebar-collapsed");
+
+      // Remove old inline display:none caused by previous jQuery .hide()
+      $(".text-link").removeAttr("style");
+
+      $(".menu-btn").show();
+      $(".close-btn").hide();
+    }
+  }
+
+  $(".menu-btn")
+    .off("click.sidebarToggle")
+    .on("click.sidebarToggle", function () {
+      if (isMobileScreen()) return;
+
+      $(".sidebar").addClass("collapsed");
+      $(".wrapper").addClass("sidebar-collapsed");
+
+      // Do not use $(".text-link").hide() here
+      $(".close-btn").show();
+      $(".menu-btn").hide();
+    });
+
+  $(".close-btn")
+    .off("click.sidebarToggle")
+    .on("click.sidebarToggle", function () {
+      if (isMobileScreen()) return;
+
+      $(".sidebar").removeClass("collapsed");
+      $(".wrapper").removeClass("sidebar-collapsed");
+
+      // Do not use $(".text-link").show() here
+      $(".close-btn").hide();
+      $(".menu-btn").show();
+    });
+
+  resetSidebarForMobile();
+  $(window)
+    .off("resize.sidebarToggle")
+    .on("resize.sidebarToggle", resetSidebarForMobile);
+}
+
 $(document).ready(function () {
   load_user(); //  initialize session
 
   // Sidebar Toggle
-  $(".menu-btn").click(function () {
-    $(".sidebar").addClass("collapsed");
-    $(".wrapper").addClass("sidebar-collapsed");
-    $(".text-link").hide();
-    $(".close-btn").show();
-    $(".menu-btn").hide();
-  });
+  setupSidebarToggle();
 
-  $(".close-btn").click(function () {
-    $(".sidebar").removeClass("collapsed");
-    $(".wrapper").removeClass("sidebar-collapsed");
-    $(".text-link").show();
-    $(".close-btn").hide();
-    $(".menu-btn").show();
-  });
+  // $(".menu-btn").click(function () {
+  //   $(".sidebar").addClass("collapsed");
+  //   $(".wrapper").addClass("sidebar-collapsed");
+  //   $(".text-link").hide();
+  //   $(".close-btn").show();
+  //   $(".menu-btn").hide();
+  // });
+
+  // $(".close-btn").click(function () {
+  //   $(".sidebar").removeClass("collapsed");
+  //   $(".wrapper").removeClass("sidebar-collapsed");
+  //   $(".text-link").show();
+  //   $(".close-btn").hide();
+  //   $(".menu-btn").show();
+  // });
 
   // Loading animation
   $(document).ajaxStart(() => $("#wait").show());
@@ -510,89 +562,6 @@ $(document).ready(function () {
     });
   }
 
-  // Display Approved Categories
-  // $.ajax({
-  //   url: `${ip}/api/category`,
-  //   method: "GET",
-  //   headers: {
-  //     Authorization: `Bearer ${token}`,
-  //     Accept: "application/json",
-  //   },
-  //   success: function (res) {
-  //     const categories = res.data ?? res;
-  //     categoriesCache = Array.isArray(categories) ? categories : [];
-  //     categoriesCache.forEach(cacheCategorySeller);
-
-  //     const approvedCategories = categoriesCache.filter((category) => {
-  //       const status = normalizeCategoryStatus(
-  //         category.status || category.approval_status,
-  //       );
-
-  //       if (role === "seller") {
-  //         return (
-  //           status === "approved" &&
-  //           String(category.seller_id) === String(currentUserId)
-  //         );
-  //       }
-
-  //       return status === "approved";
-  //     });
-
-  //     approvedCategories.forEach((category) => {
-  //       const status = normalizeCategoryStatus(
-  //         category.status || category.approval_status,
-  //       );
-  //       const seller = getCategorySellerDisplayName(category);
-  //       const description =
-  //         category.description || category.approval_reason || "N/A";
-  //       const approvedDate = formatCategoryDate(
-  //         category.approved_at || category.updated_at || category.created_at,
-  //       );
-
-  //       $("#approved-category-table tbody").append(`
-  //         <tr>
-  //           <td>${category.category_id || "N/A"}</td>
-  //           <td>${category.name || "N/A"}</td>
-  //           <td>${seller}</td>
-  //           <td>${description}</td>
-  //           <td class="text-capitalize">${status}</td>
-  //           <td>${approvedDate}</td>
-  //           <td>
-  //             <img src="${getCategoryImageUrl(category.image)}" width="50" height="50">
-  //           </td>
-  //           <td>
-  //             <button class="btn btn-sm btn-info view-category" data-id="${category.category_id}" data-toggle="modal" data-target="#categoryApprovedDetailsModal">
-  //               <i class="fas fa-eye"></i> View
-  //             </button>
-  //           </td>
-  //         </tr>
-  //       `);
-  //     });
-
-  //     if ($.fn.DataTable.isDataTable("#approved-category-table")) {
-  //       $("#approved-category-table").DataTable().destroy();
-  //     }
-
-  //     $("#approved-category-table").DataTable({
-  //       pageLength: 10,
-  //       lengthChange: false,
-  //       searching: true,
-  //       responsive: true,
-  //       columnDefs: [
-  //         { orderable: false, targets: -1, className: "text-center" },
-  //       ],
-  //     });
-  //   },
-  //   error: function (xhr) {
-  //     console.error("Error fetching approved categories:", xhr);
-  //     Swal.fire(
-  //       "Error",
-  //       getAjaxErrorMessage(xhr, "Failed to load approved categories"),
-  //       "error",
-  //     );
-  //   },
-  // });
-
   // View category details (Approved Modal)
   $(document).on("click", ".view-category", function (e) {
     e.preventDefault();
@@ -769,87 +738,6 @@ $(document).ready(function () {
 
     openRejectCategoryPrompt(categoryId);
   });
-
-  // Display Approval Categories (Pending Table)
-  // $.ajax({
-  //   url: ip + "/api/category",
-  //   method: "GET",
-  //   headers: {
-  //     Authorization: "Bearer " + token,
-  //     Accept: "application/json",
-  //   },
-  //   success: function (res) {
-  //     const categories = res.data ?? res;
-  //     categoriesCache = Array.isArray(categories) ? categories : [];
-  //     categoriesCache.forEach(cacheCategorySeller);
-
-  //     const pendingCategories = categoriesCache.filter((category) => {
-  //       const status = normalizeCategoryStatus(
-  //         category.status || category.approval_status,
-  //       );
-
-  //       if (role === "seller") {
-  //         return (
-  //           status === "pending" &&
-  //           String(category.seller_id) === String(currentUserId)
-  //         );
-  //       }
-
-  //       return status === "pending";
-  //     });
-
-  //     pendingCategories.forEach((category) => {
-  //       const status = normalizeCategoryStatus(
-  //         category.status || category.approval_status,
-  //       );
-  //       const seller = getCategorySellerDisplayName(category);
-  //       const description =
-  //         category.description || category.approval_reason || "N/A";
-  //       const submittedDate = formatCategoryDate(
-  //         category.created_at || category.submitted_at || category.updated_at,
-  //       );
-
-  //       $("#approval-category-table tbody").append(`
-  //         <tr>
-  //           <td>${category.category_id || "N/A"}</td>
-  //           <td>${category.name || "N/A"}</td>
-  //           <td>${seller}</td>
-  //           <td>${description}</td>
-  //           <td class="text-capitalize">${status}</td>
-  //           <td>${submittedDate}</td>
-  //           <td><img src="${getCategoryImageUrl(category.image)}" width="50" height="50"></td>
-  //           <td>
-  //             <button class="btn btn-sm btn-info view-category" data-id="${category.category_id}" data-toggle="modal" data-target="#categoryApprovalModal">
-  //               <i class="fas fa-eye"></i> View
-  //             </button>
-  //           </td>
-  //         </tr>
-  //       `);
-  //     });
-
-  //     if ($.fn.DataTable.isDataTable("#approval-category-table")) {
-  //       $("#approval-category-table").DataTable().destroy();
-  //     }
-
-  //     $("#approval-category-table").DataTable({
-  //       pageLength: 10,
-  //       lengthChange: false,
-  //       searching: true,
-  //       responsive: true,
-  //       columnDefs: [
-  //         { orderable: false, targets: -1, className: "text-center" },
-  //       ],
-  //     });
-  //   },
-  //   error: function (xhr) {
-  //     console.error("Error fetching approval categories:", xhr);
-  //     Swal.fire(
-  //       "Error",
-  //       getAjaxErrorMessage(xhr, "Failed to load approval categories"),
-  //       "error",
-  //     );
-  //   },
-  // });
 
   // Editing Category
   $(document).on("click", ".editBtn", function (e) {

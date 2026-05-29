@@ -1077,21 +1077,47 @@ function load_user() {
 // SIDEBAR TOGGLE
 // =======================================
 function setupSidebarToggle() {
-  $(".menu-btn").on("click", () => {
-    $(".sidebar").addClass("collapsed");
-    $(".wrapper").addClass("sidebar-collapsed");
-    $(".text-link").hide();
-    $(".close-btn").show();
-    $(".menu-btn").hide();
-  });
+  function resetSidebarForMobile() {
+    if (window.matchMedia("(max-width: 991.98px)").matches) {
+      $(".sidebar").removeClass("collapsed");
+      $(".wrapper").removeClass("sidebar-collapsed");
 
-  $(".close-btn").on("click", () => {
-    $(".sidebar").removeClass("collapsed");
-    $(".wrapper").removeClass("sidebar-collapsed");
-    $(".text-link").show();
-    $(".close-btn").hide();
-    $(".menu-btn").show();
-  });
+      $(".text-link").show();
+      $(".menu-btn").show();
+      $(".close-btn").hide();
+    }
+  }
+
+  $(".menu-btn")
+    .off("click")
+    .on("click", function () {
+      // Do not collapse sidebar on mobile
+      if (window.matchMedia("(max-width: 991.98px)").matches) return;
+
+      $(".sidebar").addClass("collapsed");
+      $(".wrapper").addClass("sidebar-collapsed");
+
+      $(".close-btn").show();
+      $(".menu-btn").hide();
+    });
+
+  $(".close-btn")
+    .off("click")
+    .on("click", function () {
+      // Do not run desktop sidebar behavior on mobile
+      if (window.matchMedia("(max-width: 991.98px)").matches) return;
+
+      $(".sidebar").removeClass("collapsed");
+      $(".wrapper").removeClass("sidebar-collapsed");
+
+      $(".close-btn").hide();
+      $(".menu-btn").show();
+    });
+
+  resetSidebarForMobile();
+  $(window)
+    .off("resize.sidebarToggle")
+    .on("resize.sidebarToggle", resetSidebarForMobile);
 }
 
 // =======================================
@@ -1701,6 +1727,7 @@ $(document).ready(function () {
   loadCounts();
   setupSidebarToggle();
   loadRecentOrders();
+  setupSidebarToggle();
 
   if (typeof window.updateNavbarCount === "function") {
     window.updateNavbarCount();
