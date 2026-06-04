@@ -416,5 +416,25 @@
         width="64"
         height="64" /><br />Loading..
     </div>
+
+    <!-- Access Denied Message -->
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        if (sessionStorage.getItem("accessDenied") === "true") {
+          sessionStorage.removeItem("accessDenied");
+
+          if (typeof Swal !== "undefined") {
+            Swal.fire({
+              icon: "warning",
+              title: "Access Denied",
+              text: "You are not allowed to access that page.",
+              confirmButtonText: "OK",
+            });
+          } else {
+            alert("Access Denied. You are not allowed to access that page.");
+          }
+        }
+      });
+    </script>
   </body>
 </html>

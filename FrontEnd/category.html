@@ -43,16 +43,11 @@
     <!-- Custom Script LAST -->
     <script src="assets/js/notification-bell.js"></script>
     <script src="assets/js/category.js"></script>
+    <script src="assets/js/role-guard.js"></script>
     <script src="assets/js/sidebar-role.js"></script>
     <script src="assets/js/navbar-count.js"></script>
     <script src="assets/js/navbar-role.js"></script>
 
-    <!-- Redirect to login if user is not authenticated -->
-    <script>
-      if ($.cookie("username") === undefined || $.cookie("token") === undefined) {
-        window.location.replace("login.html");
-      }
-    </script>
   </head>
     
   <body onload="load_user()">

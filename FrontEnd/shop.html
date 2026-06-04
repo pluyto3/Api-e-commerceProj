@@ -42,17 +42,8 @@
     <!-- Custom Script LAST -->
     <script src="assets/js/notification-bell.js"></script>
     <script src="assets/js/shop.js"></script>
+    <script src="assets/js/role-guard.js"></script>
     <script src="assets/js/navbar-role.js"></script>
-
-    <!-- Redirect to login if user is not authenticated -->
-    <script>
-      if (
-        $.cookie("username") === undefined ||
-        $.cookie("token") === undefined
-      ) {
-        window.location.replace("login.html");
-      }
-    </script>
   </head>
   <body>
     <!--Navbar-->

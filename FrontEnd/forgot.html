@@ -1,7 +1,6 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <title>Forgot Password</title>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Forgot Password</title>
@@ -38,13 +37,16 @@
             <h2 class="text-center">Forgot Password</h2>
             <form action="#" id="forgotPasswordForm" method="POST">
               <div class="mb-3">
-                <label for="email" class="form-label">Enter Email</label>
-                <input
-                  type="email"
-                  class="form-control"
-                  id="email"
-                  name="email"
-                  required />
+                <div class="mb-3">
+                  <label for="email" class="form-label">Enter Email</label>
+                  <input
+                    type="email"
+                    class="form-control"
+                    id="email"
+                    name="email"
+                    required />
+                  <small id="emailError" class="text-danger"></small>
+                </div>
               </div>
               <div class="mb-3 d-flex justify-content-center">
                 <button

@@ -48,10 +48,14 @@
 
     <!-- Redirect to login if user is not authenticated -->
     <script>
-      if ($.cookie("username") === undefined || $.cookie("token") === undefined) {
+      if (
+        $.cookie("username") === undefined ||
+        $.cookie("token") === undefined
+      ) {
         window.location.replace("login.html");
       }
     </script>
+
   </head>
   <body onload="load_user()">
     <!--Navbar-->
