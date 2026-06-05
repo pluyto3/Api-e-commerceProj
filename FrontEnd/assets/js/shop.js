@@ -711,7 +711,7 @@ function loadFiltersFromUrl() {
 
   if (q) {
     activeSearch = q;
-    $("#searchInput").val(q);
+    $("#shopSearchInput").val(q);
   }
 
   if (params.get("category_id")) {
@@ -772,20 +772,43 @@ function setupEvents() {
     renderProducts();
   });
 
-  $(".search-form").on("submit", function (event) {
-    event.preventDefault();
-    activeSearch = normalizeText($("#searchInput").val());
+  let shopSearchTimer = null;
+
+  function applyShopSearch() {
+    activeSearch = normalizeText($("#shopSearchInput").val());
     currentPage = 1;
+
     renderProducts();
+
+    if (activeSearch) {
+      const resultCount = getVisibleProducts().length;
+
+      $("#shopSearchStatus").text(
+        `${resultCount} product(s) found for "${$("#shopSearchInput").val().trim()}".`,
+      );
+    } else {
+      $("#shopSearchStatus").text("");
+    }
+  }
+
+  $("#shopSearchForm").on("submit", function (event) {
+    event.preventDefault();
+    applyShopSearch();
   });
 
-  $("#searchInput").on("input search", function () {
-    const nextSearch = normalizeText(this.value);
+  $("#shopSearchInput").on("input search", function () {
+    clearTimeout(shopSearchTimer);
 
-    if (nextSearch || !activeSearch) return;
+    shopSearchTimer = setTimeout(function () {
+      applyShopSearch();
+    }, 300);
+  });
 
+  $("#clearShopSearch").on("click", function () {
+    $("#shopSearchInput").val("");
     activeSearch = "";
     currentPage = 1;
+    $("#shopSearchStatus").text("");
     renderProducts();
   });
 

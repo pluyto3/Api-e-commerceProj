@@ -201,44 +201,70 @@
     </nav>
 
     <main>
-      <!--Single Product-->
-      <section class="container single-product my-5 pt=5">
-        <div class="row mt-5 addtoItem">
-          <div class="col-lg-5 col-md-6 col-sm-12">
-            <img src="" id="main-img" class="img-fluid w-100" />
+      <!-- Single Product -->
+      <section class="container single-product single-product-page my-5 pt-5">
+        <div class="row product-main-card mx-0">
+          <!-- Product Image -->
+          <div class="col-lg-6 col-md-12 product-image-area">
+            <div class="product-image-box">
+              <img
+                src=""
+                id="main-img"
+                class="img-fluid product-main-img"
+                alt="Product Image" />
+            </div>
           </div>
 
-          <div class="col-lg-6 col-md-12 col-12">
-            <h6 class="badge badge-dark category-name" id="category-name"></h6>
-            <h3 class="py-4" id="product-name"></h3>
-            <h2 class="product-price" id="product-price"></h2>
-            <div class="d-flex align-items-center mb-3 mt-2">
-              <input
-                type="number"
-                id="product-quantity-input"
-                value="1"
-                min="1"
-                style="
-                  width: 70px;
-                  height: 40px;
-                  padding-left: 10px;
-                  margin-right: 15px;
-                  border: 1px solid #ccc;
-                " />
-              <span
-                id="product-stock"
-                class="text-muted"
-                style="font-size: 1rem"></span>
+          <!-- Product Information -->
+          <div class="col-lg-6 col-md-12 product-info-area">
+            <div class="product-info-card">
+              <h6 class="category-pill" id="category-name"></h6>
+
+              <h2 class="single-product-title" id="product-name"></h2>
+
+              <h3 class="single-product-price" id="product-price"></h3>
+
+              <div class="stock-row">
+                <i class="fas fa-box"></i>
+                <span id="product-stock" class="text-muted"></span>
+              </div>
+
+              <div class="quantity-row">
+                <label for="product-quantity-input">Quantity</label>
+                <input
+                  type="number"
+                  id="product-quantity-input"
+                  value="1"
+                  min="1"
+                  class="quantity-input" />
+              </div>
+
+              <div class="product-action-buttons">
+                <button
+                  type="button"
+                  class="btn add-cart-btn product-add-to-cart-btn">
+                  <i class="fas fa-shopping-cart mr-1"></i> Add To Cart
+                </button>
+
+                <button
+                  type="button"
+                  class="btn buy-now-btn product-buy-now-btn">
+                  Buy Now
+                </button>
+              </div>
+
+              <div class="buyer-note">
+                <i class="fas fa-shield-alt mr-1"></i>
+                Safe checkout and order tracking available.
+              </div>
             </div>
-            <button type="button" class="buy-btn product-add-to-cart-btn">
-              Add To Cart
-            </button>
-            <button type="button" class="buy-btn product-buy-now-btn">
-              Buy Now
-            </button>
-            <h4 class="mt-5 mb-5 productDetails">Product Details</h4>
-            <div class="product-details-text" id="product-details-text"></div>
           </div>
+        </div>
+
+        <!-- Product Details -->
+        <div class="product-details-card mt-4">
+          <h4>Product Details</h4>
+          <div class="product-details-text" id="product-details-text"></div>
         </div>
       </section>
 

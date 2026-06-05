@@ -368,6 +368,45 @@
           </aside>
 
           <div class="col-lg-10" id="shop-products-panel">
+            <!-- Product Search Bar -->
+            <div class="bg-white p-3 mb-3 shadow-sm rounded shop-search-box">
+              <form
+                id="shopSearchForm"
+                class="d-flex flex-column flex-md-row align-items-stretch">
+                <div class="input-group flex-grow-1">
+                  <div class="input-group-prepend">
+                    <span class="input-group-text bg-white">
+                      <i class="fas fa-search"></i>
+                    </span>
+                  </div>
+
+                  <input
+                    type="search"
+                    id="shopSearchInput"
+                    class="form-control"
+                    placeholder="Search products..."
+                    autocomplete="off" />
+                </div>
+
+                <button
+                  type="submit"
+                  class="btn btn-primary ml-md-2 mt-2 mt-md-0">
+                  Search
+                </button>
+
+                <button
+                  type="button"
+                  id="clearShopSearch"
+                  class="btn btn-outline-secondary ml-md-2 mt-2 mt-md-0">
+                  Clear
+                </button>
+              </form>
+
+              <small
+                id="shopSearchStatus"
+                class="text-muted d-block mt-2"></small>
+            </div>
+
             <div
               class="bg-white p-2 mb-3 shadow-sm d-flex align-items-center justify-content-between rounded">
               <span

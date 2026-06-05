@@ -402,202 +402,6 @@
         </div>
       </section>
 
-      <!-- Order Details Modal -->
-      <div
-        class="modal fade order-details-modal"
-        id="orderDetailsModal"
-        tabindex="-1">
-        <div class="modal-dialog modal-xl">
-          <div class="modal-content">
-            <div class="modal-header">
-              <div>
-                <p class="order-details-kicker mb-1">Order Details</p>
-                <h5 class="modal-title mb-0">
-                  Order #<span id="summaryOrderId"></span>
-                </h5>
-              </div>
-              <button
-                type="button"
-                class="close"
-                data-dismiss="modal"
-                aria-label="Close">
-                <span>&times;</span>
-              </button>
-            </div>
-
-            <div class="modal-body">
-              <div
-                id="orderStatusTimeline"
-                class="order-status-timeline mb-4"></div>
-
-              <div id="order-summary" class="order-details-summary mb-4">
-                <div class="order-details-summary-grid">
-                  <div class="order-details-summary-item">
-                    <span class="order-details-summary-label"
-                      >Order Status</span
-                    >
-                    <div id="summaryStatus"></div>
-                  </div>
-                  <div class="order-details-summary-item">
-                    <span class="order-details-summary-label">Payment</span>
-                    <div id="summaryPaymentStatus"></div>
-                  </div>
-                  <div class="order-details-summary-item">
-                    <span class="order-details-summary-label"
-                      >Payment Method</span
-                    >
-                    <div
-                      id="summaryPaymentMethod"
-                      class="order-details-summary-value"></div>
-                  </div>
-                  <div class="order-details-summary-item">
-                    <span class="order-details-summary-label"
-                      >Tracking Number</span
-                    >
-                    <div
-                      id="tracking"
-                      class="order-details-summary-value order-details-tracking"></div>
-                  </div>
-                  <div class="order-details-summary-item">
-                    <span class="order-details-summary-label">Date</span>
-                    <div
-                      id="summaryDate"
-                      class="order-details-summary-value"></div>
-                  </div>
-                  <div class="order-details-summary-item">
-                    <span class="order-details-summary-label">Total Items</span>
-                    <div
-                      id="summaryItems"
-                      class="order-details-summary-value"></div>
-                  </div>
-                  <div class="order-details-summary-item">
-                    <span class="order-details-summary-label">Customer</span>
-                    <div
-                      id="summaryCustomer"
-                      class="order-details-summary-value"></div>
-                  </div>
-                  <div class="order-details-summary-item">
-                    <span class="order-details-summary-label">Contact</span>
-                    <div
-                      id="summaryContact"
-                      class="order-details-summary-value"></div>
-                  </div>
-                </div>
-                <div class="order-details-summary-item mt-3">
-                  <span class="order-details-summary-label"
-                    >Complete Address</span
-                  >
-                  <div
-                    id="summaryAddress"
-                    class="order-details-summary-value"></div>
-                </div>
-              </div>
-
-              <div class="order-details-items-head mb-3">
-                <h6 class="order-details-items-title mb-0">Products</h6>
-                <div class="order-details-subtotal">
-                  Total Amount: &#8369;<span id="orderTotal"></span>
-                </div>
-              </div>
-              <div class="order-details-table-wrap">
-                <table class="table order-details-table">
-                  <thead>
-                    <tr>
-                      <th>Image</th>
-                      <th>Product</th>
-                      <th class="text-center">Qty</th>
-                      <th>Price</th>
-                      <th>Subtotal</th>
-                    </tr>
-                  </thead>
-                  <tbody id="orderDetailsBody"></tbody>
-                </table>
-              </div>
-            </div>
-            <div class="modal-footer">
-              <button class="order-modal-close-btn" data-dismiss="modal">
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Update Status Modal -->
-      <div
-        class="modal fade"
-        id="updateStatusModal"
-        tabindex="-1"
-        aria-hidden="true">
-        <div class="modal-dialog modal-md">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title">Update Order Status</h5>
-              <button
-                type="button"
-                class="close"
-                data-dismiss="modal"
-                aria-label="Close">
-                <span>&times;</span>
-              </button>
-            </div>
-
-            <div class="modal-body">
-              <!-- Hidden Order ID -->
-              <input type="hidden" id="statusOrderId" />
-
-              <div class="form-group">
-                <label>Order Status</label>
-                <select id="newOrderStatus" class="form-control">
-                  <option value="pending">Pending</option>
-                  <option value="packed">Packed</option>
-                  <option value="shipped">Shipped</option>
-                  <option value="delivered">Delivered</option>
-                  <option value="cancelled">Cancelled</option>
-                </select>
-                <small
-                  id="statusFinalMessage"
-                  class="form-text text-muted"></small>
-              </div>
-
-              <div class="form-group" id="paymentStatusGroup">
-                <label>Payment Status</label>
-                <select id="newPaymentStatus" class="form-control">
-                  <option value="">No change</option>
-                  <option value="pending">Pending</option>
-                  <option value="paid">Paid</option>
-                  <option value="failed">Failed</option>
-                  <option value="cancelled">Cancelled</option>
-                </select>
-              </div>
-
-              <div class="form-group" id="trackingNumberGroup">
-                <label>Tracking Number</label>
-                <input
-                  type="text"
-                  id="trackingNumberInput"
-                  class="form-control"
-                  placeholder="Enter tracking number" />
-                <small class="form-text text-muted">
-                  Add this when the order is packed or shipped.
-                </small>
-              </div>
-            </div>
-
-            <div class="modal-footer">
-              <button class="btn btn-info" data-dismiss="modal">Close</button>
-
-              <button
-                id="saveStatusUpdate"
-                class="btn btn-success"
-                onclick="submitOrderStatusUpdate()">
-                Save Changes
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <!-- User Working Panel -->
       <section
         class="working-panel"
@@ -676,6 +480,201 @@
           <div id="userOrderListCards" class="pb-5"></div>
         </div>
       </section>
+    </div>
+
+    <!-- Order Details Modal -->
+    <div
+      class="modal fade order-details-modal"
+      id="orderDetailsModal"
+      tabindex="-1">
+      <div
+        class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+          <div class="modal-header">
+            <div>
+              <p class="order-details-kicker mb-1">Order Details</p>
+              <h5 class="modal-title mb-0">
+                Order #<span id="summaryOrderId"></span>
+              </h5>
+            </div>
+            <button
+              type="button"
+              class="close"
+              data-dismiss="modal"
+              aria-label="Close">
+              <span>&times;</span>
+            </button>
+          </div>
+
+          <div class="modal-body">
+            <div
+              id="orderStatusTimeline"
+              class="order-status-timeline mb-4"></div>
+
+            <div id="order-summary" class="order-details-summary mb-4">
+              <div class="order-details-summary-grid">
+                <div class="order-details-summary-item">
+                  <span class="order-details-summary-label">Order Status</span>
+                  <div id="summaryStatus"></div>
+                </div>
+                <div class="order-details-summary-item">
+                  <span class="order-details-summary-label">Payment</span>
+                  <div id="summaryPaymentStatus"></div>
+                </div>
+                <div class="order-details-summary-item">
+                  <span class="order-details-summary-label"
+                    >Payment Method</span
+                  >
+                  <div
+                    id="summaryPaymentMethod"
+                    class="order-details-summary-value"></div>
+                </div>
+                <div class="order-details-summary-item">
+                  <span class="order-details-summary-label"
+                    >Tracking Number</span
+                  >
+                  <div
+                    id="tracking"
+                    class="order-details-summary-value order-details-tracking"></div>
+                </div>
+                <div class="order-details-summary-item">
+                  <span class="order-details-summary-label">Date</span>
+                  <div
+                    id="summaryDate"
+                    class="order-details-summary-value"></div>
+                </div>
+                <div class="order-details-summary-item">
+                  <span class="order-details-summary-label">Total Items</span>
+                  <div
+                    id="summaryItems"
+                    class="order-details-summary-value"></div>
+                </div>
+                <div class="order-details-summary-item">
+                  <span class="order-details-summary-label">Customer</span>
+                  <div
+                    id="summaryCustomer"
+                    class="order-details-summary-value"></div>
+                </div>
+                <div class="order-details-summary-item">
+                  <span class="order-details-summary-label">Contact</span>
+                  <div
+                    id="summaryContact"
+                    class="order-details-summary-value"></div>
+                </div>
+              </div>
+              <div class="order-details-summary-item mt-3">
+                <span class="order-details-summary-label"
+                  >Complete Address</span
+                >
+                <div
+                  id="summaryAddress"
+                  class="order-details-summary-value"></div>
+              </div>
+            </div>
+
+            <div class="order-details-items-head mb-3">
+              <h6 class="order-details-items-title mb-0">Products</h6>
+              <div class="order-details-subtotal">
+                Total Amount: &#8369;<span id="orderTotal"></span>
+              </div>
+            </div>
+            <div class="order-details-table-wrap">
+              <table class="table order-details-table">
+                <thead>
+                  <tr>
+                    <th>Image</th>
+                    <th>Product</th>
+                    <th class="text-center">Qty</th>
+                    <th>Price</th>
+                    <th>Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody id="orderDetailsBody"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="order-modal-close-btn" data-dismiss="modal">
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Update Status Modal -->
+    <div
+      class="modal fade"
+      id="updateStatusModal"
+      tabindex="-1"
+      aria-hidden="true">
+      <div class="modal-dialog modal-md modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Update Order Status</h5>
+            <button
+              type="button"
+              class="close"
+              data-dismiss="modal"
+              aria-label="Close">
+              <span>&times;</span>
+            </button>
+          </div>
+
+          <div class="modal-body">
+            <!-- Hidden Order ID -->
+            <input type="hidden" id="statusOrderId" />
+
+            <div class="form-group">
+              <label>Order Status</label>
+              <select id="newOrderStatus" class="form-control">
+                <option value="pending">Pending</option>
+                <option value="packed">Packed</option>
+                <option value="shipped">Shipped</option>
+                <option value="delivered">Delivered</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+              <small
+                id="statusFinalMessage"
+                class="form-text text-muted"></small>
+            </div>
+
+            <div class="form-group" id="paymentStatusGroup">
+              <label>Payment Status</label>
+              <select id="newPaymentStatus" class="form-control">
+                <option value="">No change</option>
+                <option value="pending">Pending</option>
+                <option value="paid">Paid</option>
+                <option value="failed">Failed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+
+            <div class="form-group" id="trackingNumberGroup">
+              <label>Tracking Number</label>
+              <input
+                type="text"
+                id="trackingNumberInput"
+                class="form-control"
+                placeholder="Enter tracking number" />
+              <small class="form-text text-muted">
+                Add this when the order is packed or shipped.
+              </small>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button class="btn btn-info" data-dismiss="modal">Close</button>
+
+            <button
+              id="saveStatusUpdate"
+              class="btn btn-success"
+              onclick="submitOrderStatusUpdate()">
+              Save Changes
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!--Footer-->

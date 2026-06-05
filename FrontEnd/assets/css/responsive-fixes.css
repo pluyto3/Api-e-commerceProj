@@ -402,3 +402,28 @@ nav.navbar.sticky-top {
     width: 100% !important;
   }
 }
+
+/* Keep modals above sticky navbar and sidebar */
+.modal {
+  z-index: 20000 !important;
+}
+
+.modal-backdrop {
+  z-index: 19990 !important;
+}
+
+/* Lower navbar only when modal is open */
+body.modal-open .dashboard-navbar,
+body.modal-open .navbar.sticky-top {
+  z-index: 1000 !important;
+}
+
+/* Better height for large order details modal */
+#orderDetailsModal .modal-dialog {
+  max-width: 80%;
+}
+
+#orderDetailsModal .modal-body {
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+}
