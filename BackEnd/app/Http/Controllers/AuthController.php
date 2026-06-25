@@ -12,8 +12,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\File;
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
+use Illuminate\Support\Facades\Mail;
 use App\Services\PushNotificationService;
 
 class AuthController extends Controller
@@ -73,49 +72,30 @@ class AuthController extends Controller
      * PHP Mailer for sending verification email
      */
 
-    private function sendVerificationEmail($user){
-        $mail = new PHPMailer(true);
+    private function sendVerificationEmail($user) {
         try {
-            // Server settings from .env
-            $mail->isSMTP();
-            $mail->Host = config('mail.mailers.smtp.host'); // Your SMTP server
-            $mail->SMTPAuth = true;
-            $mail->Username = config('mail.mailers.smtp.username'); // Your SMTP username
-            $mail->Password = config('mail.mailers.smtp.password');    // Your SMTP password or App Password
-            $mail->Port = config('mail.mailers.smtp.port');
-
-            if (config('mail.mailers.smtp.encryption') === 'tls') {
-                $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-            } elseif (config('mail.mailers.smtp.encryption') === 'ssl') {
-                $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-            }
-
-            // Sender
-            $mail->setFrom(
-                config('mail.from.address'),
-                config('mail.from.name')
-            );
-
-            // Recipient
-            $mail->addAddress($user->email, $user->fullname);
-
-            // Verification URL
             $verifyUrl = url('/api/verify-email/' . $user->verification_token);
 
-            // Email content
-            $mail->isHTML(true);
-            $mail->Subject = 'Verify Your Email';
-            $mail->Body = "
-                Hello {$user->fullname},<br><br>
-                Please click the link below to verify your email:<br>
-                <a href='{$verifyUrl}'>Verify Email</a><br><br>
-                Thanks,<br>
-                Hanz-Go Team
+            $fullname = htmlspecialchars($user->fullname, ENT_QUOTES, 'UTF-8');
+
+            $body = "
+                <h2>Verify Your Email</h2>
+                <p>Hello {$fullname},</p>
+                <p>Please click the link below to verify your email:</p>
+                <p>
+                    <a href='{$verifyUrl}'>Verify Email</a>
+                </p>
+                <br>
+                <p>Thanks,<br>Hanz-Go Team</p>
             ";
 
-            $mail->send();
-        } catch (Exception $e) {
-            \Log::error("Verification email could not be sent. Mailer Error: {$mail->ErrorInfo}");
+            Mail::html($body, function ($message) use ($user) {
+                $message->to($user->email, $user->fullname)
+                    ->subject('Verify Your Email');
+            });
+
+        } catch (\Throwable $e) {
+            \Log::error('Verification email could not be sent: ' . $e->getMessage());
         }
     }
 
@@ -188,55 +168,33 @@ class AuthController extends Controller
      */
     public function sendResetEmail($user) {
 
-        $mail = new PHPMailer(true);
+        try {
+            $resetUrl = rtrim(env('FRONTEND_URL'), '/') . '/resetPassword.html?token=' . $user->reset_token;
 
-            try {
-                // Server settings from .env
-                $mail->isSMTP();
-                $mail->Host = config('mail.mailers.smtp.host');
-                $mail->SMTPAuth = true;
-                $mail->Username = config('mail.mailers.smtp.username');
-                $mail->Password = config('mail.mailers.smtp.password');
-                $mail->Port = config('mail.mailers.smtp.port');
-
-            if (config('mail.mailers.smtp.encryption') === 'tls') {
-                $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-            } elseif (config('mail.mailers.smtp.encryption') === 'ssl') {
-                $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-            }
-
-            // Sender
-            $mail->setFrom(
-                config('mail.from.address'),
-                config('mail.from.name')
-            );
-
-            // Recipient
-            $mail->addAddress($user->email, $user->fullname);
-
-            // Reset password URL
-            $resetUrl = 'http://localhost/e-commerce/FrontEnd/resetPassword.html?token=' . $user->reset_token;
-
-            // Escape user values before placing them in HTML
             $fullname = htmlspecialchars($user->fullname, ENT_QUOTES, 'UTF-8');
 
-            // Email content
-            $mail->isHTML(true);
-            $mail->Subject = 'Reset Your Password';
-            $mail->Body = "
-                Hello {$fullname},<br><br>
-                You requested a password reset.<br>
-                Please click the link below to reset your password:<br>
-                <a href='{$resetUrl}'>Reset Password</a><br><br>
-                If you did not request this, you can ignore this email.<br><br>
-                Thanks,<br>
-                Hanz-Go Team
+            $body = "
+                <h2>Reset Your Password</h2>
+                <p>Hello {$fullname},</p>
+                <p>You requested a password reset.</p>
+                <p>Please click the link below to reset your password:</p>
+                <p>
+                    <a href='{$resetUrl}'>Reset Password</a>
+                </p>
+                <br>
+                <p>If you did not request this, you can ignore this email.</p>
+                <br>
+                <p>Thanks,<br>Hanz-Go Team</p>
             ";
 
-            $mail->send();
-            } catch (Exception $e) {
-                \Log::error("Reset email could not be sent. Mailer Error: {$mail->ErrorInfo}");
-            }
+            Mail::html($body, function ($message) use ($user) {
+                $message->to($user->email, $user->fullname)
+                    ->subject('Reset Your Password');
+            });
+
+        } catch (\Throwable $e) {
+            \Log::error('Reset email could not be sent: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -840,52 +798,28 @@ class AuthController extends Controller
 
         $validated = $validator->validated();
 
-        $mail = new PHPMailer(true);
+            // Send the email using the configured mailer
+            try {
+                $name = htmlspecialchars($validated['name'], ENT_QUOTES, 'UTF-8');
+                $email = htmlspecialchars($validated['email'], ENT_QUOTES, 'UTF-8');
+                $subject = htmlspecialchars($validated['subject'], ENT_QUOTES, 'UTF-8');
+                $contactMessage = nl2br(htmlspecialchars($validated['message'], ENT_QUOTES, 'UTF-8'));
 
-        try {
-            $mail->isSMTP();
-            $mail->Host = config('mail.mailers.smtp.host');
-            $mail->SMTPAuth = true;
-            $mail->Username = config('mail.mailers.smtp.username');
-            $mail->Password = config('mail.mailers.smtp.password');
-            $mail->Port = config('mail.mailers.smtp.port');
+                $body = "
+                    <h2>New Contact Us Message</h2>
+                    <p><strong>Name:</strong> {$name}</p>
+                    <p><strong>Email:</strong> {$email}</p>
+                    <p><strong>Subject:</strong> {$subject}</p>
+                    <hr>
+                    <p><strong>Message:</strong></p>
+                    <p>{$contactMessage}</p>
+                ";
 
-            if (config('mail.mailers.smtp.encryption') === 'tls') {
-                $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-            } elseif (config('mail.mailers.smtp.encryption') === 'ssl') {
-                $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-            }
-
-            // Set recipient to App Name
-            $mail->setFrom(
-                config('mail.from.address'),
-                config('mail.from.name')
-            );
-
-            // Admin/default e-commerce email
-            $mail->addAddress(env('CONTACT_ADMIN_EMAIL'));
-
-            // Customer email, so admin can reply directly
-            $mail->addReplyTo($validated['email'], $validated['name']);
-
-            $name = htmlspecialchars($validated['name'], ENT_QUOTES, 'UTF-8');
-            $email = htmlspecialchars($validated['email'], ENT_QUOTES, 'UTF-8');
-            $subject = htmlspecialchars($validated['subject'], ENT_QUOTES, 'UTF-8');
-            $message = nl2br(htmlspecialchars($validated['message'], ENT_QUOTES, 'UTF-8'));
-
-            $mail->isHTML(true);
-            $mail->Subject = 'Hanz-Go Contact Us Message: ' . $subject;
-            $mail->Body = "
-                <h2>New Contact Us Message</h2>
-                <p><strong>Name:</strong> {$name}</p>
-                <p><strong>Email:</strong> {$email}</p>
-                <p><strong>Subject:</strong> {$subject}</p>
-                <hr>
-                <p><strong>Message:</strong></p>
-                <p>{$message}</p>
-            ";
-
-            $mail->send();
+                Mail::html($body, function ($message) use ($validated) {
+                    $message->to(env('CONTACT_ADMIN_EMAIL'))
+                        ->replyTo($validated['email'], $validated['name'])
+                        ->subject('Hanz-Go Contact Us Message: ' . $validated['subject']);
+                });
 
             // Notify admin through FCM after the email is successfully sent
             try {
@@ -919,12 +853,11 @@ class AuthController extends Controller
                 'msg' => 'Message sent successfully!'   
             ], 200);
 
-        } catch (Exception $e) {
-            \Log::error("Contact email could not be sent. Mailer Error: {$mail->ErrorInfo}");
+        } catch (\Throwable $e) {
+            \Log::error('Contact email could not be sent: ' . $e->getMessage());
 
             return response()->json([
-                'msg' => 'Message could not be sent. Please try again later.',
-                'error' => $mail->ErrorInfo
+                'msg' => 'Message could not be sent. Please try again later.'
             ], 500);
         }
     }
