@@ -84,6 +84,10 @@ return [
                 'log',
             ],
         ],
+
+        'resend' => [
+            'transport' => 'resend',
+        ],
     ],
 
     /*
@@ -119,10 +123,6 @@ return [
         'paths' => [
             resource_path('views/vendor/mail'),
         ],
-    ],
-
-    'resend' => [
-        'key' => env('RESEND_API_KEY'),
     ],
 
 ];
