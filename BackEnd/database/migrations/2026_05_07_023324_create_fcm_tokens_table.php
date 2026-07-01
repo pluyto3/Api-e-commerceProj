@@ -14,12 +14,10 @@ return new class extends Migration
         Schema::create('fcm_tokens', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('user_id')->nullable();
-            $table->text('token');
+            $table->text('token', 512)->unique();
             $table->string('platform')->default('web');
             $table->timestamp('last_used_at')->nullable();
             $table->timestamps();
-
-            $table->unique('token');
         });
     }
 

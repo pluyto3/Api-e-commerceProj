@@ -169,7 +169,8 @@ class AuthController extends Controller
     public function sendResetEmail($user) {
 
         try {
-            $resetUrl = rtrim(env('FRONTEND_URL'), '/') . '/resetPassword.html?token=' . $user->reset_token;
+            $frontendUrl = rtrim(config('app.frontend_url'), '/');
+            $resetUrl = $frontendUrl . '/resetPassword.html?token=' . urlencode($user->reset_token);
 
             $fullname = htmlspecialchars($user->fullname, ENT_QUOTES, 'UTF-8');
 
@@ -198,8 +199,8 @@ class AuthController extends Controller
     }
 
     /**
-     * PHP Mailer for sending reset email
-     */
+    * PHP Mailer for sending reset email
+    */
     
     public function resetPassword(Request $request, $token) {
         $user = User::where('reset_token', $token)->first();
