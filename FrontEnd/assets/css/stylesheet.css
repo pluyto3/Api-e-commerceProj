@@ -1155,23 +1155,23 @@ hr {
 
 /* CheckOut Starts Here */
 
-#checkout-form .checkout-small-element {
+#checkoutform .checkout-small-element {
   display: inline-block;
   width: 48%;
   margin: 10px auto;
 }
 
-#checkout-form .checkout-large-element {
+#checkoutform .checkout-large-element {
   width: 96%;
 }
 
-#checkout-form .checkout-btn-container {
+#checkoutform .checkout-btn-container {
   margin: 10px;
   text-align: right;
   margin-right: 40px;
 }
 
-#checkout-form #checkout-btn {
+#checkoutform #checkout-btn {
   color: #fff;
   background-color: #fb774b;
 }
@@ -3753,7 +3753,7 @@ th:last-child {
   margin: auto;
 }
 
-.manangeAccount-section {
+.manageAccount-section {
   padding: 20px;
   background: #f9f9f9;
   margin: auto;
@@ -5072,8 +5072,9 @@ footer {
   .wrapper .working-panel,
   .sidebar.collapsed ~ .working-panel,
   .wrapper.sidebar-collapsed .working-panel {
+    width: auto !important;
     margin: 12px !important;
-    padding: 0 0 28px;
+    padding: 16px !important;
   }
 
   .working-panel > .container-fluid > h1.display-4,

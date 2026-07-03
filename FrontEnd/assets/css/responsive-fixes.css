@@ -4,14 +4,11 @@
    ========================================================= */
 
 /* Prevent accidental horizontal scrolling */
-html {
-  max-width: 100%;
-  overflow-x: clip;
-}
-
+html,
 body {
+  width: 100%;
   max-width: 100%;
-  overflow-x: visible;
+  overflow-x: hidden;
 }
 
 /* Make images and tables safer on small screens */
@@ -426,4 +423,59 @@ body.modal-open .navbar.sticky-top {
 #orderDetailsModal .modal-body {
   max-height: calc(100vh - 200px);
   overflow-y: auto;
+}
+
+/* Checkout page mobile polish */
+@media (max-width: 767.98px) {
+  .checkout-stepper {
+    margin-top: 18px !important;
+    padding: 14px !important;
+    border-radius: 18px !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  .checkout-stepper .step {
+    width: 100% !important;
+    margin: 0 !important;
+    text-align: center !important;
+  }
+
+  .checkout-stepper i.fa-chevron-right {
+    transform: rotate(90deg);
+  }
+
+  #checkoutform .form-group {
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+  }
+
+  .ui-card,
+  .ui-card-gray {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 18px !important;
+    margin-bottom: 18px !important;
+  }
+
+  .cartItems {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+
+  #placeOrder {
+    width: 100% !important;
+  }
+
+  .footer-main {
+    width: auto !important;
+    max-width: calc(100% - 24px) !important;
+    margin: 20px 12px !important;
+  }
+
+  .footer-main .general-info {
+    flex-direction: column !important;
+    gap: 18px !important;
+    padding: 22px !important;
+  }
 }
