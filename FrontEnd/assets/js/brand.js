@@ -1,7 +1,7 @@
 /* ================================
    GLOBAL VARIABLES
 ================================ */
-const ip = "http://localhost/e-commerce/BackEnd/public";
+const ip = "http://165.245.179.185:8080";
 let token = null;
 let usr = null;
 let role = null;
@@ -10,7 +10,7 @@ let currentUserId = null;
 let brandsCache = [];
 let sellerLookup = {};
 const brandImageBaseUrl =
-  "http://localhost/e-commerce/BackEnd/public/FrontEnd/assets/img/brand";
+  "http://165.245.179.185:8080/FrontEnd/assets/img/brand";
 
 function getBrandImageUrl(imageName) {
   return imageName
@@ -846,7 +846,7 @@ $(document).ready(function () {
         $("#editDescription").val(res.description || "");
 
         const imageUrl = res.image
-          ? `http://localhost/e-commerce/BackEnd/public/FrontEnd/assets/img/brand/${res.image}`
+          ? `http://165.245.179.185:8080/FrontEnd/assets/img/brand/${res.image}`
           : null;
 
         if (imageUrl) {

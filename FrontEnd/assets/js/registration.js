@@ -1,5 +1,5 @@
 $(document).ready(function () {
-  var ip = "http://localhost:8000"; // Change this to your server IP or domain
+  var ip = "http://165.245.179.185:8080"; // Change this to your server IP or domain
 
   $(document).ajaxStart(function () {
     $("#wait").css("display", "block");

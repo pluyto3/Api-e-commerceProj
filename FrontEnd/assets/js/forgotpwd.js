@@ -1,4 +1,4 @@
-var ip = "http://localhost:8000";
+var ip = "http://165.245.179.185:8080";
 
 $(document).ajaxStart(function () {
   $("#wait").css("display", "block");

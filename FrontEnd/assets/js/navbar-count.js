@@ -1,5 +1,5 @@
 (function ($) {
-  const apiBase = "http://localhost:8000";
+  const apiBase = "http://165.245.179.185:8080";
   const SELLER_CAN_SHOP = true;
 
   function getRole() {

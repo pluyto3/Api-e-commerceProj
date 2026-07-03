@@ -1,6 +1,6 @@
 (function ($) {
   const SELLER_CAN_BUY = true;
-  const apiBase = "http://localhost:8000";
+  const apiBase = "http://165.245.179.185:8080";
   const LOW_STOCK_ALERT_THRESHOLD = 3;
   let notificationRequestKey = null;
 

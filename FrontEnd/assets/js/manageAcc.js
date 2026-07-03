@@ -1,7 +1,7 @@
 // =======================================
 // GLOBAL VARIABLES
 // =======================================
-const ip = "http://localhost:8000";
+const ip = "http://165.245.179.185:8080";
 let token = $.cookie("token");
 let usr = $.cookie("username");
 let role = $.cookie("role");

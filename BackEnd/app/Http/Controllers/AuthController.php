@@ -169,9 +169,10 @@ class AuthController extends Controller
     public function sendResetEmail($user) {
 
         try {
+
             $frontendUrl = rtrim(config('app.frontend_url'), '/');
             $resetUrl = $frontendUrl . '/resetPassword.html?token=' . urlencode($user->reset_token);
-
+            
             $fullname = htmlspecialchars($user->fullname, ENT_QUOTES, 'UTF-8');
 
             $body = "

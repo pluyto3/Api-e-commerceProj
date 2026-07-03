@@ -1,7 +1,7 @@
 // =======================================
 // GLOBAL VARIABLES
 // =======================================
-const ip = "http://localhost:8000";
+const ip = "http://165.245.179.185:8080";
 let token = $.cookie("token");
 let usr = $.cookie("username");
 let role = $.cookie("role");
@@ -1769,30 +1769,36 @@ $(document).ready(function () {
   }
 
   $("#logout").click((e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    removeFcmTokenFromServer(function () {
-      $.ajax({
-        url: `${ip}/api/logout`,
-        type: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        data: { token },
-        success: () => {
-          Swal.fire({ icon: "success", title: "Logout Successful" }).then(
-            () => {
-              Object.keys($.cookie()).forEach((cookie) =>
-                $.removeCookie(cookie),
-              );
-              window.location.replace("login.html");
-            },
-          );
-        },
-        error: (res) => {
-          const msg =
-            res.responseJSON?.msg || "Logout failed. Please try again.";
-          Swal.fire({ icon: "error", title: "Error", text: msg });
-        },
-      });
+  function clearCookiesAndRedirect() {
+    Object.keys($.cookie()).forEach((cookie) => {
+      $.removeCookie(cookie, { path: "/" });
+      $.removeCookie(cookie);
     });
-  });
+
+    window.location.replace("login.html");
+  }
+
+  function logoutFromServer() {
+    $.ajax({
+      url: `${ip}/api/logout`,
+      type: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      data: { token },
+      complete: () => {
+        clearCookiesAndRedirect();
+      },
+    });
+  }
+
+  if (typeof removeFcmTokenFromServer === "function") {
+    removeFcmTokenFromServer(function () {
+      logoutFromServer();
+    });
+  } else {
+    logoutFromServer();
+  }
 });
+});
+

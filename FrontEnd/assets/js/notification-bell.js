@@ -5,7 +5,7 @@
 
   window.__appNotificationBellLoaded = true;
 
-  const NOTIFICATION_API = "http://localhost:8000/api/notifications";
+  const NOTIFICATION_API = "http://165.245.179.185:8080/api/notifications";
 
   let notificationRequestRunning = false;
   let notificationIntervalStarted = false;

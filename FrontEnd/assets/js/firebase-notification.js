@@ -5,6 +5,9 @@
 // console.log("Current token cookie:", $.cookie("token"));
 // console.log("Current role cookie:", $.cookie("role"));
 // console.log("Notification permission:", Notification.permission);
+if (!("serviceWorker" in navigator) || !("Notification" in window)) {
+  console.warn("Firebase notifications are not supported on this browser or this site is not using HTTPS.");
+} else {
 
 const firebaseConfig = {
   apiKey: "AIzaSyBg_xIbb74aWye2s0cKF8SfyIBFYBZjy94",
@@ -104,7 +107,7 @@ function saveFcmTokenToServer(fcmToken) {
   }
 
   $.ajax({
-    url: "http://localhost:8000/api/fcm-token",
+    url: "http://165.245.179.185:8080/api/fcm-token",
     method: "POST",
     data: {
       token: fcmToken,
@@ -139,7 +142,7 @@ window.removeFcmTokenFromServer = function (callback) {
   }
 
   $.ajax({
-    url: "http://localhost:8000/api/fcm-token",
+    url: "http://165.245.179.185:8080/api/fcm-token",
     method: "DELETE",
     data: {
       token: fcmToken,
@@ -181,3 +184,4 @@ $(document).ready(function () {
     initFirebaseNotification();
   }
 });
+}

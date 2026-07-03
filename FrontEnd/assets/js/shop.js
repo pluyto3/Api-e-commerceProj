@@ -1,7 +1,7 @@
 /* ================================
    GLOBAL VARIABLES
 ================================ */
-const ip = "http://localhost:8000";
+const ip = "http://165.245.179.185:8080";
 let token = null;
 let usr = null;
 let role = null;
@@ -41,7 +41,7 @@ function getApiBaseUrl() {
     return window.location.origin;
   }
 
-  return "http://localhost/e-commerce/BackEnd/public";
+  return "http://165.245.179.185:8080";
 }
 
 function getApiHeaders(extraHeaders = {}) {
