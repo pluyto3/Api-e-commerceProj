@@ -1,7 +1,12 @@
 /* ================================
    GLOBAL VARIABLES
 ================================ */
-const ip = "http://165.245.179.185:8080";
+if (!window.APP_CONFIG?.API_BASE_URL) {
+  throw new Error("APP_CONFIG is missing. Load config.js before cart.js.");
+}
+
+const ip = window.APP_CONFIG.API_BASE_URL;
+// const ip = "http://165.245.179.185:8080";
 let token = null;
 let usr = null;
 let role = null;
@@ -14,7 +19,13 @@ let latestCartItems = [];
 // =======================================
 function load_user() {
   usr = $.cookie("username");
-  token = $.cookie("token");
+  const storedToken = $.cookie("token");
+
+  token = storedToken
+    ? String(storedToken)
+        .replace(/^Bearer\s+/i, "")
+        .trim()
+    : null;
   role = String($.cookie("role") || "").toLowerCase();
   profileImage = $.cookie("profileImage");
   currentUserId = $.cookie("user_id") || currentUserId;
@@ -54,12 +65,8 @@ function load_user() {
   $register.hide();
   $logout.show();
 
-  // Show cart only for regular users (not sellers/admins)
-  if (!role || (role !== "admin" && role !== "seller")) {
-    $cartCount.show();
-  } else {
-    $cartCount.hide();
-  }
+  // Keep the badge hidden until the cart count is loaded
+  $cartCount.text("").hide();
 
   // Role-based access
   if (role === "admin" || role === "seller") {
@@ -74,9 +81,73 @@ function load_user() {
 }
 
 /* ------------------------------
+   Update Selected Total
+------------------------------ */
+function updateSelectedTotal() {
+  let selectedTotal = 0;
+
+  const $selectedItems = $("input.select-item:checked:not(:disabled)");
+
+  const hasAvailableItems = $("input.select-item:not(:disabled)").length > 0;
+
+  $("#checkout-btn").prop("disabled", !hasAvailableItems);
+
+  const unavailableCount = $(".cart-item-card.stock-issue").length;
+
+  if (unavailableCount === 0) {
+    $("#cart-stock-alert").remove();
+  } else {
+    $("#cart-stock-alert").text(
+      `${unavailableCount} item(s) cannot be checked out because stock is unavailable or below your cart quantity.`,
+    );
+  }
+
+  $selectedItems.each(function () {
+    const itemPrice = Number($(this).attr("data-price")) || 0;
+
+    selectedTotal += itemPrice;
+  });
+
+  const formattedTotal = selectedTotal.toLocaleString("en-PH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+  if ($selectedItems.length > 0) {
+    $("#subtotal-display").text(`₱${formattedTotal}`);
+
+    $("#total-amount").text(`₱${formattedTotal}`);
+
+    $("#subtotal-row").show();
+    $("#total-row").show();
+    $("#summary-hr").show();
+  } else {
+    $("#subtotal-display").text("₱0.00");
+    $("#total-amount").text("₱0.00");
+    $("#subtotal-row").hide();
+    $("#total-row").hide();
+    $("#summary-hr").hide();
+  }
+}
+
+/* ------------------------------
    Load Cart Items
 ------------------------------ */
 function loadCartItems() {
+  if (!token) {
+    console.warn(
+      "Cart request skipped because no authentication token exists.",
+    );
+
+    $("#cart-items-container").html(`
+      <div class="alert alert-warning">
+        Please log in to view your cart.
+      </div>
+    `);
+
+    return;
+  }
+
   $.ajax({
     url: `${ip}/api/cart`,
     method: "GET",
@@ -310,7 +381,7 @@ $(document).ready(function () {
   // -------------------------------
   if (usr) {
     $.ajax({
-      url: `${ip}/api/getAccount_username/${usr}`,
+      url: `${ip}/api/getAccount_username/${encodeURIComponent(usr)}`,
       type: "GET",
       headers: {
         Accept: "application/json",
@@ -647,48 +718,17 @@ $(document).ready(function () {
   });
 
   /* ------------------------------
-     Update Total Amount
-  ------------------------------ */
-  function updateSelectedTotal() {
-    let selectedTotal = 0;
-    const $selectedItems = $("input.select-item:checked:not(:disabled)");
-    const hasAvailableItems = $("input.select-item:not(:disabled)").length > 0;
-
-    $("#checkout-btn").prop("disabled", !hasAvailableItems);
-
-    const unavailableCount = $(".cart-item-card.stock-issue").length;
-    if (unavailableCount === 0) {
-      $("#cart-stock-alert").remove();
-    } else {
-      $("#cart-stock-alert").text(
-        `${unavailableCount} item(s) cannot be checked out because stock is unavailable or below your cart quantity.`,
-      );
-    }
-
-    $selectedItems.each(function () {
-      selectedTotal += parseFloat($(this).data("price"));
-    });
-
-    if ($selectedItems.length > 0) {
-      $("#subtotal-display").text(`₱${selectedTotal.toLocaleString()}`);
-      $("#total-amount").text(`₱${selectedTotal.toLocaleString()}`);
-      $("#subtotal-row").show();
-      $("#total-row").show();
-      $("#summary-hr").show();
-    } else {
-      $("#subtotal-display").text("₱0");
-      $("#total-amount").text("₱0");
-      $("#subtotal-row").hide();
-      $("#total-row").hide();
-      $("#summary-hr").hide();
-    }
-  }
-
-  /* ------------------------------
      Update Cart Count (Navbar)
   ------------------------------ */
   function updateCartCount(count) {
-    $("#cart-count").text(count);
+    const cartCount = Number(count) || 0;
+    const $cartBadges = $("#cart-count, #cart-count-mobile");
+
+    if (cartCount > 0) {
+      $cartBadges.text(cartCount).show();
+    } else {
+      $cartBadges.text("").hide();
+    }
   }
 
   // Fetch cart count on page load

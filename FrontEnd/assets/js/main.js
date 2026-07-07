@@ -1,7 +1,13 @@
 /* ================================
    GLOBAL VARIABLES
 ================================ */
-const ip = "http://165.245.179.185:8080";
+// const ip = "http://165.245.179.185:8080";
+if (!window.APP_CONFIG?.API_BASE_URL) {
+  throw new Error("APP_CONFIG is missing. Load config.js before checkout.js.");
+}
+
+const ip = window.APP_CONFIG.API_BASE_URL;
+
 let token = null;
 let usr = null;
 let role = null;
@@ -58,7 +64,17 @@ function getCartProductIds(cartItems) {
 }
 
 function updateCartCount(count) {
-  $("#cart-count").text(count || 0);
+  const cartCount = Number(count) || 0;
+  const $cartCount = $("#cart-count");
+
+  // Hide badge for admin/seller or when cart is empty
+  if (role === "admin" || role === "seller" || cartCount <= 0) {
+    $cartCount.text("").hide();
+    return;
+  }
+
+  // Show badge only when count is greater than zero
+  $cartCount.text(cartCount).show();
 }
 
 function renderHomepageCartButton(product) {
@@ -341,12 +357,8 @@ function load_user() {
   $register.hide();
   $logout.show();
 
-  // Show cart only for regular users (not sellers/admins)
-  if (!role || (role !== "admin" && role !== "seller")) {
-    $cartCount.show();
-  } else {
-    $cartCount.hide();
-  }
+  // Keep the badge hidden until the cart count is loaded
+  $cartCount.text("").hide();
 
   // Show admin dashboard for admin/seller only
   role === "admin" || role === "seller"

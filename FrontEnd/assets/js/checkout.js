@@ -1,7 +1,13 @@
 /* ================================
    GLOBAL VARIABLES
 ================================ */
-const ip = "http://165.245.179.185:8080";
+// const ip = "http://165.245.179.185:8080";
+if (!window.APP_CONFIG?.API_BASE_URL) {
+  throw new Error("APP_CONFIG is missing. Load config.js before checkout.js.");
+}
+
+const ip = window.APP_CONFIG.API_BASE_URL;
+
 let token = null;
 let usr = null;
 let role = null;
@@ -13,7 +19,13 @@ let currentUserId = null;
 // =======================================
 function load_user() {
   usr = $.cookie("username");
-  token = $.cookie("token");
+  const storedToken = $.cookie("token");
+
+  token = storedToken
+    ? String(storedToken)
+        .replace(/^Bearer\s+/i, "")
+        .trim()
+    : null;
   role = $.cookie("role");
   profileImage = $.cookie("profileImage");
   currentUserId = $.cookie("user_id") || currentUserId;
@@ -38,6 +50,10 @@ function load_user() {
     $adminDashboard.hide();
     $navbarProfileImage.hide();
     $defaultProfileIcon.show();
+
+    console.warn("Checkout requires an authenticated user.");
+    window.location.replace("login.html");
+
     return;
   }
 
@@ -47,12 +63,8 @@ function load_user() {
   $register.hide();
   $logout.show();
 
-  // Show cart only for regular users (not sellers/admins)
-  if (!role || (role !== "admin" && role !== "seller")) {
-    $cartCount.show();
-  } else {
-    $cartCount.hide();
-  }
+  // Keep the badge hidden until the cart count is loaded
+  $cartCount.text("").hide();
 
   // Role-based access
   if (role === "admin" || role === "seller") {
@@ -91,6 +103,37 @@ function isOwnSellerCheckoutItem(item = {}) {
 $(document).ready(function () {
   load_user();
 
+  function handleInvalidToken(xhr) {
+    if (xhr.status !== 401 && xhr.status !== 400) {
+      return false;
+    }
+
+    const message = xhr.responseJSON?.msg || xhr.responseJSON?.message || "";
+
+    if (!message.toLowerCase().includes("invalid token")) {
+      return false;
+    }
+
+    ["token", "username", "role", "user_id", "profileImage"].forEach(
+      function (name) {
+        $.removeCookie(name);
+        $.removeCookie(name, { path: "/" });
+      },
+    );
+
+    sessionStorage.removeItem("selectedCartItems");
+
+    Swal.fire({
+      icon: "warning",
+      title: "Session Expired",
+      text: "Please log in again.",
+    }).then(function () {
+      window.location.replace("login.html");
+    });
+
+    return true;
+  }
+
   // Get the selected cart item IDs from sessionStorage
   const selectedIdsJSON = sessionStorage.getItem("selectedCartItems");
 
@@ -125,7 +168,7 @@ $(document).ready(function () {
   // -------------------------------
   if (usr) {
     $.ajax({
-      url: `${ip}/api/getAccount_username/${usr}`,
+      url: `${ip}/api/getAccount_username/${encodeURIComponent(usr)}`,
       type: "GET",
       headers: {
         Accept: "application/json",
@@ -159,7 +202,7 @@ $(document).ready(function () {
 
   // Combine AJAX calls for user info and address
   const accountRequest = $.ajax({
-    url: `${ip}/api/getAccount_username/${usr}`,
+    url: `${ip}/api/getAccount_username/${encodeURIComponent(usr)}`,
     method: "GET",
     headers: {
       Authorization: "Bearer " + token,
@@ -600,7 +643,15 @@ $(document).ready(function () {
 
   // Fetch cart count
   function updateCartCount(count) {
-    $("#cart-count").text(count);
+    const cartCount = Number(count) || 0;
+    const userRole = String(role || "").toLowerCase();
+    const $cartBadges = $("#cart-count, #cart-count-mobile");
+
+    if (token && userRole !== "admin" && cartCount > 0) {
+      $cartBadges.text(cartCount).show();
+    } else {
+      $cartBadges.text("").hide();
+    }
   }
 
   // Fetch cart count on page load
@@ -612,8 +663,16 @@ $(document).ready(function () {
       Accept: "application/json",
     },
     success: function (response) {
-      console.log("Cart items fetched successfully:", response);
-      updateCartCount(response.count);
+      console.log("Cart Count:", response);
+
+      const cartItems = response.cart || response.data || [];
+      const cartCount = Number(response.count ?? cartItems.length ?? 0);
+
+      updateCartCount(cartCount);
+    },
+    error: function (xhr) {
+      console.error("Error loading cart count:", xhr.responseText);
+      updateCartCount(0);
     },
   });
 

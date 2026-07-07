@@ -1,187 +1,333 @@
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+// firebase-notification.js
 
-// console.log("firebase-notification.js loaded");
-// console.log("Current token cookie:", $.cookie("token"));
-// console.log("Current role cookie:", $.cookie("role"));
-// console.log("Notification permission:", Notification.permission);
-if (!("serviceWorker" in navigator) || !("Notification" in window)) {
-  console.warn("Firebase notifications are not supported on this browser or this site is not using HTTPS.");
-} else {
+(function () {
+  if (window.APP_CONFIG?.ENVIRONMENT === "local") {
+    console.log("Firebase notifications disabled during local UI development.");
+    return;
+  }
 
-const firebaseConfig = {
-  apiKey: "AIzaSyBg_xIbb74aWye2s0cKF8SfyIBFYBZjy94",
-  authDomain: "e-commerce-45367.firebaseapp.com",
-  projectId: "e-commerce-45367",
-  storageBucket: "e-commerce-45367.firebasestorage.app",
-  messagingSenderId: "100656810885",
-  appId: "1:100656810885:web:0ae522bd849f6d850352ec",
-  measurementId: "G-97XLJS4249",
-};
+  if (!("serviceWorker" in navigator) || !("Notification" in window)) {
+    console.warn("Firebase notifications are not supported by this browser.");
+    return;
+  }
 
-firebase.initializeApp(firebaseConfig);
+  if (!window.APP_CONFIG?.API_BASE_URL) {
+    console.error(
+      "APP_CONFIG is missing. Load config.js before firebase-notification.js.",
+    );
+    return;
+  }
 
-const messaging = firebase.messaging();
+  const FCM_TOKEN_API = `${window.APP_CONFIG.API_BASE_URL}/api/fcm-token`;
 
-const VAPID_KEY =
-  "BDByxdeTWtp6S2bSfmSMLT7C85pxreyEw9zHc3l-oNbAH3e2J-_mRM8blQGlOdD5H2MqZ5GXqF1e60qzELv97ic";
+  const firebaseConfig = {
+    apiKey: "AIzaSyBg_xIbb74aWye2s0cKF8SfyIBFYBZjy94",
+    authDomain: "e-commerce-45367.firebaseapp.com",
+    projectId: "e-commerce-45367",
+    storageBucket: "e-commerce-45367.firebasestorage.app",
+    messagingSenderId: "100656810885",
+    appId: "1:100656810885:web:0ae522bd849f6d850352ec",
+    measurementId: "G-97XLJS4249",
+  };
 
-// Request permission and get FCM token
-async function initFirebaseNotification() {
-  try {
-    if (!("Notification" in window)) {
-      console.log("This browser does not support notifications.");
-      return;
+  const VAPID_KEY =
+    "BDByxdeTWtp6S2bSfmSMLT7C85pxreyEw9zHc3l-oNbAH3e2J-_mRM8blQGlOdD5H2MqZ5GXqF1e60qzELv97ic";
+
+  // Prevent Firebase from being initialized more than once.
+  if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+  }
+
+  const messaging = firebase.messaging();
+
+  let unauthorizedHandled = false;
+
+  function getAuthToken() {
+    const storedToken = $.cookie("token");
+
+    if (!storedToken) {
+      return null;
     }
 
-    if (!("serviceWorker" in navigator)) {
-      console.log("This browser does not support service workers.");
-      return;
+    return String(storedToken)
+      .replace(/^Bearer\s+/i, "")
+      .trim();
+  }
+
+  function getAuthHeaders() {
+    const authToken = getAuthToken();
+
+    return {
+      Accept: "application/json",
+      Authorization: `Bearer ${authToken}`,
+    };
+  }
+
+  function clearFcmLocalStorage() {
+    localStorage.removeItem("fcm_token");
+    localStorage.removeItem("saved_fcm_token");
+    localStorage.removeItem("saved_fcm_auth_token");
+    localStorage.removeItem("saved_fcm_token_at");
+  }
+
+  function clearAuthenticationCookies() {
+    const cookieNames = [
+      "token",
+      "username",
+      "role",
+      "user_id",
+      "profileImage",
+    ];
+
+    cookieNames.forEach(function (name) {
+      $.removeCookie(name);
+      $.removeCookie(name, { path: "/" });
+    });
+  }
+
+  function handleUnauthorized(xhr) {
+    if (xhr.status !== 401 || unauthorizedHandled) {
+      return false;
     }
 
-    const permission = await Notification.requestPermission();
+    unauthorizedHandled = true;
 
-    if (permission !== "granted") {
-      console.log("Notification permission denied.");
-      return;
-    }
-
-    const registration = await navigator.serviceWorker.register(
-      "./firebase-messaging-sw.js",
-      { scope: "./" },
+    console.error(
+      "Authentication token rejected by:",
+      window.APP_CONFIG.API_BASE_URL,
     );
 
-    console.log("Service worker registered:", registration);
+    clearFcmLocalStorage();
+    clearAuthenticationCookies();
 
-    // Wait until the service worker is active
-    const activeRegistration = await navigator.serviceWorker.ready;
-
-    console.log("Service worker is active:", activeRegistration);
-
-    const currentToken = await messaging.getToken({
-      vapidKey: VAPID_KEY,
-      serviceWorkerRegistration: activeRegistration,
-    });
-
-    if (currentToken) {
-      console.log("FCM Token:", currentToken);
-      localStorage.setItem("fcm_token", currentToken);
-      saveFcmTokenToServer(currentToken);
+    if (typeof Swal !== "undefined") {
+      Swal.fire({
+        icon: "warning",
+        title: "Session Expired",
+        text: "Your login token is invalid. Please log in again.",
+        confirmButtonText: "Go to Login",
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+      }).then(function () {
+        window.location.replace("login.html");
+      });
     } else {
-      console.log("No FCM token received.");
+      window.location.replace("login.html");
     }
-  } catch (error) {
-    console.error("FCM setup error:", error);
-  }
-}
 
-// Utility function to get browser name from user agent
-function getBrowserName() {
-  const userAgent = navigator.userAgent;
-
-  if (userAgent.includes("Edg")) return "Microsoft Edge";
-  if (userAgent.includes("Chrome")) return "Google Chrome";
-  if (userAgent.includes("Firefox")) return "Mozilla Firefox";
-  if (userAgent.includes("Safari")) return "Safari";
-
-  return "Unknown Browser";
-}
-
-// Save the FCM token to the server for later use (e.g., sending notifications)
-function saveFcmTokenToServer(fcmToken) {
-  localStorage.setItem("fcm_token", fcmToken);
-
-  const authToken = $.cookie("token") || "";
-  const savedTokenKey = "saved_fcm_token";
-  const savedAuthKey = "saved_fcm_auth_token";
-  const savedAtKey = "saved_fcm_token_at";
-  const savedAt = Number(localStorage.getItem(savedAtKey) || 0);
-  const oneDay = 24 * 60 * 60 * 1000;
-
-  if (
-    localStorage.getItem(savedTokenKey) === fcmToken &&
-    localStorage.getItem(savedAuthKey) === authToken &&
-    Date.now() - savedAt < oneDay
-  ) {
-    return;
+    return true;
   }
 
-  $.ajax({
-    url: "http://165.245.179.185:8080/api/fcm-token",
-    method: "POST",
-    data: {
-      token: fcmToken,
-      platform: "web",
-      browser_name: getBrowserName(),
-      device_name: navigator.platform,
-      user_agent: navigator.userAgent,
-    },
-    headers: {
-      Accept: "application/json",
-      Authorization: "Bearer " + authToken,
-    },
-    success: function (response) {
-      localStorage.setItem(savedTokenKey, fcmToken);
-      localStorage.setItem(savedAuthKey, authToken);
-      localStorage.setItem(savedAtKey, String(Date.now()));
-      console.log("FCM token saved:", response);
-    },
-    error: function (xhr) {
-      console.error("Failed to save FCM token:", xhr.responseText);
-    },
+  async function initFirebaseNotification() {
+    try {
+      const authToken = getAuthToken();
+
+      if (!authToken) {
+        console.log(
+          "Firebase notification setup skipped: user is not logged in.",
+        );
+        return;
+      }
+
+      const permission = await Notification.requestPermission();
+
+      if (permission !== "granted") {
+        console.log("Notification permission was not granted.");
+        return;
+      }
+
+      const registration = await navigator.serviceWorker.register(
+        "./firebase-messaging-sw.js",
+        {
+          scope: "./",
+        },
+      );
+
+      console.log("Service worker registered:", registration);
+
+      const activeRegistration = await navigator.serviceWorker.ready;
+
+      console.log("Service worker is active:", activeRegistration);
+
+      const currentToken = await messaging.getToken({
+        vapidKey: VAPID_KEY,
+        serviceWorkerRegistration: activeRegistration,
+      });
+
+      if (!currentToken) {
+        console.log("No FCM token was received.");
+        return;
+      }
+
+      console.log("FCM token received.");
+
+      localStorage.setItem("fcm_token", currentToken);
+
+      saveFcmTokenToServer(currentToken);
+    } catch (error) {
+      console.error("FCM setup error:", error);
+    }
+  }
+
+  function getBrowserName() {
+    const userAgent = navigator.userAgent;
+
+    if (userAgent.includes("Edg")) {
+      return "Microsoft Edge";
+    }
+
+    if (userAgent.includes("Chrome")) {
+      return "Google Chrome";
+    }
+
+    if (userAgent.includes("Firefox")) {
+      return "Mozilla Firefox";
+    }
+
+    if (userAgent.includes("Safari")) {
+      return "Safari";
+    }
+
+    return "Unknown Browser";
+  }
+
+  function saveFcmTokenToServer(fcmToken) {
+    const authToken = getAuthToken();
+
+    if (!authToken) {
+      console.warn(
+        "FCM token was not saved because no authentication token exists.",
+      );
+      return;
+    }
+
+    localStorage.setItem("fcm_token", fcmToken);
+
+    const savedTokenKey = "saved_fcm_token";
+    const savedAuthKey = "saved_fcm_auth_token";
+    const savedAtKey = "saved_fcm_token_at";
+
+    const savedAt = Number(localStorage.getItem(savedAtKey) || 0);
+
+    const oneDay = 24 * 60 * 60 * 1000;
+
+    const sameFcmToken = localStorage.getItem(savedTokenKey) === fcmToken;
+
+    const sameAuthToken = localStorage.getItem(savedAuthKey) === authToken;
+
+    const recentlySaved = Date.now() - savedAt < oneDay;
+
+    if (sameFcmToken && sameAuthToken && recentlySaved) {
+      console.log("FCM token is already saved.");
+      return;
+    }
+
+    $.ajax({
+      url: FCM_TOKEN_API,
+      method: "POST",
+
+      data: {
+        token: fcmToken,
+        platform: "web",
+        browser_name: getBrowserName(),
+        device_name:
+          navigator.userAgentData?.platform || navigator.platform || "Unknown",
+        user_agent: navigator.userAgent,
+      },
+
+      headers: getAuthHeaders(),
+
+      success: function (response) {
+        localStorage.setItem(savedTokenKey, fcmToken);
+        localStorage.setItem(savedAuthKey, authToken);
+        localStorage.setItem(savedAtKey, String(Date.now()));
+
+        console.log("FCM token saved:", response);
+      },
+
+      error: function (xhr) {
+        console.error(
+          "Failed to save FCM token:",
+          xhr.status,
+          xhr.responseText,
+        );
+
+        handleUnauthorized(xhr);
+      },
+    });
+  }
+
+  window.removeFcmTokenFromServer = function (callback) {
+    const fcmToken = localStorage.getItem("fcm_token");
+
+    const authToken = getAuthToken();
+
+    if (!fcmToken || !authToken) {
+      clearFcmLocalStorage();
+
+      if (typeof callback === "function") {
+        callback();
+      }
+
+      return;
+    }
+
+    $.ajax({
+      url: FCM_TOKEN_API,
+      method: "DELETE",
+
+      data: {
+        token: fcmToken,
+      },
+
+      headers: getAuthHeaders(),
+
+      error: function (xhr) {
+        console.error(
+          "Failed to remove FCM token:",
+          xhr.status,
+          xhr.responseText,
+        );
+
+        // Continue logout even when the server rejects
+        // an old authentication token.
+      },
+
+      complete: function () {
+        clearFcmLocalStorage();
+
+        if (typeof callback === "function") {
+          callback();
+        }
+      },
+    });
+  };
+
+  messaging.onMessage(function (payload) {
+    console.log("Foreground notification:", payload);
+
+    if (typeof Swal !== "undefined") {
+      Swal.fire({
+        icon: "info",
+        title:
+          payload.notification?.title ||
+          payload.data?.title ||
+          "New Notification",
+        text: payload.notification?.body || payload.data?.message || "",
+        timer: 4000,
+        showConfirmButton: false,
+      });
+    }
+
+    if (typeof window.reloadAppNotificationBell === "function") {
+      window.reloadAppNotificationBell();
+    }
   });
-}
 
-// Call this function when user logs out to remove token from server and local storage
-window.removeFcmTokenFromServer = function (callback) {
-  const fcmToken = localStorage.getItem("fcm_token");
-
-  if (!fcmToken) {
-    if (callback) callback();
-    return;
-  }
-
-  $.ajax({
-    url: "http://165.245.179.185:8080/api/fcm-token",
-    method: "DELETE",
-    data: {
-      token: fcmToken,
-    },
-    headers: {
-      Accept: "application/json",
-      Authorization: "Bearer " + $.cookie("token"),
-    },
-    complete: function () {
-      localStorage.removeItem("fcm_token");
-      localStorage.removeItem("saved_fcm_token");
-      localStorage.removeItem("saved_fcm_auth_token");
-      localStorage.removeItem("saved_fcm_token_at");
-
-      if (callback) callback();
-    },
+  $(document).ready(function () {
+    if (getAuthToken()) {
+      console.log("FCM API:", FCM_TOKEN_API);
+      initFirebaseNotification();
+    }
   });
-};
-
-// Handle incoming messages when the web page is in the foreground
-messaging.onMessage(function (payload) {
-  console.log("Foreground notification:", payload);
-
-  Swal.fire({
-    icon: "info",
-    title: payload.notification?.title || "New Notification",
-    text: payload.notification?.body || "",
-    timer: 4000,
-    showConfirmButton: false,
-  });
-
-  if (typeof window.reloadAppNotificationBell === "function") {
-    window.reloadAppNotificationBell();
-  }
-});
-
-$(document).ready(function () {
-  if ($.cookie("token")) {
-    initFirebaseNotification();
-  }
-});
-}
+})();

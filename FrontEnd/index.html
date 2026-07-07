@@ -34,6 +34,9 @@
     <!-- jQuery Cookie Plugin -->
     <script src="assets/js/jquery.cookie.min.js"></script>
 
+    <!-- Custom Config -->
+    <script src="assets/js/config.js"></script>
+
     <!-- Firebase Notification -->
     <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-messaging-compat.js"></script>
@@ -50,7 +53,7 @@
       <div class="container-fluid">
         <!-- Brand -->
         <a class="navbar-brand d-flex align-items-center" href="index.html">
-          <img src="assets/img/ecomLogo.jpg" alt="" style="height: 40px" />
+          <img src="assets/img/hanz-goLogo.png" alt="" style="height: 40px" />
         </a>
         <button
           class="navbar-toggler"
@@ -107,8 +110,8 @@
                 <i class="fa fa-shopping-cart white-icon fa-lg"></i>
                 <span
                   id="cart-count"
-                  class="badge bg-danger rounded-pill position-absolute">
-                  0
+                  class="badge bg-danger rounded-pill position-absolute"
+                  style="display: none">
                 </span>
               </a>
             </li>
@@ -128,8 +131,8 @@
                 <span
                   id="appNotificationBellCount"
                   class="badge bg-danger rounded-pill position-absolute"
-                  aria-live="polite">
-                  0
+                  aria-live="polite"
+                  style="display: none">
                 </span>
               </a>
               <div
@@ -161,7 +164,7 @@
             <!-- User Dropdown -->
             <li class="nav-item dropdown">
               <a
-                class="nav-link dropdown-toggle d-flex align-items-center"
+                class="nav-link dropdown-toggle d-flex align-items-center dashboard-profile-pill"
                 href="#"
                 id="navbardrop"
                 data-toggle="dropdown"
@@ -170,6 +173,7 @@
                 <!-- Profile Image -->
                 <img
                   id="navbarProfileImage"
+                  src=""
                   alt="Profile"
                   class="rounded-circle mr-2"
                   style="
@@ -181,11 +185,15 @@
                     border: 2px solid #fff;
                     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
                   " />
-
-                <!-- Username -->
+                <!-- Default Profile Icon -->
+                <span
+                  id="defaultProfileIcon"
+                  class="navbar-default-avatar mr-2">
+                  <i class="fas fa-user-circle"></i>
+                </span>
                 <span
                   id="displayUsername"
-                  class="text-white font-weight-bold"></span>
+                  class="text-white font-weight-bold dashboard-username"></span>
               </a>
 
               <!-- Dropdown Menu -->

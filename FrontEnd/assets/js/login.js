@@ -1,4 +1,5 @@
-var ip = "http://165.245.179.185:8080";
+// var ip = "http://165.245.179.185:8080"; // For production server
+var ip = "http://localhost:8000"; // For local testing
 
 function load_user() {
   var usr = $.cookie("username");

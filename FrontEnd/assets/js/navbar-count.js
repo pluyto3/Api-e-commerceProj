@@ -1,6 +1,16 @@
 (function ($) {
-  const apiBase = "http://165.245.179.185:8080";
+  // const apiBase = "http://165.245.179.185:8080";
+  if (!window.APP_CONFIG?.API_BASE_URL) {
+    console.error(
+      "APP_CONFIG is missing. Load config.js before navbar-count.js.",
+    );
+    return;
+  }
+
+  const apiBase = window.APP_CONFIG.API_BASE_URL;
   const SELLER_CAN_SHOP = true;
+
+  console.log("Navbar count API URL:", apiBase);
 
   function getRole() {
     return String($.cookie("role") || "").toLowerCase();
@@ -81,9 +91,14 @@
   }
 
   function setBadgeCount(count) {
-    $("#cart-count, #cart-count-mobile")
-      .text(count || 0)
-      .show();
+    const cartCount = Number(count) || 0;
+    const $cartBadges = $("#cart-count, #cart-count-mobile");
+
+    if (cartCount > 0) {
+      $cartBadges.text(cartCount).show();
+    } else {
+      $cartBadges.text("").hide();
+    }
   }
 
   function sellerCanShop() {
@@ -126,7 +141,29 @@
         setBadgeCount(response?.count || 0);
       },
       error: function (xhr) {
+        const message =
+          xhr.responseJSON?.msg || xhr.responseJSON?.message || "";
+
+        const invalidToken =
+          (xhr.status === 400 || xhr.status === 401) &&
+          message.toLowerCase().includes("invalid token");
+
+        if (invalidToken) {
+          console.warn("The stored login token is invalid.");
+
+          ["token", "username", "role", "user_id", "profileImage"].forEach(
+            function (name) {
+              $.removeCookie(name);
+              $.removeCookie(name, { path: "/" });
+            },
+          );
+
+          hideBadge();
+          return;
+        }
+
         console.error("Error loading navbar cart count:", xhr.responseText);
+
         setBadgeCount(0);
       },
     });
@@ -156,14 +193,40 @@
         setBadgeCount(sellerOrderCount || orders.length);
       },
       error: function (xhr) {
+        const message =
+          xhr.responseJSON?.msg || xhr.responseJSON?.message || "";
+
+        const invalidToken =
+          (xhr.status === 400 || xhr.status === 401) &&
+          message.toLowerCase().includes("invalid token");
+
+        if (invalidToken) {
+          ["token", "username", "role", "user_id", "profileImage"].forEach(
+            function (name) {
+              $.removeCookie(name);
+              $.removeCookie(name, { path: "/" });
+            },
+          );
+
+          hideBadge();
+          return;
+        }
+
         console.error("Error loading seller order count:", xhr.responseText);
+
         setBadgeCount(0);
       },
     });
   }
 
   function updateNavbarCount() {
-    const token = $.cookie("token");
+    const storedToken = $.cookie("token");
+
+    const token = storedToken
+      ? String(storedToken)
+          .replace(/^Bearer\s+/i, "")
+          .trim()
+      : null;
     const role = getRole();
 
     if (!token) {

@@ -1,12 +1,13 @@
 /* ================================
    GLOBAL VARIABLES
 ================================ */
-const ip = "http://165.245.179.185:8080";
+// const ip = "http://165.245.179.185:8080"; // For production server
+const apiBaseUrl = "http://localhost:8000";
+const ip = apiBaseUrl; // For local testing
 let token = null;
 let usr = null;
 let role = null;
 let profileImage = null;
-const apiBaseUrl = getApiBaseUrl();
 let allCategories = [];
 let allBrands = [];
 let allProducts = [];
@@ -67,7 +68,14 @@ function getCartItemsFromResponse(response) {
 }
 
 function updateCartCount(count) {
-  $("#cart-count").text(count || 0);
+  const cartCount = Number(count) || 0;
+  const $cartBadges = $("#cart-count, #cart-count-mobile");
+
+  if (token && normalizeText(role) === "user" && cartCount > 0) {
+    $cartBadges.text(cartCount).show();
+  } else {
+    $cartBadges.text("").hide();
+  }
 }
 
 function loadCartCount() {
@@ -84,7 +92,9 @@ function loadCartCount() {
     headers: getApiHeaders(),
     success: function (response) {
       const cartItems = getCartItemsFromResponse(response);
-      updateCartCount(response?.count || cartItems.length || 0);
+      const count = Number(response?.count ?? cartItems.length ?? 0);
+
+      updateCartCount(count);
     },
     error: function (xhr) {
       console.error("Error loading cart count:", xhr.responseText || xhr);
@@ -220,12 +230,8 @@ function loadUser() {
   $logout.show();
   showShopCatalog();
 
-  // Show cart only for regular users (not sellers/admins)
-  if (!userRole || userRole === "user") {
-    $cartCount.show();
-  } else {
-    $cartCount.hide();
-  }
+  // Keep the count badge hidden until loadCartCount() gets the real count
+  $("#cart-count, #cart-count-mobile").text("").hide();
 
   // Show admin dashboard for admin/seller only
   userRole === "admin" || userRole === "seller"

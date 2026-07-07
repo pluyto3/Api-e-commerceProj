@@ -5,20 +5,105 @@
 
   window.__appNotificationBellLoaded = true;
 
-  const NOTIFICATION_API = "http://165.245.179.185:8080/api/notifications";
+  if (window.APP_CONFIG?.ENVIRONMENT === "local") {
+    console.log("Notification bell API disabled during local UI development.");
+
+    $("#notificationNav").hide();
+    return;
+  }
+
+  if (!window.APP_CONFIG || !window.APP_CONFIG.API_BASE_URL) {
+    console.error(
+      "APP_CONFIG is unavailable. Make sure config.js is loaded before notification-bell.js.",
+    );
+    return;
+  }
+
+  const NOTIFICATION_API = `${window.APP_CONFIG.API_BASE_URL}/api/notifications`;
 
   let notificationRequestRunning = false;
   let notificationIntervalStarted = false;
+  let authenticationErrorHandled = false;
+
+  function getAuthToken() {
+    const storedToken = $.cookie("token");
+
+    if (!storedToken) {
+      return null;
+    }
+
+    return String(storedToken)
+      .replace(/^Bearer\s+/i, "")
+      .trim();
+  }
 
   function notificationHeaders() {
+    const token = getAuthToken();
+
     return {
       Accept: "application/json",
-      Authorization: "Bearer " + $.cookie("token"),
+      Authorization: `Bearer ${token}`,
     };
   }
 
+  function clearAuthenticationCookies() {
+    const cookieNames = [
+      "token",
+      "username",
+      "role",
+      "user_id",
+      "profileImage",
+    ];
+
+    cookieNames.forEach(function (name) {
+      $.removeCookie(name);
+      $.removeCookie(name, { path: "/" });
+    });
+  }
+
+  function handleAuthenticationError(xhr) {
+    if (xhr.status !== 401) {
+      return false;
+    }
+
+    if (authenticationErrorHandled) {
+      return true;
+    }
+
+    authenticationErrorHandled = true;
+
+    console.error(
+      "Authentication token rejected by:",
+      window.APP_CONFIG.API_BASE_URL,
+    );
+
+    clearAuthenticationCookies();
+
+    $("#notificationNav").hide();
+    updateNotificationBadge(0);
+
+    if (typeof Swal !== "undefined") {
+      Swal.fire({
+        icon: "warning",
+        title: "Session Expired",
+        text: "Your login session is invalid. Please log in again.",
+        confirmButtonText: "Go to Login",
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+      }).then(function () {
+        window.location.replace("login.html");
+      });
+    } else {
+      window.location.replace("login.html");
+    }
+
+    return true;
+  }
+
   function escapeHtml(value) {
-    if (!value) return "";
+    if (!value) {
+      return "";
+    }
 
     return String(value)
       .replaceAll("&", "&amp;")
@@ -29,33 +114,35 @@
   }
 
   function formatNotificationDate(dateValue) {
-    if (!dateValue) return "";
+    if (!dateValue) {
+      return "";
+    }
 
     const date = new Date(dateValue);
 
-    if (isNaN(date.getTime())) {
-      return dateValue;
+    if (Number.isNaN(date.getTime())) {
+      return String(dateValue);
     }
 
     return date.toLocaleString();
   }
 
   function updateNotificationBadge(count) {
-    const badge = $("#appNotificationBellCount, #notification-count").first();
+    const unreadCount = Number(count) || 0;
+    const $notificationBadges = $(
+      "#appNotificationBellCount, #notification-count",
+    );
 
-    count = Number(count) || 0;
-
-    if (count > 0) {
-      badge.text(count);
-      badge.show();
+    if (unreadCount > 0) {
+      $notificationBadges.text(unreadCount).show();
     } else {
-      badge.text("");
-      badge.hide();
+      $notificationBadges.text("").hide();
     }
   }
 
   function renderNotificationBell(notifications) {
     const list = $("#appNotificationBellList, #notificationList").first();
+
     list.empty();
 
     if (!Array.isArray(notifications) || notifications.length === 0) {
@@ -64,6 +151,7 @@
           No notifications yet.
         </div>
       `);
+
       return;
     }
 
@@ -80,7 +168,7 @@
         <a
           href="#"
           class="dropdown-item notification-item ${isUnread ? "unread" : ""}"
-          data-id="${notification.id}"
+          data-id="${escapeHtml(notification.id)}"
           data-url="${escapeHtml(url)}">
           <div class="notification-title">${title}</div>
           <div class="notification-message">${message}</div>
@@ -91,7 +179,7 @@
   }
 
   function loadNotifications() {
-    const token = $.cookie("token");
+    const token = getAuthToken();
 
     if (!token) {
       $("#notificationNav").hide();
@@ -99,7 +187,7 @@
       return;
     }
 
-    if (notificationRequestRunning) {
+    if (notificationRequestRunning || authenticationErrorHandled) {
       return;
     }
 
@@ -110,24 +198,34 @@
       url: NOTIFICATION_API,
       method: "GET",
       headers: notificationHeaders(),
-      success: function (response) {
-        const notifications = response.notifications || [];
-        const unreadCount = response.unread_count || 0;
 
+      success: function (response) {
+        const notifications = Array.isArray(response.notifications)
+          ? response.notifications
+          : [];
+
+        const unreadCount = Number(response.unread_count) || 0;
+
+        console.log("Notification API:", NOTIFICATION_API);
         console.log("Current role:", $.cookie("role"));
-        console.log("Notification API response:", response);
-        console.log("Unread count:", response.unread_count);
+        console.log("Notification response:", response);
 
         updateNotificationBadge(unreadCount);
         renderNotificationBell(notifications);
       },
+
       error: function (xhr) {
         console.error(
           "Failed to load notifications:",
           xhr.status,
           xhr.responseText,
         );
+
+        if (handleAuthenticationError(xhr)) {
+          return;
+        }
       },
+
       complete: function () {
         notificationRequestRunning = false;
       },
@@ -135,10 +233,17 @@
   }
 
   function markNotificationAsRead(notificationId, url) {
+    const token = getAuthToken();
+
+    if (!token || !notificationId) {
+      return;
+    }
+
     $.ajax({
-      url: `${NOTIFICATION_API}/${notificationId}/read`,
+      url: `${NOTIFICATION_API}/${encodeURIComponent(notificationId)}/read`,
       method: "POST",
       headers: notificationHeaders(),
+
       success: function () {
         loadNotifications();
 
@@ -146,8 +251,17 @@
           window.location.href = url;
         }
       },
+
       error: function (xhr) {
-        console.error("Failed to mark notification as read:", xhr.responseText);
+        console.error(
+          "Failed to mark notification as read:",
+          xhr.status,
+          xhr.responseText,
+        );
+
+        if (handleAuthenticationError(xhr)) {
+          return;
+        }
 
         if (url) {
           window.location.href = url;
@@ -157,18 +271,29 @@
   }
 
   function markAllNotificationsAsRead() {
+    const token = getAuthToken();
+
+    if (!token) {
+      return;
+    }
+
     $.ajax({
       url: `${NOTIFICATION_API}/read-all`,
       method: "POST",
       headers: notificationHeaders(),
+
       success: function () {
         loadNotifications();
       },
+
       error: function (xhr) {
         console.error(
           "Failed to mark all notifications as read:",
+          xhr.status,
           xhr.responseText,
         );
+
+        handleAuthenticationError(xhr);
       },
     });
   }
@@ -176,7 +301,7 @@
   $(document).ready(function () {
     $("#appNotificationBellCount, #notification-count").hide().text("");
 
-    if (!$.cookie("token")) {
+    if (!getAuthToken()) {
       $("#notificationNav").hide();
       return;
     }
@@ -185,13 +310,18 @@
 
     if (!notificationIntervalStarted) {
       notificationIntervalStarted = true;
-      setInterval(loadNotifications, 60000);
+
+      window.setInterval(function () {
+        if (!authenticationErrorHandled) {
+          loadNotifications();
+        }
+      }, 60000);
     }
 
     $(document)
       .off("click.notificationBell", ".notification-item")
-      .on("click.notificationBell", ".notification-item", function (e) {
-        e.preventDefault();
+      .on("click.notificationBell", ".notification-item", function (event) {
+        event.preventDefault();
 
         const notificationId = $(this).data("id");
         const url = $(this).attr("data-url") || "";
@@ -204,8 +334,8 @@
       .on(
         "click.notificationReadAll",
         "#markAllNotificationsRead",
-        function (e) {
-          e.preventDefault();
+        function (event) {
+          event.preventDefault();
           markAllNotificationsAsRead();
         },
       );

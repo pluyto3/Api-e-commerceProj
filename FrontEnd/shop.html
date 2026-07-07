@@ -34,6 +34,9 @@
     <!-- jQuery Cookie Plugin -->
     <script src="assets/js/jquery.cookie.min.js"></script>
 
+    <!-- Custom Config -->
+    <script src="assets/js/config.js"></script>
+
     <!-- Firebase Notification -->
     <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-messaging-compat.js"></script>
@@ -101,8 +104,7 @@
                 <span
                   id="cart-count-mobile"
                   class="badge badge-danger rounded-pill ml-2"
-                  >0</span
-                >
+                  style="display: none"></span>
               </a>
             </li>
           </ul>
@@ -117,8 +119,7 @@
                 <span
                   id="cart-count"
                   class="badge badge-danger rounded-pill position-absolute"
-                  >0</span
-                >
+                  style="display: none"></span>
               </a>
             </li>
 
@@ -321,26 +322,50 @@
 
       <div class="container-fluid px-4">
         <div class="row">
-          <aside class="col-lg-2 d-none d-lg-block" id="shop-categories-panel">
+          <!-- Mobile filter button -->
+          <div class="col-12 d-lg-none mb-3">
+            <button
+              type="button"
+              class="btn btn-outline-primary btn-block shop-filter-toggle"
+              data-toggle="collapse"
+              data-target="#shop-categories-panel"
+              aria-expanded="false"
+              aria-controls="shop-categories-panel">
+              <i class="fa fa-filter mr-2"></i>
+              Categories, Brands & Price
+            </button>
+          </div>
+
+          <!-- Filters: visible on desktop, collapsible on mobile -->
+          <aside
+            class="col-12 col-lg-2 collapse d-lg-block shop-filter-sidebar"
+            id="shop-categories-panel">
             <h5 class="mb-3"><i class="fa fa-list mr-2"></i>Categories</h5>
+
             <ul
               class="list-unstyled shopee-filter-list"
               id="shop-category-list">
               <li>
-                <span class="text-muted py-1 d-block"
-                  >Loading categories...</span
-                >
+                <span class="text-muted py-1 d-block">
+                  Loading categories...
+                </span>
               </li>
             </ul>
+
             <hr />
+
             <h5 class="mb-3"><i class="fa fa-tags mr-2"></i>Brands</h5>
+
             <ul class="list-unstyled shopee-filter-list" id="shop-brand-list">
               <li>
-                <span class="text-muted py-1 d-block">Loading brands...</span>
+                <span class="text-muted py-1 d-block"> Loading brands... </span>
               </li>
             </ul>
+
             <hr />
+
             <h5 class="mb-3"><i class="fa fa-filter mr-2"></i>Price</h5>
+
             <div class="form-row">
               <div class="col-6">
                 <input
@@ -350,6 +375,7 @@
                   class="form-control form-control-sm"
                   placeholder="Min" />
               </div>
+
               <div class="col-6">
                 <input
                   type="number"
@@ -359,6 +385,7 @@
                   placeholder="Max" />
               </div>
             </div>
+
             <button
               type="button"
               id="applyPriceFilter"
@@ -367,7 +394,7 @@
             </button>
           </aside>
 
-          <div class="col-lg-10" id="shop-products-panel">
+          <div class="col-12 col-lg-10" id="shop-products-panel">
             <!-- Product Search Bar -->
             <div class="bg-white p-3 mb-3 shadow-sm rounded shop-search-box">
               <form
@@ -408,12 +435,12 @@
             </div>
 
             <div
-              class="bg-white p-2 mb-3 shadow-sm d-flex align-items-center justify-content-between rounded">
+              class="bg-white p-2 mb-3 shadow-sm d-flex align-items-center justify-content-between rounded shop-sort-bar">
               <span
                 class="ml-2 font-weight-bold text-uppercase small text-muted"
                 >Sort By:</span
               >
-              <div class="btn-group btn-group-sm">
+              <div class="btn-group btn-group-sm shop-sort-buttons">
                 <button
                   class="btn btn-light shop-sort-btn active"
                   data-sort="relevance">

@@ -543,6 +543,11 @@ main {
   margin-top: 0;
 }
 
+/* Desktop homepage content position */
+.container-home {
+  margin-right: 530px;
+}
+
 @media only screen and (max-width: 990px) {
   .navbar-buttons {
     margin: 10px;
@@ -563,14 +568,6 @@ main {
     width: 200px;
     margin-left: 7px;
   }
-
-  .container-home {
-    margin-right: 0;
-  }
-}
-
-.container-home {
-  margin-right: 530px;
 }
 
 .container-home button {
