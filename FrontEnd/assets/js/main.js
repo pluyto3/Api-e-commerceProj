@@ -160,16 +160,30 @@ function renderProductCarousel(products) {
     `);
   });
 
+  const canLoopProducts = products.length > 5;
+
   $carousel.owlCarousel({
-    loop: products.length > 1,
+    loop: canLoopProducts,
+    rewind: false,
     margin: 10,
-    nav: true,
-    autoplay: products.length > 1,
+    nav: products.length > 1,
+    dots: products.length > 1,
+    autoplay: canLoopProducts,
+    autoplayHoverPause: true,
+    smartSpeed: 500,
     responsive: {
-      0: { items: 1 },
-      480: { items: 2 },
-      768: { items: 3 },
-      1024: { items: 5 },
+      0: {
+        items: 1,
+      },
+      480: {
+        items: 2,
+      },
+      768: {
+        items: 3,
+      },
+      1024: {
+        items: 5,
+      },
     },
   });
 }
@@ -450,16 +464,31 @@ $(document).ready(() => {
         `);
       });
 
+      const canLoopBrands = brands.length > 6;
+
       // Initialize Owl Carousel ONLY AFTER the items are appended to the DOM
       $brandCarousel.owlCarousel({
-        loop: true,
+        loop: canLoopBrands,
+        rewind: false,
         margin: 30,
-        nav: false,
-        autoplay: true,
+        nav: brands.length > 1,
+        dots: brands.length > 1,
+        autoplay: canLoopBrands,
+        autoplayHoverPause: true,
+        smartSpeed: 500,
         responsive: {
-          0: { items: 2 },
-          600: { items: 4 },
-          1000: { items: 6 },
+          0: {
+            items: 1,
+          },
+          480: {
+            items: 2,
+          },
+          768: {
+            items: 4,
+          },
+          1000: {
+            items: 6,
+          },
         },
       });
     },
