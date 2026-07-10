@@ -1,7 +1,7 @@
 /* ================================
    GLOBAL VARIABLES
 ================================ */
-// const ip = "http://165.245.179.185:8080";
+// const ip = "https://api.hanzgo.me";
 if (!window.APP_CONFIG?.API_BASE_URL) {
   throw new Error("APP_CONFIG is missing. Load config.js before checkout.js.");
 }

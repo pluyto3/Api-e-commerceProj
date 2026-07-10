@@ -1,8 +1,8 @@
 /* ================================
    GLOBAL VARIABLES
 ================================ */
-// const ip = "http://165.245.179.185:8080"; // For production server
-const apiBaseUrl = "http://localhost:8000";
+// const ip = "https://api.hanzgo.me"; // For production server
+const apiBaseUrl = "https://api.hanzgo.me";
 const ip = apiBaseUrl; // For local testing
 let token = null;
 let usr = null;
@@ -42,7 +42,7 @@ function getApiBaseUrl() {
     return window.location.origin;
   }
 
-  return "http://165.245.179.185:8080";
+  return "https://api.hanzgo.me";
 }
 
 function getApiHeaders(extraHeaders = {}) {

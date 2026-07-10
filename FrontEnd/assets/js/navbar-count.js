@@ -1,5 +1,5 @@
 (function ($) {
-  // const apiBase = "http://165.245.179.185:8080";
+  // const apiBase = "https://api.hanzgo.me";
   if (!window.APP_CONFIG?.API_BASE_URL) {
     console.error(
       "APP_CONFIG is missing. Load config.js before navbar-count.js.",

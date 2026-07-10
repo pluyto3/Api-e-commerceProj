@@ -1,7 +1,7 @@
 // ==========================
 // Global Configuration
 // ==========================
-const ip = "http://165.245.179.185:8080";
+const ip = "https://api.hanzgo.me";
 let token = null;
 let usr = null;
 let role = null;

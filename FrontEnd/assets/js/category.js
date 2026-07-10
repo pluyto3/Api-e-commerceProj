@@ -1,5 +1,5 @@
 // Global variables
-let ip = "http://165.245.179.185:8080";
+let ip = "https://api.hanzgo.me";
 let token = null;
 let usr = null;
 let role = null;
@@ -8,7 +8,7 @@ let categoriesCache = [];
 let categorySellerLookup = {};
 let currentUserId = null;
 const categoryImageBaseUrl =
-  "http://165.245.179.185:8080/FrontEnd/assets/img/category";
+  "https://api.hanzgo.me/FrontEnd/assets/img/category";
 
 function getCategoryImageUrl(imageName) {
   return imageName
@@ -765,7 +765,7 @@ $(document).ready(function () {
         $("#editDescription").val(res.description);
         if (res.image) {
           const imageUrl =
-            "http://165.245.179.185:8080/FrontEnd/assets/img/category/" +
+            "https://api.hanzgo.me/FrontEnd/assets/img/category/" +
             res.image;
           // console.log("Setting image source to:", imageUrl);
           $("#currentImagePreview").attr("src", imageUrl);

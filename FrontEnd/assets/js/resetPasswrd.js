@@ -1,4 +1,4 @@
-var ip = "http://165.245.179.185:8080";
+var ip = "https://api.hanzgo.me";
 
 // Extract token from URL
 function getToken() {

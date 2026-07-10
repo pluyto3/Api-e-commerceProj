@@ -15,7 +15,15 @@
 
     API_BASE_URL: isLocal
       ? "http://127.0.0.1:8000"
-      : "http://165.245.179.185:8080",
+      : "http://api.hanzgo.me",
+
+    FRONTEND_URL: isLocal
+      ? "http://localhost/e-commerce/FrontEnd"
+      : "http://hanzgo.me",
+
+    BACKEND_PUBLIC_URL: isLocal
+      ? "http://127.0.0.1:8000"
+      : "http://api.hanzgo.me",
   });
 
   console.log("Hostname:", hostname);
