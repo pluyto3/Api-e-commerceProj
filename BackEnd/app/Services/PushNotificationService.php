@@ -24,26 +24,44 @@ class PushNotificationService
             'url' => $url,
         ]);
 
-        // 2. Send FCM push to all devices/browsers of that user
-        $tokens = FcmToken::where('user_id', $userId)->pluck('token');
+        // 2. Get all FCM tokens for this user
+        $tokens = FcmToken::where('user_id', $userId)
+            ->pluck('token')
+            ->filter()
+            ->values();
+
+        if ($tokens->isEmpty()) {
+            Log::warning("No FCM tokens found for user_id: {$userId}");
+            return $notification;
+        }
+
+        // 3. Use live frontend URL from config/app.php and .env
+        $frontendUrl = rtrim(config('app.frontend_url', 'https://hanzgo.me'), '/');
 
         $fullUrl = $url
-            ? 'http://localhost/e-commerce/FrontEnd/' . ltrim($url, '/')
-            : 'http://localhost/e-commerce/FrontEnd/index.html';
+            ? $frontendUrl . '/' . ltrim($url, '/')
+            : $frontendUrl . '/index.html';
 
+        $iconUrl = $frontendUrl . '/assets/img/hanz-goLogo.png';
+
+        // 4. Send FCM push notification
         foreach ($tokens as $token) {
             try {
                 $fcmMessage = CloudMessage::new()
-                    ->withNotification(FirebaseNotification::create($title, $message))
+                    ->withNotification(
+                        FirebaseNotification::create($title, $message)
+                    )
                     ->withData([
-                        'type' => $type ?? 'general',
-                        'url' => $fullUrl,
+                        'type' => (string) ($type ?? 'general'),
+                        'url' => (string) $fullUrl,
+                        'related_id' => (string) ($relatedId ?? ''),
+                        'notification_id' => (string) $notification->id,
                     ])
                     ->withWebPushConfig(WebPushConfig::fromArray([
                         'notification' => [
                             'title' => $title,
                             'body' => $message,
-                            'icon' => 'http://localhost/e-commerce/FrontEnd/assets/img/hanz-goLogo.png',
+                            'icon' => $iconUrl,
                         ],
                         'fcm_options' => [
                             'link' => $fullUrl,
@@ -52,6 +70,8 @@ class PushNotificationService
                     ->toToken($token);
 
                 Firebase::messaging()->send($fcmMessage);
+
+                Log::info("FCM notification sent to user_id {$userId}");
             } catch (\Throwable $e) {
                 Log::error('FCM notification failed: ' . $e->getMessage());
             }

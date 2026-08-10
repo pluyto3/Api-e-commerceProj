@@ -1,9 +1,5 @@
-importScripts(
-  "https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js",
-);
-importScripts(
-  "https://www.gstatic.com/firebasejs/10.13.2/firebase-messaging-compat.js",
-);
+importScripts("https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js");
+importScripts("https://www.gstatic.com/firebasejs/10.13.2/firebase-messaging-compat.js");
 
 firebase.initializeApp({
   apiKey: "AIzaSyBg_xIbb74aWye2s0cKF8SfyIBFYBZjy94",
@@ -20,13 +16,21 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage(function (payload) {
   console.log("Background notification received:", payload);
 
-  const notificationTitle = payload.notification?.title || "New Notification";
+  const notificationTitle =
+    payload.notification?.title ||
+    payload.data?.title ||
+    "Hanz-Go Notification";
 
   const notificationOptions = {
-    body: payload.notification?.body || "",
-    icon: "http://165.245.179.185/assets/img/hanz-goLogo.png",
+    body:
+      payload.notification?.body ||
+      payload.data?.body ||
+      payload.data?.message ||
+      "You have a new notification.",
+    icon: "/assets/img/hanz-goLogo.png",
+    badge: "/assets/img/hanz-goLogo.png",
     data: {
-      url: payload.data?.url || "",
+      url: payload.data?.url || "/brand.html",
     },
   };
 
@@ -36,9 +40,7 @@ messaging.onBackgroundMessage(function (payload) {
 self.addEventListener("notificationclick", function (event) {
   event.notification.close();
 
-  const url = event.notification.data?.url;
+  const url = event.notification.data?.url || "/brand.html";
 
-  if (url) {
-    event.waitUntil(clients.openWindow(url));
-  }
+  event.waitUntil(clients.openWindow(url));
 });

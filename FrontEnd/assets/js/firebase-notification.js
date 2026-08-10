@@ -304,25 +304,59 @@
   };
 
   messaging.onMessage(function (payload) {
-    console.log("Foreground notification:", payload);
+  console.log("Foreground notification:", payload);
 
-    if (typeof Swal !== "undefined") {
-      Swal.fire({
-        icon: "info",
-        title:
-          payload.notification?.title ||
-          payload.data?.title ||
-          "New Notification",
-        text: payload.notification?.body || payload.data?.message || "",
-        timer: 4000,
-        showConfirmButton: false,
-      });
-    }
+  const title =
+    payload.notification?.title ||
+    payload.data?.title ||
+    "Hanz-Go Notification";
 
-    if (typeof window.reloadAppNotificationBell === "function") {
-      window.reloadAppNotificationBell();
-    }
-  });
+  const body =
+    payload.notification?.body ||
+    payload.data?.body ||
+    payload.data?.message ||
+    "You have a new notification.";
+
+  const rawUrl =
+    payload.data?.url ||
+    payload.fcmOptions?.link ||
+    "brand.html";
+
+  const targetUrl = rawUrl.startsWith("http")
+    ? rawUrl
+    : `${window.location.origin}/${rawUrl.replace(/^\/+/, "")}`;
+
+  if (Notification.permission === "granted") {
+    const browserNotification = new Notification(title, {
+      body: body,
+      icon: "/assets/img/hanz-goLogo.png",
+      badge: "/assets/img/hanz-goLogo.png",
+      data: {
+        url: targetUrl,
+      },
+    });
+
+    browserNotification.onclick = function () {
+      window.focus();
+      window.location.href = targetUrl;
+      browserNotification.close();
+    };
+  }
+
+  if (typeof Swal !== "undefined") {
+    Swal.fire({
+      icon: "info",
+      title: title,
+      text: body,
+      timer: 4000,
+      showConfirmButton: false,
+    });
+  }
+
+  if (typeof window.reloadAppNotificationBell === "function") {
+    window.reloadAppNotificationBell();
+  }
+});
 
   $(document).ready(function () {
     if (getAuthToken()) {
