@@ -8,7 +8,7 @@ html,
 body {
   width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 /* Make images and tables safer on small screens */
@@ -820,4 +820,15 @@ body.modal-open .navbar.sticky-top {
     flex: 0 0 100% !important;
     max-width: 100% !important;
   }
+}
+
+nav.navbar.sticky-top,
+.dashboard-navbar.sticky-top {
+  position: -webkit-sticky !important;
+  position: sticky !important;
+  top: 0 !important;
+  left: 0;
+  right: 0;
+  width: 100%;
+  z-index: 5000 !important;
 }
