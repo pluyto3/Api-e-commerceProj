@@ -262,11 +262,19 @@ private function sendVerificationEmail($user) {
 
         $validated = $validator->validated();
 
-        // Generate reset token
+        // Find the user first
+        $user = User::where('email', $validated['email'])->first();
+
+        // Do not allow password reset if email is not verified
+        if (is_null($user->email_verified_at)) {
+            return response()->json([
+                'msg' => 'Please verify your email before resetting your password.'
+            ], 403);
+        }
+
+        // Generate reset token only for verified accounts
         $resetToken = Str::random(15);
 
-        // Save the reset token to the user
-        $user = User::where('email', $validated['email'])->first();
         $user->reset_token = $resetToken;
         $user->save();
 
