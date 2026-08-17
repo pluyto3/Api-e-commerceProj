@@ -55,6 +55,7 @@ Route::controller(AuthController::class)->group(function () {
   Route::get('/getAccount_username/{username}', 'getAccount_username'); // Get a specific user by username
   Route::put('/updateImageAccount/{id}', 'updateImageAccount'); // Update Account Image
   Route::post('/contact/send-email', 'sendContactEmail'); // Send Contact Message
+  Route::post('/resend-verification', 'resendVerificationEmail') ->middleware('throttle:3,1'); // Resend Verification Email
 });
 
 // Product Routes

@@ -60,11 +60,36 @@ class AuthController extends Controller
         ]);
 
         // Send verification email
-        $this->sendVerificationEmail($user);
+        try {
+            $this->sendVerificationEmail($user);
 
+        } catch (\Throwable $e) {
+
+            \Log::error(
+                'Registration verification email failed.',
+                [
+                    'user_id' => $user->user_id,
+                    'email' => $user->email,
+                    'error' => $e->getMessage(),
+                ]
+            );
+
+            return response()->json([
+                'msg' => 'Your account was created, but the verification email could not be sent. Please use Resend Verification Email on the login page.'
+            ], 201);
+        }
+
+        // Registration successful and verification email sent
         return response()->json([
-            'msg' => 'User successfully registered.',
-            'user' => $user->only(['id', 'username', 'email', 'phone_number', 'fullname', 'role']) // exclude password
+            'msg' => 'User successfully registered. Please check your email to verify your account.',
+            'user' => $user->only([
+                'user_id',
+                'username',
+                'email',
+                'phone_number',
+                'fullname',
+                'role'
+            ])
         ], 201);
     } 
 
@@ -72,30 +97,120 @@ class AuthController extends Controller
      * PHP Mailer for sending verification email
      */
 
-    private function sendVerificationEmail($user) {
+private function sendVerificationEmail($user) {
+
+        $verifyUrl = url(
+            '/api/verify-email/' .
+            urlencode($user->verification_token)
+        );
+
+        $fullname = htmlspecialchars(
+            $user->fullname,
+            ENT_QUOTES,
+            'UTF-8'
+        );
+
+        $body = "
+
+            <h2>Verify Your Email</h2>
+
+            <p>Hello {$fullname},</p>
+
+            <p>
+                Please click the link below to verify your email:
+            </p>
+
+            <p>
+                <a href='{$verifyUrl}'>
+                    Verify Email
+                </a>
+            </p>
+
+            <br>
+
+            <p>
+                If you did not create this account,
+                you can safely ignore this email.
+            </p>
+
+            <br>
+
+            <p>
+                Thanks,<br>
+                Hanz-Go Team
+            </p>
+        ";
+
+        Mail::html($body, function ($message) use ($user) {
+            $message
+                ->to($user->email, $user->fullname)
+                ->subject('Verify Your Email');
+        });
+    }
+
+    /**
+     * Resend Verification Email
+     */
+    public function resendVerificationEmail(Request $request){
+
+        $validator = Validator::make($request->all(), [
+            'username' => 'required|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $user = User::where(
+            'username',
+            $request->username
+        )->first();
+
+        if (!$user) {
+            return response()->json([
+                'msg' => 'Account not found.'
+            ], 404);
+        }
+
+        // Already verified
+        if (!is_null($user->email_verified_at)) {
+            return response()->json([
+                'msg' =>
+                    'Your email is already verified. You may log in.'
+            ], 400);
+        }
+
         try {
-            $verifyUrl = url('/api/verify-email/' . $user->verification_token);
 
-            $fullname = htmlspecialchars($user->fullname, ENT_QUOTES, 'UTF-8');
+            // Generate a fresh verification token
+            $user->verification_token = Str::random(64);
+            $user->save();
 
-            $body = "
-                <h2>Verify Your Email</h2>
-                <p>Hello {$fullname},</p>
-                <p>Please click the link below to verify your email:</p>
-                <p>
-                    <a href='{$verifyUrl}'>Verify Email</a>
-                </p>
-                <br>
-                <p>Thanks,<br>Hanz-Go Team</p>
-            ";
+            // Send verification email
+            $this->sendVerificationEmail($user);
 
-            Mail::html($body, function ($message) use ($user) {
-                $message->to($user->email, $user->fullname)
-                    ->subject('Verify Your Email');
-            });
+            return response()->json([
+                'msg' =>
+                    'A new verification email has been sent. Please check your inbox.'
+            ], 200);
 
         } catch (\Throwable $e) {
-            \Log::error('Verification email could not be sent: ' . $e->getMessage());
+
+            \Log::error(
+                'Resend verification email failed.',
+                [
+                    'user_id' => $user->user_id,
+                    'email' => $user->email,
+                    'error' => $e->getMessage(),
+                ]
+            );
+
+            return response()->json([
+                'msg' =>
+                    'Unable to send the verification email. Please try again later.'
+            ], 500);
         }
     }
 

@@ -88,11 +88,24 @@ $(document).ready(function () {
 
           // Laravel validation error
           Object.keys(errors).forEach((field) => {
-            // Show the first error message under the field
-            $("#" + field + "Error").text(errors[field][0]);
+            $(".error-message").text("");
+            $(".form-control").removeClass("is-invalid");
 
-            // Add Bootstrap invalid class to the input
-            $("#" + field).addClass("is-invalid");
+            // Laravel validation error
+            Object.keys(errors).forEach((field) => {
+              const message = errors[field][0];
+
+              if (
+                field === "password" &&
+                message.toLowerCase().includes("confirmation")
+              ) {
+                $("#password_confirmationError").text(message);
+                $("#password_confirmation").addClass("is-invalid");
+              } else {
+                $("#" + field + "Error").text(message);
+                $("#" + field).addClass("is-invalid");
+              }
+            });
           });
         } else {
           Swal.fire({

@@ -1,12 +1,68 @@
-// var ip = "https://api.hanzgo.me"; // For production server
-var ip = "https://api.hanzgo.me"; // For local testing
+var ip = "https://api.hanzgo.me"; // Production server
 
 function load_user() {
   var usr = $.cookie("username");
   var token = $.cookie("token");
+
   if (usr != undefined && token != undefined) {
     window.location.replace("index.html");
   }
+}
+
+// Function to resend verification email
+function resendVerificationEmail(username) {
+  Swal.fire({
+    title: "Sending Verification Email",
+    text: "Please wait...",
+    allowOutsideClick: false,
+    allowEscapeKey: false,
+    didOpen: () => {
+      Swal.showLoading();
+    },
+  });
+
+  $.ajax({
+    type: "POST",
+    url: ip + "/api/resend-verification",
+    data: JSON.stringify({
+      username: username,
+    }),
+    contentType: "application/json",
+    headers: {
+      Accept: "application/json",
+    },
+
+    success: function (res) {
+      Swal.fire({
+        icon: "success",
+        title: "Email Sent",
+        text:
+          res.msg ||
+          "A new verification email has been sent. Please check your inbox.",
+        confirmButtonText: "OK",
+      });
+    },
+
+    error: function (xhr) {
+      let errorMessage =
+        "Unable to resend verification email. Please try again.";
+
+      if (xhr.responseJSON) {
+        errorMessage =
+          xhr.responseJSON.msg ||
+          xhr.responseJSON.message ||
+          xhr.responseJSON.error ||
+          errorMessage;
+      }
+
+      Swal.fire({
+        icon: "error",
+        title: "Unable to Send Email",
+        text: errorMessage,
+        confirmButtonText: "OK",
+      });
+    },
+  });
 }
 
 $(document).ready(function () {
@@ -58,7 +114,6 @@ $(document).ready(function () {
         // Default error message
         let errorMessage = "Access Denied: Invalid username or password.";
 
-        // Check if the backend sent a specific error message
         if (xhr.responseJSON) {
           errorMessage =
             xhr.responseJSON.msg ||
@@ -67,10 +122,38 @@ $(document).ready(function () {
             errorMessage;
         }
 
+        // Check if account is not yet verified
+        if (
+          errorMessage.toLowerCase().includes("verify your email") ||
+          errorMessage.toLowerCase().includes("email verification")
+        ) {
+          Swal.fire({
+            icon: "warning",
+            title: "Email Not Verified",
+            text: errorMessage,
+
+            showDenyButton: true,
+
+            confirmButtonText: "OK",
+            denyButtonText: "Resend Verification Email",
+
+            footer: '<a href="forgot.html">Forgot Password?</a>',
+          }).then((result) => {
+            if (result.isDenied) {
+              // Use the username already entered in the login form
+              resendVerificationEmail(usr);
+            }
+          });
+
+          return;
+        }
+
+        // Normal login errors
         Swal.fire({
           icon: "error",
           title: "Error",
           text: errorMessage,
+          confirmButtonText: "OK",
           footer: '<a href="forgot.html">Forgot Password?</a>',
         });
       },
