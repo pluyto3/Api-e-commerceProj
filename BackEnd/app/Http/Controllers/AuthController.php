@@ -91,13 +91,84 @@ class AuthController extends Controller
                 'role'
             ])
         ], 201);
-    } 
+    }
+
+    /**
+     * PHP Mailer for sending verification email
+     */ 
+    public function adminCreateAccount(Request $request) {
+        
+        // Check admin authentication
+        $token = $request->bearerToken();
+
+        if (!$token) {
+            return response()->json([
+                'msg' => 'No Token Provided.'
+            ], 401);
+        }
+
+        $admin = User::where('token', $token)->first();
+
+        if (!$admin || $admin->role !== 'admin') {
+            return response()->json([
+                'msg' => 'Unauthorized. Only administrators can create accounts.'
+            ], 403);
+        }
+
+        // Validate account data
+        $validator = Validator::make($request->all(), [
+            'username' => 'required|string|max:255|unique:users,username',
+            'email' => 'required|string|email|max:255|unique:users,email',
+            'phone_number' => 'required|string|max:13|unique:users,phone_number',
+            'password' => 'required|string|min:8|confirmed',
+            'fullname' => 'required|string|max:255',
+            'role' => 'required|string|in:admin,seller,user',
+        ], [
+            'username.unique' => 'This username is already taken.',
+            'email.unique' => 'This email is already registered.',
+            'phone_number.unique' => 'This phone number is already registered.',
+            'password.confirmed' => 'Password confirmation does not match.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $validated = $validator->validated();
+
+        // Create account as already verified
+        $user = User::create([
+            'username' => $validated['username'],
+            'email' => $validated['email'],
+            'phone_number' => $validated['phone_number'],
+            'password' => Hash::make($validated['password']),
+            'fullname' => $validated['fullname'],
+            'role' => $validated['role'],
+            'token' => '',
+            'email_verified_at' => now(),
+            'verification_token' => null,
+        ]);
+
+        return response()->json([
+            'msg' => 'Account created successfully.',
+            'user' => $user->only([
+                'user_id',
+                'username',
+                'email',
+                'phone_number',
+                'fullname',
+                'role',
+                'email_verified_at',
+            ])
+        ], 201);
+    }
 
     /**
      * PHP Mailer for sending verification email
      */
-
-private function sendVerificationEmail($user) {
+    private function sendVerificationEmail($user) {
 
         $verifyUrl = url(
             '/api/verify-email/' .

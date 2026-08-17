@@ -202,6 +202,9 @@ function loadProfileImage() {
 // =======================================
 // ACCOUNT REGISTRATION
 // =======================================
+// =======================================
+// ADMIN ACCOUNT CREATION
+// =======================================
 function setupRegistrationForm() {
   $("#accountForm").on("submit", function (e) {
     e.preventDefault();
@@ -221,50 +224,101 @@ function setupRegistrationForm() {
 
     $.ajax({
       type: "POST",
-      url: `${ip}/api/register`,
+
+      // Admin-specific endpoint
+      url: `${ip}/api/admin/create-account`,
+
       contentType: "application/json",
-      headers: { Accept: "application/json" },
+
+      // Send logged-in admin token
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+
       data: JSON.stringify(formData),
+
       beforeSend: () => {
         $("#wait").show();
+
+        $(".error-message").text("");
+        $(".form-control, .custom-select").removeClass("is-invalid");
+
         $createButton
           .prop("disabled", true)
           .html(
             '<span class="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>Adding...',
           );
       },
-      success: () => {
+
+      success: (res) => {
         $(".error-message").text("");
         $(".form-control, .custom-select").removeClass("is-invalid");
+
+        // Clear form
         this.reset();
 
         Swal.fire({
-          title: "Successfully Registered",
-          text: "Please log in to continue.",
+          title: "Account Created",
+          text:
+            res.msg ||
+            "The account was created successfully and can log in immediately.",
           icon: "success",
-        }).then(() => window.location.replace("manageAccounts.html"));
+        }).then(() => {
+          window.location.replace("manageAccounts.html");
+        });
       },
+
       error: (xhr) => {
         $(".error-message").text("");
         $(".form-control, .custom-select").removeClass("is-invalid");
 
-        if (xhr.status === 422 && xhr.responseJSON.errors) {
+        // Laravel validation errors
+        if (xhr.status === 422 && xhr.responseJSON?.errors) {
           const errors = xhr.responseJSON.errors;
-          for (let field in errors) {
-            $(`#${field}Error`).text(errors[field][0]);
-            $(`[name="${field}"]`).addClass("is-invalid");
-          }
-        } else {
+
+          Object.keys(errors).forEach((field) => {
+            const message = errors[field][0];
+
+            // Password confirmation mismatch
+            if (
+              field === "password" &&
+              message.toLowerCase().includes("confirmation")
+            ) {
+              $("#password_confirmationError").text(message);
+              $("#password_confirmation").addClass("is-invalid");
+            } else {
+              $(`#${field}Error`).text(message);
+              $(`[name="${field}"]`).addClass("is-invalid");
+            }
+          });
+
+          return;
+        }
+
+        // Unauthorized admin
+        if (xhr.status === 401 || xhr.status === 403) {
           Swal.fire({
-            title: "Registration Failed",
+            title: "Unauthorized",
             text:
               xhr.responseJSON?.msg ||
-              xhr.responseJSON?.message ||
-              "Unknown error",
+              "Only administrators can create new accounts.",
             icon: "error",
           });
+
+          return;
         }
+
+        Swal.fire({
+          title: "Account Creation Failed",
+          text:
+            xhr.responseJSON?.msg ||
+            xhr.responseJSON?.message ||
+            "Unable to create the account.",
+          icon: "error",
+        });
       },
+
       complete: () => {
         $("#wait").hide();
         $createButton.prop("disabled", false).text(originalButtonText);

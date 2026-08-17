@@ -56,6 +56,7 @@ Route::controller(AuthController::class)->group(function () {
   Route::put('/updateImageAccount/{id}', 'updateImageAccount'); // Update Account Image
   Route::post('/contact/send-email', 'sendContactEmail'); // Send Contact Message
   Route::post('/resend-verification', 'resendVerificationEmail') ->middleware('throttle:3,1'); // Resend Verification Email
+  Route::post('/admin/create-account', 'adminCreateAccount'); // Admin Create Account
 });
 
 // Product Routes
