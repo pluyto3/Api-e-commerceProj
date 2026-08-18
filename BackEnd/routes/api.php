@@ -69,6 +69,8 @@ Route::group(['prefix' => 'products'], function($router) {
         Route::put('/{id}/approve', 'approveProduct'); // Approve a product (admin)
         Route::put('/{id}/reject', 'rejectProduct'); // Reject a product (admin)
         Route::delete('/{id}', 'deleteProduct'); // Delete a specific product
+        Route::put('/{id}/stock', 'updateStock'); // Update product stock
+        Route::put('/{id}/availability', 'updateAvailability'); // Deactivate a specific product
     });
 });
 

@@ -608,4 +608,107 @@ class ProductController extends Controller
         return response()->json(['msg' => 'Product rejected.'], 200);
     }
 
+    /**
+     * Update product stock
+     */
+    public function updateStock(Request $request, $id)
+    {
+        $user = $this->getAuthenticatedUser($request);
+
+        if (!$user) {
+            return response()->json([
+                'msg' => 'Unauthorized.'
+            ], 401);
+        }
+
+        $product = Product::find($id);
+
+        if (!$product) {
+            return response()->json([
+                'msg' => 'Product not found.'
+            ], 404);
+        }
+
+        if (!$this->authorizeProductOwner($user, $product)) {
+            return response()->json([
+                'msg' => 'Unauthorized.'
+            ], 403);
+        }
+
+        $request->validate([
+            'stock_quantity' => 'required|integer|min:0'
+        ]);
+
+        $product->stock_quantity = $request->stock_quantity;
+
+        $product->status = $this->productStatusFromStock(
+            (int) $request->stock_quantity,
+            $product->status
+        );
+
+        $product->save();
+
+        return response()->json([
+            'msg' => 'Product stock updated successfully.',
+            'stock_quantity' => $product->stock_quantity,
+            'status' => $product->status
+        ], 200);
+    }
+
+    /**
+     * Update product availability
+     */
+    public function updateAvailability(Request $request, $id)
+    {
+        $user = $this->getAuthenticatedUser($request);
+
+        if (!$user) {
+            return response()->json([
+                'msg' => 'Unauthorized.'
+            ], 401);
+        }
+
+        $product = Product::find($id);
+
+        if (!$product) {
+            return response()->json([
+                'msg' => 'Product not found.'
+            ], 404);
+        }
+
+        if (!$this->authorizeProductOwner($user, $product)) {
+            return response()->json([
+                'msg' => 'Unauthorized.'
+            ], 403);
+        }
+
+        $request->validate([
+            'status' => 'required|in:active,inactive'
+        ]);
+
+        /*
+        * A product with zero stock cannot
+        * be activated.
+        */
+        if (
+            $request->status === 'active' &&
+            (int) $product->stock_quantity <= 0
+        ) {
+            return response()->json([
+                'msg' => 'Cannot activate a product with zero stock.'
+            ], 422);
+        }
+
+        $product->status = $request->status;
+
+        $product->save();
+
+        return response()->json([
+            'msg' => $request->status === 'active'
+                ? 'Product activated successfully.'
+                : 'Product deactivated successfully.',
+            'status' => $product->status
+        ], 200);
+    }
+
 }

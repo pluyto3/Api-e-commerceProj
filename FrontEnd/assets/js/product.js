@@ -1430,6 +1430,144 @@ $(document).ready(function () {
     $("#rejectionReasonModal").modal("show");
   });
 
+  // =======================================
+  // Update Product Stock
+  // =======================================
+  $(document).on("click", ".update-product-stock", function () {
+    const productId = $(this).data("id");
+
+    const product = allProducts.find((p) => p.product_id == productId);
+
+    if (!product) {
+      return Swal.fire("Error", "Product not found.", "error");
+    }
+
+    Swal.fire({
+      title: "Update Stock",
+      input: "number",
+      inputLabel: `Current stock: ${product.stock_quantity}`,
+      inputValue: product.stock_quantity,
+      inputAttributes: {
+        min: 0,
+        step: 1,
+      },
+      showCancelButton: true,
+      confirmButtonText: "Update Stock",
+
+      inputValidator: (value) => {
+        if (value === "") {
+          return "Please enter the stock quantity.";
+        }
+
+        if (parseInt(value) < 0) {
+          return "Stock cannot be negative.";
+        }
+      },
+    }).then((result) => {
+      if (!result.isConfirmed) {
+        return;
+      }
+
+      const newStock = parseInt(result.value);
+
+      $.ajax({
+        url: `${ip}/api/products/${productId}/stock`,
+        method: "PUT",
+
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+
+        data: JSON.stringify({
+          stock_quantity: newStock,
+        }),
+
+        success: function (res) {
+          Swal.fire({
+            icon: "success",
+            title: "Stock Updated",
+            text: res.msg || "Product stock has been updated.",
+          });
+
+          loadProductsForApproval();
+        },
+
+        error: function (xhr) {
+          Swal.fire({
+            icon: "error",
+            title: "Error",
+            text: xhr.responseJSON?.msg || "Failed to update stock.",
+          });
+        },
+      });
+    });
+  });
+
+  // =======================================
+  // Activate / Deactivate Product
+  // =======================================
+  $(document).on("click", ".toggle-product-availability", function () {
+    const productId = $(this).data("id");
+    const action = $(this).data("action");
+
+    const activating = action === "active";
+
+    Swal.fire({
+      title: activating ? "Activate Product?" : "Deactivate Product?",
+
+      text: activating
+        ? "This product will become available to customers."
+        : "This product will no longer be available to customers.",
+
+      icon: "question",
+      showCancelButton: true,
+
+      confirmButtonText: activating ? "Yes, Activate" : "Yes, Deactivate",
+
+      cancelButtonText: "Cancel",
+    }).then((result) => {
+      if (!result.isConfirmed) {
+        return;
+      }
+
+      $.ajax({
+        url: `${ip}/api/products/${productId}/availability`,
+        method: "PUT",
+
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+
+        data: JSON.stringify({
+          status: action,
+        }),
+
+        success: function (res) {
+          Swal.fire({
+            icon: "success",
+            title: activating ? "Product Activated" : "Product Deactivated",
+            text: res.msg,
+          });
+
+          loadProductsForApproval();
+        },
+
+        error: function (xhr) {
+          Swal.fire({
+            icon: "error",
+            title: "Error",
+            text:
+              xhr.responseJSON?.msg || "Failed to update product availability.",
+          });
+        },
+      });
+    });
+  });
+
   // --- Logout Functionality ---
   $("#logout").click((e) => {
     e.preventDefault();
