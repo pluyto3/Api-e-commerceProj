@@ -493,15 +493,14 @@ $(document).ready(function () {
       const activityBadge = getCategoryActivityBadge(category.is_active);
 
       let approvedActionButtons = `
-      <button
-        class="btn btn-sm btn-info view-category"
-        data-id="${category.category_id}">
-        data-toggle="modal"
-        data-target="#categoryApprovedDetailsModal">
-
-        <i class="fas fa-eye"></i> View
-      </button>
-    `;
+        <button
+          class="btn btn-sm btn-info view-category"
+          data-id="${category.category_id}"
+          data-toggle="modal"
+          data-target="#categoryApprovedDetailsModal">
+          <i class="fas fa-eye"></i> View
+        </button>
+      `;
 
       // Seller-only actions
       if (role === "seller") {
