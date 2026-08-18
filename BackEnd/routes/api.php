@@ -109,6 +109,8 @@ Route::group(['prefix' => 'brands'], function($router) {
         Route::put('/{id}', 'updateBrands'); // Update a specific brand by ID
         Route::post('/{id}', 'updateBrands'); // Update a specific brand by ID
         Route::delete('/{id}', 'deleteBrands'); // Delete a specific brand by ID
+        Route::put('/{id}/deactivate', 'deactivateBrand'); // Deactivate a specific brand by ID
+        Route::put('/{id}/reactivate', 'reactivateBrand'); // Reactivate a specific brand by ID
     });
 });
 
