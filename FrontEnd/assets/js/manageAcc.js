@@ -344,17 +344,37 @@ function initializeDataTable(selector) {
 // APPEND TABLE ROW
 // =======================================
 function appendTableRow(tableId, user) {
-  let displayRole;
+  const displayRole =
+    user.role === "user"
+      ? "Customer"
+      : user.role === "seller"
+        ? "Seller"
+        : user.role === "admin"
+          ? "Admin"
+          : user.role;
 
-  if (user.role === "user") {
-    displayRole = "Customer";
-  } else if (user.role === "seller") {
-    displayRole = "Seller";
-  } else if (user.role === "admin") {
-    displayRole = "Admin";
-  } else {
-    displayRole = user.role;
-  }
+  const profileImage = user.image
+    ? `
+      <img
+        src="${ip}/FrontEnd/assets/img/user/${user.image}"
+        width="50"
+        height="50"
+        class="rounded-circle"
+        style="object-fit: cover;"
+        alt="${user.username}"
+        onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';"
+      >
+      <i
+        class="fas fa-user-circle"
+        style="font-size: 50px; color: #adb5bd; display: none;"
+      ></i>
+    `
+    : `
+      <i
+        class="fas fa-user-circle"
+        style="font-size: 50px; color: #adb5bd;"
+      ></i>
+    `;
 
   $(`${tableId} tbody`).append(`
     <tr>
@@ -365,11 +385,7 @@ function appendTableRow(tableId, user) {
       <td>${user.phone_number}</td>
       <td>${displayRole}</td>
       <td>
-        <img 
-          src="${ip}/FrontEnd/assets/img/user/${user.image}" 
-          width="50" 
-          height="50"
-        >
+        ${profileImage}
       </td>
       <td>
         <a href="#" 
