@@ -9,8 +9,7 @@ let profileImage = null;
 let currentUserId = null;
 let brandsCache = [];
 let sellerLookup = {};
-const brandImageBaseUrl =
-  "https://api.hanzgo.me/FrontEnd/assets/img/brand";
+const brandImageBaseUrl = "https://api.hanzgo.me/FrontEnd/assets/img/brand";
 
 function getBrandImageUrl(imageName) {
   return imageName
@@ -38,6 +37,26 @@ function getStatusBadge(status) {
 
   const badgeClass = badgeClasses[status] || "badge-secondary";
   return `<span class="badge ${badgeClass}">${String(status).toUpperCase()}</span>`;
+}
+
+function isBrandActive(value) {
+  return value === true || value === 1 || value === "1";
+}
+
+function getBrandActivityBadge(value) {
+  if (isBrandActive(value)) {
+    return `
+      <span class="badge badge-success">
+        ACTIVE
+      </span>
+    `;
+  }
+
+  return `
+    <span class="badge badge-secondary">
+      DEACTIVATED
+    </span>
+  `;
 }
 
 function formatBrandDate(dateValue) {
@@ -156,7 +175,8 @@ function populateBrandApprovedDetailsModal(
   const status = normalizeBrandStatus(brand.status || brand.approval_status);
   cacheSeller(brand);
   const seller = getBrandSellerDisplayName(brand);
-  const description = brand.description || brand.approval_reason || "N/A";
+  const description = brand.description || "N/A";
+  const rejectionReason = brand.approval_reason || "";
   const submittedDate =
     brand.created_at || brand.submitted_at || brand.updated_at || null;
   const imageUrl = getBrandImageUrl(brand.image);
@@ -169,6 +189,28 @@ function populateBrandApprovedDetailsModal(
   $modal.find(".brand-detail-name").text(brand.name || "N/A");
   $modal.find(".brand-detail-seller").text(seller);
   $modal.find(".brand-detail-description").text(description);
+  const $reasonWrap = $modal.find(".brand-detail-reason-wrap");
+  const $reasonText = $modal.find(".brand-detail-reason");
+
+  if (status === "rejected") {
+    $reasonText.text(rejectionReason || "No rejection reason was provided.");
+    $reasonWrap.show();
+  } else {
+    $reasonText.text("");
+    $reasonWrap.hide();
+  }
+
+  if (modalSelector === "#brandApprovedDetailsModal") {
+    const title =
+      status === "rejected"
+        ? "Rejected Brand Details"
+        : status === "approved"
+          ? "Approved Brand Details"
+          : "Brand Details";
+
+    $modal.find(".modal-title").text(title);
+  }
+
   $modal.find(".brand-detail-date").text(formatBrandDate(submittedDate));
   $modal
     .find(".brand-detail-status")
@@ -481,7 +523,7 @@ $(document).ready(function () {
 
       if (!approvedBrands || approvedBrands.length === 0) {
         $("#approved-brand-table tbody").html(
-          `<tr><td colspan="8" class="text-center text-muted py-4">No Approved Brands found.</td></tr>`,
+          `<tr><td colspan="9" class="text-center text-muted py-4">No Approved Brands found.</td></tr>`,
         );
       } else {
         approvedBrands.forEach((brand) => {
@@ -489,12 +531,63 @@ $(document).ready(function () {
             brand.status || brand.approval_status,
           );
           const statusBadge = getStatusBadge(status);
+          const active = isBrandActive(brand.is_active);
+          const activityBadge = getBrandActivityBadge(brand.is_active);
           const seller = getBrandSellerDisplayName(brand);
           const description =
             brand.description || brand.approval_reason || "N/A";
           const approvedDate = formatBrandDate(
             brand.approved_at || brand.updated_at || brand.created_at,
           );
+
+          let approvedActionButtons = `
+            <button
+              class="btn btn-sm btn-info view-brand"
+              data-id="${brand.brand_id}"
+              data-toggle="modal"
+              data-target="#brandApprovedDetailsModal">
+              <i class="fas fa-eye"></i> View
+            </button>
+          `;
+
+          if (role === "seller") {
+            // Request Edit is always available
+            // while the brand remains approved.
+            approvedActionButtons += `
+    <button
+      class="btn btn-sm btn-warning request-edit-btn"
+      data-id="${brand.brand_id}">
+      <i class="fas fa-edit"></i> Request Edit
+    </button>
+  `;
+
+            // Active brand → Deactivate
+            if (active) {
+              approvedActionButtons += `
+                <button
+                  class="btn btn-sm btn-danger toggle-brand-activity"
+                  data-id="${brand.brand_id}"
+                  data-action="deactivate">
+
+                  <i class="fas fa-ban"></i>
+                  Deactivate
+                </button>
+              `;
+
+              // Deactivated brand → Reactivate
+            } else {
+              approvedActionButtons += `
+                <button
+                  class="btn btn-sm btn-success toggle-brand-activity"
+                  data-id="${brand.brand_id}"
+                  data-action="reactivate">
+
+                  <i class="fas fa-check-circle"></i>
+                  Reactivate
+                </button>
+              `;
+            }
+          }
 
           $("#approved-brand-table tbody").append(`
             <tr>
@@ -503,15 +596,14 @@ $(document).ready(function () {
               <td>${seller}</td>
               <td>${description}</td>
               <td>${statusBadge}</td>
+              <td>${activityBadge}</td>
               <td>${approvedDate}</td>
               <td>
                 <img src="${getBrandImageUrl(brand.image)}" 
                      width="50" height="50">
               </td>
               <td>
-                <button class="btn btn-sm btn-info view-brand" data-id="${brand.brand_id}" data-toggle="modal" data-target="#brandApprovedDetailsModal">
-                  <i class="fas fa-eye"></i> View
-                </button>
+                ${approvedActionButtons}
               </td>
             </tr>
           `);
@@ -591,7 +683,7 @@ $(document).ready(function () {
           // Add Edit button for sellers
           if (role === "seller") {
             actionButtons += `
-              <button class="btn btn-sm btn-primary editBtn" data-id="${brand.brand_id}" data-toggle="modal" data-target="#editBrandModal">
+              <button class="btn btn-sm btn-primary editBtn" data-id="${brand.brand_id}">
                 <i class="fas fa-edit"></i> Edit
               </button>
             `;
@@ -634,6 +726,144 @@ $(document).ready(function () {
         getAjaxErrorMessage(xhr, "Failed to load brands"),
         "error",
       );
+    },
+  });
+
+  // =======================================
+  // Display Rejected Brands
+  // =======================================
+  $.ajax({
+    url: `${ip}/api/brands`,
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    },
+
+    success: function (res) {
+      const brands = res.data ?? res;
+      const allBrands = Array.isArray(brands) ? brands : [];
+
+      allBrands.forEach(cacheSeller);
+
+      const rejectedBrands = filterBrandsForRole(allBrands).filter(
+        (brand) =>
+          normalizeBrandStatus(brand.status || brand.approval_status) ===
+          "rejected",
+      );
+
+      if ($.fn.DataTable.isDataTable("#rejected-brand-table")) {
+        $("#rejected-brand-table").DataTable().destroy();
+      }
+
+      $("#rejected-brand-table tbody").empty();
+
+      if (rejectedBrands.length === 0) {
+        $("#rejected-brand-table tbody").html(`
+        <tr>
+          <td
+            colspan="9"
+            class="text-center text-muted py-4">
+            No Rejected Brands found.
+          </td>
+        </tr>
+      `);
+
+        return;
+      }
+
+      rejectedBrands.forEach((brand) => {
+        const status = normalizeBrandStatus(
+          brand.status || brand.approval_status,
+        );
+
+        const seller = getBrandSellerDisplayName(brand);
+
+        const statusBadge = getStatusBadge(status);
+
+        const description = brand.description || "N/A";
+
+        const rejectionReason = brand.approval_reason || "No reason provided.";
+
+        const submittedDate = formatBrandDate(
+          brand.created_at || brand.submitted_at || brand.updated_at,
+        );
+
+        let actionButtons = `
+        <button
+          class="btn btn-sm btn-info view-brand"
+          data-id="${brand.brand_id}"
+          data-toggle="modal"
+          data-target="#brandApprovedDetailsModal">
+
+          <i class="fas fa-eye"></i>
+          View
+        </button>
+      `;
+
+        if (role === "seller") {
+          actionButtons += `
+          <button
+            class="btn btn-sm btn-warning resubmit-brand-btn"
+            data-id="${brand.brand_id}">
+
+            <i class="fas fa-redo"></i>
+            Edit & Resubmit
+          </button>
+        `;
+        }
+
+        $("#rejected-brand-table tbody").append(`
+        <tr>
+          <td>${brand.brand_id || "N/A"}</td>
+
+          <td>${brand.name || "N/A"}</td>
+
+          <td>${seller}</td>
+
+          <td>${description}</td>
+
+          <td>${statusBadge}</td>
+
+          <td>
+            <span class="text-danger">
+              ${rejectionReason}
+            </span>
+          </td>
+
+          <td>${submittedDate}</td>
+
+          <td>
+            <img
+              src="${getBrandImageUrl(brand.image)}"
+              width="50"
+              height="50">
+          </td>
+
+          <td>
+            ${actionButtons}
+          </td>
+        </tr>
+      `);
+      });
+
+      $("#rejected-brand-table").DataTable({
+        pageLength: 10,
+        lengthChange: false,
+        searching: true,
+        responsive: true,
+        columnDefs: [
+          {
+            orderable: false,
+            targets: -1,
+            className: "text-center",
+          },
+        ],
+      });
+    },
+
+    error: function (xhr) {
+      console.error("Error fetching rejected brands:", xhr);
     },
   });
 
@@ -826,38 +1056,145 @@ $(document).ready(function () {
     openRejectBrandPrompt(brandId);
   });
 
-  // -------------------------------
-  // Edit Brand (Fetch Details)
-  // -------------------------------
-  $(document).on("click", ".editBtn", function (e) {
-    e.preventDefault();
-    const brand_id = $(this).data("id");
-    $("#brand_id").val(brand_id);
+  // =======================================
+  // Open Brand Edit Modal
+  // =======================================
+  function openBrandEditModal(brandId, mode = "edit") {
+    $("#brand_id").val(brandId);
 
     $.ajax({
-      url: `${ip}/api/brands/${brand_id}`,
+      url: `${ip}/api/brands/${brandId}`,
       method: "GET",
       headers: {
         Authorization: `Bearer ${token}`,
         Accept: "application/json",
       },
+
       success: function (res) {
-        $("#editName").val(res.name);
-        $("#editDescription").val(res.description || "");
+        const brand = res.data ?? res;
 
-        const imageUrl = res.image
-          ? `https://api.hanzgo.me/FrontEnd/assets/img/brand/${res.image}`
-          : null;
+        $("#editName").val(brand.name || "");
+        $("#editDescription").val(brand.description || "");
 
-        if (imageUrl) {
-          $("#currentImagePreview").attr("src", imageUrl).show();
+        if (brand.image) {
+          $("#currentImagePreview")
+            .attr("src", getBrandImageUrl(brand.image))
+            .show();
         } else {
           $("#currentImagePreview").hide();
         }
+
+        // Remember why the edit modal was opened.
+        $("#editBrandForm").data("edit-mode", mode);
+
+        if (mode === "request-edit") {
+          $("#editBrandModal .modal-title").text("Request Brand Update");
+
+          $("#editBrand").html(
+            '<i class="fas fa-paper-plane"></i> Submit for Review',
+          );
+        } else if (mode === "resubmit") {
+          $("#editBrandModal .modal-title").text("Edit and Resubmit Brand");
+
+          $("#editBrand").html(
+            '<i class="fas fa-redo"></i> Resubmit for Review',
+          );
+        } else {
+          $("#editBrandModal .modal-title").text("Edit Pending Brand");
+
+          $("#editBrand").html('<i class="fas fa-save"></i> Update');
+        }
+
+        $("#editBrandModal").modal("show");
       },
-      error: function () {
-        Swal.fire("Error", "Failed to fetch brand details", "error");
+
+      error: function (xhr) {
+        Swal.fire(
+          "Error",
+          getAjaxErrorMessage(xhr, "Failed to fetch brand details"),
+          "error",
+        );
       },
+    });
+  }
+
+  // =======================================
+  // Edit Pending Brand
+  // =======================================
+  $(document).on("click", ".editBtn", function (e) {
+    e.preventDefault();
+
+    const brandId = $(this).data("id");
+
+    openBrandEditModal(brandId, "edit");
+  });
+
+  // =======================================
+  // Request Edit for Approved Brand
+  // =======================================
+  $(document).on("click", ".request-edit-btn", function (e) {
+    e.preventDefault();
+
+    const brandId = $(this).data("id");
+
+    Swal.fire({
+      title: "Request Brand Edit?",
+      html: `
+      <p>
+        Changes to an approved brand must be reviewed again
+        by an administrator.
+      </p>
+
+      <p class="mb-0">
+        <strong>After you submit the changes, the brand will
+        return to Pending status until it is approved again.</strong>
+      </p>
+    `,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Continue Editing",
+      cancelButtonText: "Cancel",
+    }).then((result) => {
+      if (!result.isConfirmed) {
+        return;
+      }
+
+      openBrandEditModal(brandId, "request-edit");
+    });
+  });
+
+  // =======================================
+  // Edit and Resubmit Rejected Brand
+  // =======================================
+  $(document).on("click", ".resubmit-brand-btn", function (e) {
+    e.preventDefault();
+
+    const brandId = $(this).data("id");
+
+    Swal.fire({
+      title: "Resubmit Brand?",
+      html: `
+        <p>
+          You can correct the information that caused
+          the brand to be rejected.
+        </p>
+
+        <p class="mb-0">
+          After submitting your changes, the brand will
+          return to <strong>Pending</strong> status for
+          administrator review.
+        </p>
+      `,
+      icon: "info",
+      showCancelButton: true,
+      confirmButtonText: "Edit Brand",
+      cancelButtonText: "Cancel",
+    }).then((result) => {
+      if (!result.isConfirmed) {
+        return;
+      }
+
+      openBrandEditModal(brandId, "resubmit");
     });
   });
 
@@ -868,8 +1205,9 @@ $(document).ready(function () {
     e.preventDefault();
 
     const fd = new FormData(this);
-    fd.append("_method", "PUT");
-    $("#editBrand").text("Updating...");
+    const mode = $(this).data("edit-mode") || "edit";
+
+    $("#editBrand").prop("disabled", true).text("Submitting...");
 
     $.ajax({
       url: `${ip}/api/brands/${$("#brand_id").val()}`,
@@ -881,13 +1219,37 @@ $(document).ready(function () {
       data: fd,
       processData: false,
       contentType: false,
-      success: function () {
-        Swal.fire("Updated!", "Brand updated successfully!", "success").then(
-          () => location.reload(),
-        );
+
+      success: function (res) {
+        $("#editBrandModal").modal("hide");
+
+        let title = "Brand Updated";
+
+        if (mode === "request-edit") {
+          title = "Edit Request Submitted";
+        }
+
+        if (mode === "resubmit") {
+          title = "Brand Resubmitted";
+        }
+
+        Swal.fire({
+          icon: "success",
+          title: title,
+          text: res?.msg || "Brand submitted successfully.",
+        }).then(() => {
+          location.reload();
+        });
       },
+
       error: function (xhr) {
-        Swal.fire("Error", xhr.responseText, "error");
+        $("#editBrand").prop("disabled", false);
+
+        Swal.fire(
+          "Error",
+          getAjaxErrorMessage(xhr, "Unable to update brand."),
+          "error",
+        );
       },
     });
   });
@@ -949,6 +1311,68 @@ $(document).ready(function () {
       },
     });
   }
+
+  // =======================================
+  // Deactivate / Reactivate Brand
+  // =======================================
+  $(document).on("click", ".toggle-brand-activity", function (e) {
+    e.preventDefault();
+
+    const brandId = $(this).data("id");
+    const action = $(this).data("action");
+
+    const isDeactivating = action === "deactivate";
+
+    Swal.fire({
+      title: isDeactivating ? "Deactivate Brand?" : "Reactivate Brand?",
+
+      text: isDeactivating
+        ? "This brand will no longer be visible to customers. No brand data will be deleted."
+        : "This approved brand will become available to customers again.",
+
+      icon: isDeactivating ? "warning" : "question",
+
+      showCancelButton: true,
+
+      confirmButtonText: isDeactivating ? "Yes, Deactivate" : "Yes, Reactivate",
+
+      cancelButtonText: "Cancel",
+    }).then((result) => {
+      if (!result.isConfirmed) {
+        return;
+      }
+
+      $.ajax({
+        url: `${ip}/api/brands/${brandId}/${action}`,
+        method: "PUT",
+
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
+
+        success: function (res) {
+          Swal.fire({
+            icon: "success",
+
+            title: isDeactivating ? "Brand Deactivated" : "Brand Reactivated",
+
+            text: res?.msg || "Brand availability updated successfully.",
+          }).then(() => {
+            location.reload();
+          });
+        },
+
+        error: function (xhr) {
+          Swal.fire(
+            "Error",
+            getAjaxErrorMessage(xhr, "Unable to update brand availability."),
+            "error",
+          );
+        },
+      });
+    });
+  });
 
   /* -----------------------------
      LOGOUT HANDLER

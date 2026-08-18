@@ -312,6 +312,7 @@
                         <th class="text-center">Seller</th>
                         <th class="text-center">Description</th>
                         <th class="text-center">Status</th>
+                        <th class="text-center">Availability</th>
                         <th class="text-center">Approved Date</th>
                         <th class="text-center">Image</th>
                         <th class="text-center">Action</th>
@@ -346,6 +347,10 @@
                           <p><strong>Description:</strong></p>
                           <p id="detailDescription" class="brand-detail-description" style="border: 1px solid #ddd; padding: 10px; border-radius: 4px;"></p>
                           <p><strong>Status:</strong> <span id="detailStatus" class="badge brand-detail-status"></span></p>
+                          <div class="brand-detail-reason-wrap alert alert-danger" style="display: none;">
+                            <strong>Rejection Reason:</strong>
+                            <p class="brand-detail-reason mb-0 mt-1"></p>
+                          </div>
                           <p><strong>Submitted Date:</strong> <span id="detailDate" class="brand-detail-date"></span></p>
                         </div>
                       </div>
@@ -492,6 +497,38 @@
                   <tbody>
                     <!-- Data will be populated here via JavaScript -->
                   </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Rejected Brands -->
+            <div class="card mt-4">
+              <div class="card-header">
+                <h2 class="mb-0">Rejected Brands</h2>
+              </div>
+
+              <div class="card-body table-responsive">
+                <table
+                  id="rejected-brand-table"
+                  class="table table-striped table-hover">
+
+                  <thead>
+                    <tr>
+                      <th class="text-center">ID</th>
+                      <th class="text-center">Brand Name</th>
+                      <th class="text-center">Seller</th>
+                      <th class="text-center">Description</th>
+                      <th class="text-center">Status</th>
+                      <th class="text-center">Rejection Reason</th>
+                      <th class="text-center">Submitted Date</th>
+                      <th class="text-center">Image</th>
+                      <th class="text-center">Action</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                  </tbody>
+
                 </table>
               </div>
             </div>
