@@ -340,7 +340,22 @@ function initializeDataTable(selector) {
   $(`${selector} thead th`).addClass("text-center");
 }
 
+// =======================================
+// APPEND TABLE ROW
+// =======================================
 function appendTableRow(tableId, user) {
+  let displayRole;
+
+  if (user.role === "user") {
+    displayRole = "Customer";
+  } else if (user.role === "seller") {
+    displayRole = "Seller";
+  } else if (user.role === "admin") {
+    displayRole = "Admin";
+  } else {
+    displayRole = user.role;
+  }
+
   $(`${tableId} tbody`).append(`
     <tr>
       <td>${user.user_id}</td>
@@ -348,13 +363,26 @@ function appendTableRow(tableId, user) {
       <td>${user.email}</td>
       <td>${user.fullname}</td>
       <td>${user.phone_number}</td>
-      <td>${user.role}</td>
-      <td><img src="${ip}/FrontEnd/assets/img/user/${user.image}" width="50" height="50"></td>
+      <td>${displayRole}</td>
       <td>
-        <a href="#" data-id="${user.user_id}" class="text-success mx-1 editBtn" data-toggle="modal" data-target="#editAccountModal">
+        <img 
+          src="${ip}/FrontEnd/assets/img/user/${user.image}" 
+          width="50" 
+          height="50"
+        >
+      </td>
+      <td>
+        <a href="#" 
+           data-id="${user.user_id}" 
+           class="text-success mx-1 editBtn" 
+           data-toggle="modal" 
+           data-target="#editAccountModal">
           <i class="fas fa-edit fa-2x"></i>
         </a>
-        <a href="#" data-id="${user.user_id}" class="text-danger mx-1 deleteBtn">
+
+        <a href="#" 
+           data-id="${user.user_id}" 
+           class="text-danger mx-1 deleteBtn">
           <i class="fas fa-trash fa-2x"></i>
         </a>
       </td>
