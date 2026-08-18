@@ -95,6 +95,8 @@ Route::group(['prefix' => 'category'], function($router) {
         Route::delete('/{id}', 'deleteCategory'); // Delete a specific category by ID
         Route::put('/{id}', 'updateCategory'); // Update a specific category
         Route::post('/{id}', 'updateCategory'); // Update a specific category
+        Route::put('/{id}/deactivate', 'deactivateCategory'); // Deactivate a specific category by ID
+        Route::put('/{id}/reactivate', 'reactivateCategory'); // Reactivate a specific category by ID
     });
 });
 

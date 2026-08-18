@@ -27,6 +27,7 @@ function getCategoryStatusBadgeClass(status) {
   return "badge-secondary";
 }
 
+// Utility function to get the status badge for a category
 function getStatusBadge(status) {
   const badgeClasses = {
     pending: "Pending",
@@ -36,6 +37,28 @@ function getStatusBadge(status) {
 
   const badgeClass = badgeClasses[status] || "badge-secondary";
   return `<span class="badge ${badgeClass}">${String(status).toUpperCase()}</span>`;
+}
+
+// Utility functions for category activity
+function isCategoryActive(value) {
+  return value === true || value === 1 || value === "1";
+}
+
+// Utility function to get the activity badge for a category
+function getCategoryActivityBadge(value) {
+  if (isCategoryActive(value)) {
+    return `
+      <span class="badge badge-success">
+        ACTIVE
+      </span>
+    `;
+  }
+
+  return `
+    <span class="badge badge-secondary">
+      DEACTIVATED
+    </span>
+  `;
 }
 
 function formatCategoryDate(dateValue) {
@@ -126,7 +149,8 @@ function populateCategoryDetailsModal(
   cacheCategorySeller(category);
 
   const seller = getCategorySellerDisplayName(category);
-  const description = category.description || category.approval_reason || "N/A";
+  const description = category.description || "N/A";
+  const rejectionReason = category.approval_reason || "";
   const submittedDate =
     category.created_at || category.submitted_at || category.updated_at || null;
   const imageUrl = getCategoryImageUrl(category.image);
@@ -134,11 +158,20 @@ function populateCategoryDetailsModal(
 
   $modal.attr("data-category-id", categoryId);
   $modal.attr("data-category-status", status);
-
   $modal.find(".category-detail-id").text(categoryId || "N/A");
   $modal.find(".category-detail-name").text(category.name || "N/A");
   $modal.find(".category-detail-seller").text(seller);
   $modal.find(".category-detail-description").text(description);
+  const $reasonWrap = $modal.find(".category-detail-reason-wrap");
+  const $reasonText = $modal.find(".category-detail-reason");
+  if (status === "rejected") {
+    $reasonText.text(rejectionReason || "No rejection reason was provided.");
+
+    $reasonWrap.show();
+  } else {
+    $reasonText.text("");
+    $reasonWrap.hide();
+  }
   $modal.find(".category-detail-date").text(formatCategoryDate(submittedDate));
   $modal
     .find(".category-detail-status")
@@ -442,7 +475,7 @@ $(document).ready(function () {
 
     if (!categories || categories.length === 0) {
       $("#approved-category-table tbody").html(
-        `<tr><td colspan="8" class="text-center text-muted py-4">No Approved Categories found.</td></tr>`,
+        `<tr><td colspan="9" class="text-center text-muted py-4">No Approved Categories found.</td></tr>`,
       );
       return;
     }
@@ -456,6 +489,59 @@ $(document).ready(function () {
       const statusBadge = getStatusBadge(
         normalizeCategoryStatus(category.status || category.approval_status),
       );
+      const active = isCategoryActive(category.is_active);
+      const activityBadge = getCategoryActivityBadge(category.is_active);
+
+      let approvedActionButtons = `
+      <button
+        class="btn btn-sm btn-info view-category"
+        data-id="${category.category_id}">
+        data-toggle="modal"
+        data-target="#categoryApprovedDetailsModal">
+
+        <i class="fas fa-eye"></i> View
+      </button>
+    `;
+
+      // Seller-only actions
+      if (role === "seller") {
+        approvedActionButtons += `
+        <button
+          class="btn btn-sm btn-warning request-category-edit-btn"
+          data-id="${category.category_id}">
+
+          <i class="fas fa-edit"></i>
+          Request Edit
+        </button>
+      `;
+
+        // Active category
+        if (active) {
+          approvedActionButtons += `
+          <button
+            class="btn btn-sm btn-danger toggle-category-activity"
+            data-id="${category.category_id}"
+            data-action="deactivate">
+
+            <i class="fas fa-ban"></i>
+            Deactivate
+          </button>
+        `;
+
+          // Deactivated category
+        } else {
+          approvedActionButtons += `
+          <button
+            class="btn btn-sm btn-success toggle-category-activity"
+            data-id="${category.category_id}"
+            data-action="reactivate">
+
+            <i class="fas fa-check-circle"></i>
+            Reactivate
+          </button>
+        `;
+        }
+      }
 
       $("#approved-category-table tbody").append(`
       <tr>
@@ -464,20 +550,92 @@ $(document).ready(function () {
         <td>${seller}</td>
         <td>${description}</td>
         <td>${statusBadge}</td>
+        <td>${activityBadge}</td>
         <td>${approvedDate}</td>
         <td>
           <img src="${getCategoryImageUrl(category.image)}" width="50">
         </td>
         <td>
-          <button class="btn btn-sm btn-info view-category"
-          data-id="${category.category_id}"
-          data-toggle="modal"
-          data-target="#categoryApprovedDetailsModal">
-          <i class="fas fa-eye"></i> View
-          </button>
+          ${approvedActionButtons}
         </td>
       </tr>
     `);
+    });
+  }
+
+  // Render Rejected Categories
+  function renderRejectedCategories(categories) {
+    $("#rejected-category-table tbody").empty();
+
+    if (!categories || categories.length === 0) {
+      $("#rejected-category-table tbody").html(`
+        <tr>
+          <td
+            colspan="9"
+            class="text-center text-muted py-4">
+            No Rejected Categories found.
+          </td>
+        </tr>
+      `);
+
+      return;
+    }
+
+    categories.forEach((category) => {
+      const seller = getCategorySellerDisplayName(category);
+
+      const statusBadge = getStatusBadge("rejected");
+
+      const reason = category.approval_reason || "No reason provided.";
+
+      let actions = `
+        <button
+          class="btn btn-sm btn-info view-category"
+          data-id="${category.category_id}"
+          data-toggle="modal"
+          data-target="#categoryApprovedDetailsModal">
+
+          <i class="fas fa-eye"></i> View
+        </button>
+      `;
+
+      if (role === "seller") {
+        actions += `
+          <button
+            class="btn btn-sm btn-warning resubmit-category-btn"
+            data-id="${category.category_id}">
+
+            <i class="fas fa-redo"></i>
+            Edit & Resubmit
+          </button>
+        `;
+      }
+
+      $("#rejected-category-table tbody").append(`
+        <tr>
+          <td>${category.category_id}</td>
+          <td>${category.name}</td>
+          <td>${seller}</td>
+          <td>${category.description || "N/A"}</td>
+          <td>${statusBadge}</td>
+
+          <td class="text-danger">
+            ${reason}
+          </td>
+
+          <td>
+            ${formatCategoryDate(category.created_at)}
+          </td>
+
+          <td>
+            <img
+              src="${getCategoryImageUrl(category.image)}"
+              width="50">
+          </td>
+
+          <td>${actions}</td>
+        </tr>
+      `);
     });
   }
 
@@ -514,8 +672,6 @@ $(document).ready(function () {
         actionButtons += `
           <button class="btn btn-sm btn-primary editBtn"
           data-id="${category.category_id}"
-          data-toggle="modal"
-          data-target="#editCategoryModal">
           <i class="fas fa-edit"></i> Edit
           </button>
         `;
@@ -554,13 +710,37 @@ $(document).ready(function () {
         categoriesCache = Array.isArray(categories) ? categories : [];
 
         const approved = filterCategoriesByRole(categoriesCache, "approved");
+
         const pending = filterCategoriesByRole(categoriesCache, "pending");
+
+        const rejected = filterCategoriesByRole(categoriesCache, "rejected");
 
         renderApprovedCategories(approved);
         renderPendingCategories(pending);
+        renderRejectedCategories(rejected);
       },
     });
   }
+
+  // Resubmit Category Button
+  $(document).on("click", ".resubmit-category-btn", function (e) {
+    e.preventDefault();
+
+    const categoryId = $(this).data("id");
+
+    Swal.fire({
+      title: "Resubmit Category?",
+      text: "Correct the rejected category and submit it again for administrator review.",
+      icon: "info",
+      showCancelButton: true,
+      confirmButtonText: "Edit Category",
+      cancelButtonText: "Cancel",
+    }).then((result) => {
+      if (!result.isConfirmed) return;
+
+      openCategoryEditModal(categoryId, "resubmit");
+    });
+  });
 
   // View category details (Approved Modal)
   $(document).on("click", ".view-category", function (e) {
@@ -614,15 +794,24 @@ $(document).ready(function () {
     });
   });
 
+  // Reject Category Prompt
   function openRejectCategoryPrompt(categoryId) {
     Swal.fire({
       title: "Reject Category?",
       input: "textarea",
-      inputLabel: "Reason (optional)",
+      inputLabel: "Reason for rejection",
       inputPlaceholder: "Enter reason for rejection...",
+
       inputAttributes: {
         "aria-label": "Enter reason for rejection",
       },
+
+      inputValidator: (value) => {
+        if (!value || !value.trim()) {
+          return "Please enter a reason for rejecting this category.";
+        }
+      },
+
       showCancelButton: true,
       confirmButtonText: "Reject",
       confirmButtonColor: "#d33",
@@ -632,13 +821,16 @@ $(document).ready(function () {
       $.ajax({
         url: `${ip}/api/category/${categoryId}/reject`,
         method: "PUT",
+
         headers: {
           Authorization: `Bearer ${token}`,
           Accept: "application/json",
         },
+
         data: {
-          reason: result.value || "",
+          reason: result.value.trim(),
         },
+
         success: function (res) {
           Swal.fire(
             "Rejected",
@@ -646,6 +838,7 @@ $(document).ready(function () {
             "success",
           ).then(() => location.reload());
         },
+
         error: function (xhr) {
           Swal.fire(
             "Error",
@@ -743,92 +936,225 @@ $(document).ready(function () {
   $(document).on("click", ".editBtn", function (e) {
     e.preventDefault();
 
-    const category_id = $(this).data("id"); // get the data-id from the clicked button
-    $("#category_id").val(category_id); // set it into the hidden input for form submission
+    openCategoryEditModal($(this).data("id"), "edit");
+  });
 
-    // console.log("Category ID for edit:", category_id);
-    // console.log("Value of category_id:", category_id, typeof category_id);
-
-    // $("#editCategory").text("Updating....");
+  // Reusable Edit / Request Edit / Resubmit
+  function openCategoryEditModal(categoryId, mode = "edit") {
+    $("#category_id").val(categoryId);
 
     $.ajax({
-      url: ip + "/api/category/" + category_id,
+      url: `${ip}/api/category/${categoryId}`,
       method: "GET",
+
       headers: {
-        Authorization: "Bearer " + token,
+        Authorization: `Bearer ${token}`,
         Accept: "application/json",
       },
+
       success: function (res) {
-        // console.log("Category data fetched for edit:", res);
-        // console.log("Response from server:", res);
-        $("#editName").val(res.name);
-        $("#editDescription").val(res.description);
-        if (res.image) {
-          const imageUrl =
-            "https://api.hanzgo.me/FrontEnd/assets/img/category/" +
-            res.image;
-          // console.log("Setting image source to:", imageUrl);
-          $("#currentImagePreview").attr("src", imageUrl);
-          $("#currentImagePreview").show(); // Make sure the image element is visible
+        const category = res.data ?? res;
+
+        $("#editName").val(category.name || "");
+        $("#editDescription").val(category.description || "");
+
+        if (category.image) {
+          $("#currentImagePreview")
+            .attr("src", getCategoryImageUrl(category.image))
+            .show();
         } else {
-          // If no image, hide the image preview element
           $("#currentImagePreview").hide();
         }
+
+        $("#editCategoryForm").data("edit-mode", mode);
+
+        if (mode === "request-edit") {
+          $("#editCategoryModal .modal-title").text("Request Category Update");
+
+          $("#editCategory").html(
+            '<i class="fas fa-paper-plane"></i> Submit for Review',
+          );
+        } else if (mode === "resubmit") {
+          $("#editCategoryModal .modal-title").text(
+            "Edit and Resubmit Category",
+          );
+
+          $("#editCategory").html(
+            '<i class="fas fa-redo"></i> Resubmit for Review',
+          );
+        } else {
+          $("#editCategoryModal .modal-title").text("Edit Pending Category");
+
+          $("#editCategory").html('<i class="fas fa-save"></i> Update');
+        }
+
+        $("#editCategoryModal").modal("show");
       },
+
       error: function (xhr) {
-        console.error("Error fetching category for edit:", xhr);
-        console.error("Status:", xhr.status);
-        console.error("Response Text:", xhr.responseText);
-        alert(
-          "Failed to fetch category data. Please check the console for details.",
+        Swal.fire(
+          "Error",
+          getAjaxErrorMessage(xhr, "Failed to fetch category."),
+          "error",
+        );
+      },
+    });
+  }
+
+  // Add Request Edit
+  $(document).on("click", ".request-category-edit-btn", function (e) {
+    e.preventDefault();
+
+    const categoryId = $(this).data("id");
+
+    Swal.fire({
+      title: "Request Category Edit?",
+
+      html: `
+        <p>
+          Changes to an approved category must
+          be reviewed again by an administrator.
+        </p>
+
+        <p class="mb-0">
+          <strong>
+            After submission, the category will
+            return to Pending status.
+          </strong>
+        </p>
+      `,
+
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Continue Editing",
+      cancelButtonText: "Cancel",
+    }).then((result) => {
+      if (!result.isConfirmed) {
+        return;
+      }
+
+      openCategoryEditModal(categoryId, "request-edit");
+    });
+  });
+
+  // Update Category
+  $("#editCategoryForm").on("submit", function (e) {
+    e.preventDefault();
+
+    const fd = new FormData(this);
+
+    const mode = $(this).data("edit-mode") || "edit";
+
+    $("#editCategory").prop("disabled", true).text("Submitting...");
+
+    $.ajax({
+      url: `${ip}/api/category/${$("#category_id").val()}`,
+
+      method: "POST",
+
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+      },
+
+      data: fd,
+      processData: false,
+      contentType: false,
+
+      success: function (res) {
+        $("#editCategoryModal").modal("hide");
+
+        let title = "Category Updated";
+
+        if (mode === "request-edit") {
+          title = "Edit Request Submitted";
+        }
+
+        if (mode === "resubmit") {
+          title = "Category Resubmitted";
+        }
+
+        Swal.fire({
+          icon: "success",
+          title: title,
+          text: res?.msg || "Category submitted successfully.",
+        }).then(() => {
+          location.reload();
+        });
+      },
+
+      error: function (xhr) {
+        $("#editCategory").prop("disabled", false);
+
+        Swal.fire(
+          "Error",
+          getAjaxErrorMessage(xhr, "Unable to update category."),
+          "error",
         );
       },
     });
   });
 
-  // Update Category
-  $("#editCategoryForm").submit(function (e) {
+  // Deactivate & Reactivate Javascript
+  $(document).on("click", ".toggle-category-activity", function (e) {
     e.preventDefault();
 
-    // console.log("Form submitted");
-    const fd = new FormData(this);
-    fd.append("_method", "PUT"); // Tell Laravel this is a PUT request
-    // console.log("FormData created");
+    const categoryId = $(this).data("id");
+    const action = $(this).data("action");
 
-    $("#editCategory").text("Updating....");
+    const isDeactivating = action === "deactivate";
 
-    $.ajax({
-      url: ip + "/api/category/" + $("#category_id").val(),
-      method: "POST", // Use POST with _method=PUT for Laravel compatibility
-      headers: {
-        Authorization: "Bearer " + token,
-        Accept: "application/json",
-      },
-      data: fd,
-      processData: false,
-      contentType: false,
-      success: function (res) {
-        console.log("Category updated successfully:", res);
-        if (res.status === 200) {
+    Swal.fire({
+      title: isDeactivating ? "Deactivate Category?" : "Reactivate Category?",
+
+      text: isDeactivating
+        ? "This category will no longer be available to customers. No category data will be deleted."
+        : "This approved category will become available to customers again.",
+
+      icon: isDeactivating ? "warning" : "question",
+
+      showCancelButton: true,
+
+      confirmButtonText: isDeactivating ? "Yes, Deactivate" : "Yes, Reactivate",
+
+      cancelButtonText: "Cancel",
+    }).then((result) => {
+      if (!result.isConfirmed) {
+        return;
+      }
+
+      $.ajax({
+        url: `${ip}/api/category/${categoryId}/${action}`,
+
+        method: "PUT",
+
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
+
+        success: function (res) {
           Swal.fire({
             icon: "success",
-            title: "Category Updated Successfully",
-            text: "Your category has been updated.",
-            showConfirmButton: false,
+
+            title: isDeactivating
+              ? "Category Deactivated"
+              : "Category Reactivated",
+
+            text: res?.msg || "Category availability updated successfully.",
           }).then(() => {
-            $("#editCategory").text("Update");
-            $("#editCategoryForm")[0].reset(); // Reset the form
-            location.reload(); // Reload the page to see changes
+            location.reload();
           });
-        }
-      },
-      error: function (xhr) {
-        Swal.fire({
-          icon: "error",
-          title: "Error Updating Category",
-          text: xhr.responseText,
-        });
-      },
+        },
+
+        error: function (xhr) {
+          Swal.fire(
+            "Error",
+            getAjaxErrorMessage(xhr, "Unable to update category availability."),
+            "error",
+          );
+        },
+      });
     });
   });
 

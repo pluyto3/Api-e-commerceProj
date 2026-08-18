@@ -6,14 +6,10 @@ use App\Models\User;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
-use Illuminate\Http\FileException;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Auth\AuthenticationException;
 use App\Services\PushNotificationService;
 
 
-class CategoryController extends Controller
-{
+class CategoryController extends Controller {
     private function getAuthenticatedUser(Request $request)
     {
         $token = $request->bearerToken();
@@ -39,6 +35,7 @@ class CategoryController extends Controller
                 ]
                 : null,
             'status' => $category->status ?? 'pending',
+            'is_active' => (bool) $category->is_active,
             'approval_reason' => $category->approval_reason,
             'approved_by' => $category->approved_by,
             'approved_by_user' => $category->approver
@@ -68,8 +65,14 @@ class CategoryController extends Controller
         $categoriesQuery = Category::with(['seller', 'approver']);
 
         if ($publicScope || !$user || $user->role === 'user') {
-            $categoriesQuery->where('status', 'approved');
+
+            $categoriesQuery
+                ->where('status', 'approved')
+                ->where('is_active', true);
+
         } elseif ($user->role === 'seller') {
+
+            // Seller still sees their active and deactivated categories.
             $categoriesQuery->where('seller_id', $user->user_id);
         }
 
@@ -105,6 +108,7 @@ class CategoryController extends Controller
         $category->description = $request->description;
         $category->seller_id = $user->user_id;
         $category->status = $user->role === 'admin' ? 'approved' : 'pending';
+        $category->is_active = true;
         $category->approval_reason = null;
         $category->approved_by = $user->role === 'admin' ? $user->user_id : null;
 
@@ -164,8 +168,13 @@ class CategoryController extends Controller
 
         $user = $this->getAuthenticatedUser($request);
         if (!$user || $user->role === 'user') {
-            if ($category->status !== 'approved') {
-                return response()->json(['message' => 'Category not found'], 404);
+            if (
+                $category->status !== 'approved' ||
+                !$category->is_active
+            ) {
+                return response()->json([
+                    'message' => 'Category not found'
+                ], 404);
             }
         } elseif ($user->role === 'seller' && (int) $category->seller_id !== (int) $user->user_id) {
             return response()->json(['message' => 'Category not found'], 404);
@@ -177,8 +186,10 @@ class CategoryController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function updateCategory(Request $request, $id) {
+    public function updateCategory(Request $request, $id)
+    {
         $user = $this->getAuthenticatedUser($request);
+
         if (!$user) {
             return response()->json([
                 'msg' => 'No Token Provided or Invalid Token.'
@@ -186,39 +197,82 @@ class CategoryController extends Controller
         }
 
         $category = Category::find($id);
-        
+
         if (!$category) {
-            return response()->json(['msg' => 'Category not found.'], 404);
+            return response()->json([
+                'msg' => 'Category not found.'
+            ], 404);
         }
 
         if (!$this->canManageCategory($user, $category)) {
-            return response()->json(['msg' => 'Unauthorized. Sellers can only update their own categories.'], 403);
+            return response()->json([
+                'msg' => 'Unauthorized. Sellers can only update their own categories.'
+            ], 403);
         }
 
+        // Remember the status BEFORE making changes.
+        $oldStatus = strtolower($category->status ?? 'pending');
+
         $request->validate([
-            'editName' => 'required|string|unique:categories,name,' . $id . ',category_id',
+            'editName' =>
+                'required|string|unique:categories,name,' .
+                $id .
+                ',category_id',
+
             'editDescription' => 'nullable|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:102400'
+
+            'image' =>
+                'nullable|image|mimes:jpeg,png,jpg,gif|max:102400'
         ]);
 
         $category->name = $request->editName;
+
         if ($request->has('editDescription')) {
-            $category->description = $request->editDescription;
+            $category->description =
+                $request->editDescription;
         }
 
         if ($request->hasFile('image')) {
+
             $image = $request->file('image');
-            $imageName = time() . '.' . $image->getClientOriginalExtension();
-            $destinationPath = public_path('FrontEnd/assets/img/category');
+
+            $imageName =
+                time() . '.' .
+                $image->getClientOriginalExtension();
+
+            $destinationPath =
+                public_path(
+                    'FrontEnd/assets/img/category'
+                );
+
             if (!File::exists($destinationPath)) {
-                File::makeDirectory($destinationPath, 0755, true);  
+                File::makeDirectory(
+                    $destinationPath,
+                    0755,
+                    true
+                );
             }
-            if (!$image->move($destinationPath, $imageName)) {
-                return response()->json(['msg' => 'Failed to upload image.'], 500);
+
+            if (
+                !$image->move(
+                    $destinationPath,
+                    $imageName
+                )
+            ) {
+                return response()->json([
+                    'msg' => 'Failed to upload image.'
+                ], 500);
             }
-            // Delete the old image if it exists
+
+            // Delete old image if it exists.
             if ($category->image) {
-                $oldImagePath = public_path('FrontEnd/assets/img/category/' . $category->image);
+
+                $oldImagePath =
+                    public_path(
+                        'FrontEnd/assets/img/category/' .
+                        $category->image
+                    );
+
                 if (File::exists($oldImagePath)) {
                     File::delete($oldImagePath);
                 }
@@ -227,14 +281,146 @@ class CategoryController extends Controller
             $category->image = $imageName;
         }
 
+        /*
+        * Any seller edit requires admin review again.
+        *
+        * pending  -> pending
+        * approved -> pending
+        * rejected -> pending
+        */
+        if ($user->role === 'seller') {
+
+            $category->status = 'pending';
+
+            $category->approval_reason = null;
+
+            $category->approved_by = null;
+        }
+
         $category->save();
-        $category->load(['seller', 'approver']);
+
+        /*
+        * Notify admins when a seller
+        * updates/resubmits a category.
+        */
+        if ($user->role === 'seller') {
+
+            try {
+
+                $admins =
+                    User::where(
+                        'role',
+                        'admin'
+                    )->get();
+
+                if ($oldStatus === 'approved') {
+
+                    $notificationTitle =
+                        'Category Edit Request';
+
+                    $notificationMessage =
+                        'Seller "' .
+                        $user->username .
+                        '" submitted changes to approved category "' .
+                        $category->name .
+                        '" for review.';
+
+                    $notificationType =
+                        'category_edit_request';
+
+                } elseif ($oldStatus === 'rejected') {
+
+                    $notificationTitle =
+                        'Category Resubmitted';
+
+                    $notificationMessage =
+                        'Seller "' .
+                        $user->username .
+                        '" resubmitted category "' .
+                        $category->name .
+                        '" for approval.';
+
+                    $notificationType =
+                        'category_resubmitted';
+
+                } else {
+
+                    $notificationTitle =
+                        'Category Updated';
+
+                    $notificationMessage =
+                        'Seller "' .
+                        $user->username .
+                        '" updated pending category "' .
+                        $category->name .
+                        '".';
+
+                    $notificationType =
+                        'category_updated';
+                }
+
+                foreach ($admins as $admin) {
+
+                    app(
+                        PushNotificationService::class
+                    )->sendToUser(
+                        $admin->user_id,
+                        $notificationTitle,
+                        $notificationMessage,
+                        'category.html',
+                        $notificationType,
+                        $category->category_id
+                    );
+                }
+
+            } catch (\Exception $notificationError) {
+
+                \Log::error(
+                    'Category update FCM notification failed: ' .
+                    $notificationError->getMessage()
+                );
+            }
+        }
+
+        $category->load([
+            'seller',
+            'approver'
+        ]);
+
+        /*
+        * Give a more accurate response depending
+        * on what the seller actually did.
+        */
+        if ($user->role === 'seller') {
+
+            if ($oldStatus === 'approved') {
+
+                $message =
+                    'Category changes submitted successfully and are now pending admin approval.';
+
+            } elseif ($oldStatus === 'rejected') {
+
+                $message =
+                    'Category resubmitted successfully and is now pending admin approval.';
+
+            } else {
+
+                $message =
+                    'Category updated successfully and remains pending admin approval.';
+            }
+
+        } else {
+
+            $message =
+                'Category updated successfully.';
+        }
 
         return response()->json([
-            'msg' => 'Category updated successfully.',
-            'category' => $this->formatCategory($category),
+            'msg' => $message,
+            'category' =>
+                $this->formatCategory($category),
             'status' => 200
-        ]);
+        ], 200);
     }
 
     /**
@@ -301,8 +487,11 @@ class CategoryController extends Controller
 
         $oldStatus = $category->status;
 
-        $data = $request->all();
-        $reason = $data['reason'] ?? null;
+        $request->validate([
+            'reason' => 'required|string|max:1000',
+        ]);
+
+        $reason = trim($request->reason);
 
         $category->status = 'rejected';
         $category->approval_reason = $reason;
@@ -342,7 +531,19 @@ class CategoryController extends Controller
                 }
                 if (!$this->canManageCategory($user, $category)) {
                     return response()->json([
-                        'msg' => 'Unauthorized. Sellers can only delete their own categories.'
+                        'msg' =>
+                            'Unauthorized. Sellers can only delete their own categories.'
+                    ], 403);
+                }
+
+                // Sellers cannot permanently delete approved categories.
+                if (
+                    $user->role === 'seller' &&
+                    strtolower($category->status ?? '') === 'approved'
+                ) {
+                    return response()->json([
+                        'msg' =>
+                            'Approved categories cannot be permanently deleted. Deactivate the category instead.'
                     ], 403);
                 }
                 $category->delete();
@@ -361,5 +562,120 @@ class CategoryController extends Controller
                 'msg' => 'No Token Provided.'
             ], 400);
         }
+    }
+
+    /**
+     * Deactivate approved category.
+     * 
+     */
+    public function deactivateCategory(Request $request, $id)
+    {
+        $user = $this->getAuthenticatedUser($request);
+
+        if (!$user) {
+            return response()->json([
+                'msg' => 'No Token Provided or Invalid Token.'
+            ], 401);
+        }
+
+        if ($user->role !== 'seller') {
+            return response()->json([
+                'msg' => 'Only sellers can deactivate categories.'
+            ], 403);
+        }
+
+        $category = Category::find($id);
+
+        if (!$category) {
+            return response()->json([
+                'msg' => 'Category not found.'
+            ], 404);
+        }
+
+        if ((int) $category->seller_id !== (int) $user->user_id) {
+            return response()->json([
+                'msg' => 'You can only deactivate your own categories.'
+            ], 403);
+        }
+
+        if (strtolower($category->status ?? '') !== 'approved') {
+            return response()->json([
+                'msg' => 'Only approved categories can be deactivated.'
+            ], 422);
+        }
+
+        if (!$category->is_active) {
+            return response()->json([
+                'msg' => 'Category is already deactivated.'
+            ], 200);
+        }
+
+        $category->is_active = false;
+        $category->save();
+
+        $category->load(['seller', 'approver']);
+
+        return response()->json([
+            'msg' => 'Category deactivated successfully.',
+            'category' => $this->formatCategory($category),
+        ], 200);
+    }
+
+
+    /**
+     * Reactivate approved category.
+     */
+    public function reactivateCategory(Request $request, $id)
+    {
+        $user = $this->getAuthenticatedUser($request);
+
+        if (!$user) {
+            return response()->json([
+                'msg' => 'No Token Provided or Invalid Token.'
+            ], 401);
+        }
+
+        if ($user->role !== 'seller') {
+            return response()->json([
+                'msg' => 'Only sellers can reactivate categories.'
+            ], 403);
+        }
+
+        $category = Category::find($id);
+
+        if (!$category) {
+            return response()->json([
+                'msg' => 'Category not found.'
+            ], 404);
+        }
+
+        if ((int) $category->seller_id !== (int) $user->user_id) {
+            return response()->json([
+                'msg' => 'You can only reactivate your own categories.'
+            ], 403);
+        }
+
+        // Prevent rejected/pending categories from bypassing approval.
+        if (strtolower($category->status ?? '') !== 'approved') {
+            return response()->json([
+                'msg' => 'Only approved categories can be reactivated.'
+            ], 422);
+        }
+
+        if ($category->is_active) {
+            return response()->json([
+                'msg' => 'Category is already active.'
+            ], 200);
+        }
+
+        $category->is_active = true;
+        $category->save();
+
+        $category->load(['seller', 'approver']);
+
+        return response()->json([
+            'msg' => 'Category reactivated successfully.',
+            'category' => $this->formatCategory($category),
+        ], 200);
     }
 }
