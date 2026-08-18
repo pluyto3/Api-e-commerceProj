@@ -183,6 +183,7 @@ function loadProductsForApproval() {
     success: function (res) {
       console.log("All Products:", res);
       allProducts = res.data || res || [];
+
       // ======================================
       // FILTER PRODUCTS IF SELLER IS LOGGED IN
       // ======================================
@@ -190,26 +191,35 @@ function loadProductsForApproval() {
 
       if (role === "seller") {
         filteredProducts = allProducts.filter((p) => {
-          const status = (p.approval_status || "pending").toLowerCase();
-
-          return (
-            p.seller?.username === usr &&
-            (status === "approved" || status === "pending")
-          );
+          return p.seller?.username === usr;
         });
       }
 
       // ======================================
-      // PENDING TABLE
+      // SEPARATE PRODUCTS BY APPROVAL STATUS
       // ======================================
       const pendingProducts = filteredProducts.filter((p) => {
-        const status = (p.approval_status || "pending").toLowerCase();
-        return status === "pending";
+        return (p.approval_status || "pending").toLowerCase() === "pending";
       });
 
+      const approvedProducts = filteredProducts.filter((p) => {
+        return (p.approval_status || "").toLowerCase() === "approved";
+      });
+
+      const rejectedProducts = filteredProducts.filter((p) => {
+        return (p.approval_status || "").toLowerCase() === "rejected";
+      });
+
+      // ======================================
+      // DISPLAY TABLES
+      // ======================================
       displayProductsTable(pendingProducts, "all");
-      // populate approved orders card/table from backend
-      displayApprovedOrders(filteredProducts);
+
+      // Keep using your EXISTING approved function for now
+      displayApprovedOrders(approvedProducts);
+
+      // Keep using your EXISTING rejected function for now
+      displayRejectedProducts(rejectedProducts);
     },
     error: function (xhr) {
       console.error("Error loading products:", xhr.responseText);
@@ -298,7 +308,7 @@ function displayProductsTable(products, statusFilter = "all") {
 // Populate Approved Orders Card/Table
 // =======================================
 function displayApprovedOrders(products) {
-  const tbody = $("#ordersTable tbody");
+  const tbody = $("#approvedProductsTable tbody");
   tbody.empty();
 
   const approved = (products || []).filter(
@@ -307,7 +317,7 @@ function displayApprovedOrders(products) {
 
   if (approved.length === 0) {
     tbody.html(
-      `<tr><td colspan="11" class="text-center text-muted py-4">No Approved Products found.</td></tr>`,
+      `<tr><td colspan="12" class="text-center text-muted py-4">No Approved Products found.</td></tr>`,
     );
     return;
   }
@@ -340,6 +350,61 @@ function displayApprovedOrders(products) {
       brand = product.brandName;
     }
 
+    // ======================================
+    // APPROVED PRODUCT ACTION BUTTONS
+    // ======================================
+    let actionButtons = `
+      <button
+        class="btn btn-sm btn-info view-product"
+        data-id="${product.product_id}"
+        title="View Details"
+        data-toggle="modal"
+        data-target="#productDetailsModal">
+        <i class="fas fa-eye"></i> View
+      </button>
+    `;
+
+    if (role === "seller") {
+      // Request Edit
+      actionButtons += `
+        <button
+          class="btn btn-sm btn-warning request-product-edit"
+          data-id="${product.product_id}">
+          <i class="fas fa-edit"></i> Request Edit
+        </button>
+      `;
+
+      // Update Stock
+      actionButtons += `
+        <button
+          class="btn btn-sm btn-primary update-product-stock"
+          data-id="${product.product_id}">
+          <i class="fas fa-boxes"></i> Update Stock
+        </button>
+      `;
+
+      // Activate / Deactivate
+      if (product.status === "active") {
+        actionButtons += `
+          <button
+            class="btn btn-sm btn-danger toggle-product-availability"
+            data-id="${product.product_id}"
+            data-action="inactive">
+            <i class="fas fa-ban"></i> Deactivate
+          </button>
+        `;
+      } else if (product.status === "inactive") {
+        actionButtons += `
+          <button
+            class="btn btn-sm btn-success toggle-product-availability"
+            data-id="${product.product_id}"
+            data-action="active">
+            <i class="fas fa-check"></i> Activate
+          </button>
+        `;
+      }
+    }
+
     const row = `
       <tr>
         <td class="text-center">${product.product_id || index + 1}</td>
@@ -350,18 +415,44 @@ function displayApprovedOrders(products) {
         <td class="text-center">₱${parseFloat(product.product_price || 0).toFixed(2)}</td>
         <td class="text-center">${product.stock_quantity || 0}</td>
         <td class="text-center"><img src="${img}" alt="Product" style="width:50px;height:50px;object-fit:cover;border-radius:4px;" onerror="this.onerror=null;this.src='assets/img/back.jpg'"></td>
-        <td class="text-center">${statusBadge}</td>
-        <td class="text-center">${formatDate(product.approved_at || product.created_at)}</td>
         <td class="text-center">
-          <button class="btn btn-sm btn-info view-product" data-id="${product.product_id}" title="View Details" data-toggle="modal" data-target="#productDetailsModal">
-            <i class="fas fa-eye"></i> View
-          </button>
+          ${getStatusBadge(product.approval_status || "approved")}
+        </td>
+        <td class="text-center">
+          ${getAvailabilityBadge(product.status)}
+        </td>
+        <td class="text-center">
+          ${formatDate(product.approved_at || product.created_at)}
+        </td>
+        <td class="text-center">
+          ${actionButtons}
         </td>
       </tr>
     `;
 
     tbody.append(row);
   });
+}
+
+// =======================================
+// Get Availability Badge
+// =======================================
+function getAvailabilityBadge(status) {
+  const normalizedStatus = (status || "active").toLowerCase();
+
+  if (normalizedStatus === "active") {
+    return `<span class="badge badge-success">ACTIVE</span>`;
+  }
+
+  if (normalizedStatus === "inactive") {
+    return `<span class="badge badge-secondary">INACTIVE</span>`;
+  }
+
+  if (normalizedStatus === "out_of_stock") {
+    return `<span class="badge badge-danger">OUT OF STOCK</span>`;
+  }
+
+  return `<span class="badge badge-secondary">${normalizedStatus.toUpperCase()}</span>`;
 }
 
 // Normalize order status for filtering
@@ -382,7 +473,7 @@ function normalizeOrderStatus(status) {
 
 // Render approved orders with optional status filter
 function renderApprovedOrdersTable(statusFilter = "all") {
-  const tbody = $("#ordersTable tbody");
+  const tbody = $("#approvedProductsTable tbody");
   tbody.empty();
 
   const filterValue = String(statusFilter || "all").toLowerCase();
@@ -393,7 +484,7 @@ function renderApprovedOrdersTable(statusFilter = "all") {
 
   if (filtered.length === 0) {
     tbody.html(
-      `<tr><td colspan="11" class="text-center text-muted py-4">No orders found.</td></tr>`,
+      `<tr><td colspan="12" class="text-center text-muted py-4">No orders found.</td></tr>`,
     );
     return;
   }
@@ -544,7 +635,7 @@ function renderApprovedOrdersTable(statusFilter = "all") {
 // Fetch approved orders (checkouts) from backend and render
 // =======================================
 function fetchAndDisplayApprovedOrders() {
-  const tbody = $("#ordersTable tbody");
+  const tbody = $("#approvedProductsTable tbody");
   tbody.empty();
 
   $.ajax({
@@ -579,7 +670,7 @@ function fetchAndDisplayApprovedOrders() {
 
       if (approved.length === 0) {
         tbody.html(
-          `<tr><td colspan="11" class="text-center text-muted py-4">No approved orders found.</td></tr>`,
+          `<tr><td colspan="12" class="text-center text-muted py-4">No approved orders found.</td></tr>`,
         );
         return;
       }
@@ -621,7 +712,7 @@ function fetchAndDisplayApprovedOrders() {
     error: function (xhr) {
       console.error("Error fetching approved orders:", xhr.responseText);
       tbody.html(
-        `<tr><td colspan="11" class="text-center text-danger py-4">Failed to load approved orders.</td></tr>`,
+        `<tr><td colspan="12" class="text-center text-danger py-4">Failed to load approved orders.</td></tr>`,
       );
     },
   });
@@ -962,17 +1053,9 @@ function loadProductDetails(productId) {
   currentProductId = product.product_id;
 
   // Show/hide approve/reject buttons based on status
-  if (role === "admin") {
-    if (status === "pending") {
-      $("#approveBtn").show();
-      $("#rejectBtn").show();
-    } else if (status === "approved") {
-      $("#approveBtn").hide();
-      $("#rejectBtn").show();
-    } else {
-      $("#approveBtn").hide();
-      $("#rejectBtn").hide();
-    }
+  if (role === "admin" && status === "pending") {
+    $("#approveBtn").show();
+    $("#rejectBtn").show();
   } else {
     $("#approveBtn").hide();
     $("#rejectBtn").hide();
@@ -1043,6 +1126,73 @@ function rejectProduct(productId, reason = "") {
         text: xhr.responseJSON?.message || "Failed to reject product.",
       });
     },
+  });
+}
+
+// =======================================
+// Display Rejected Products
+// =======================================
+function displayRejectedProducts(products) {
+  const tbody = $("#rejectedProductsTable tbody");
+  tbody.empty();
+
+  if (!products || products.length === 0) {
+    tbody.html(`
+      <tr>
+        <td colspan="8" class="text-center text-muted py-4">
+          No Rejected Products found.
+        </td>
+      </tr>
+    `);
+    return;
+  }
+
+  products.forEach((product, index) => {
+    let actionButtons = `
+      <button
+        class="btn btn-sm btn-info view-product"
+        data-id="${product.product_id}"
+        data-toggle="modal"
+        data-target="#productDetailsModal">
+        <i class="fas fa-eye"></i> View
+      </button>
+    `;
+
+    if (role === "seller") {
+      actionButtons += `
+        <button
+          class="btn btn-sm btn-warning edit-product"
+          data-id="${product.product_id}"
+          data-toggle="modal"
+          data-target="#editProductModal">
+          <i class="fas fa-edit"></i> Edit & Resubmit
+        </button>
+      `;
+    }
+
+    const row = `
+      <tr>
+        <td>${product.product_id || index + 1}</td>
+        <td>${product.product_name || "N/A"}</td>
+        <td>${product.seller?.username || "N/A"}</td>
+        <td>${product.category || "N/A"}</td>
+        <td>${product.brand || "N/A"}</td>
+
+        <td>
+          ${product.approval_reason || "No reason provided"}
+        </td>
+
+        <td>
+          ${formatDate(product.updated_at || product.created_at)}
+        </td>
+
+        <td>
+          ${actionButtons}
+        </td>
+      </tr>
+    `;
+
+    tbody.append(row);
   });
 }
 

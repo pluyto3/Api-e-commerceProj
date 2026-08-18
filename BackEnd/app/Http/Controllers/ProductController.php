@@ -6,7 +6,6 @@ use App\Models\Product;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\File;
-use Illuminate\Http\FileException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use App\Services\PushNotificationService;
@@ -425,6 +424,22 @@ class ProductController extends Controller
                     ], 403);
                 }
 
+                // =============================================
+                // PREVENT SELLER FROM DIRECTLY EDITING
+                // AN ALREADY APPROVED PRODUCT
+                // =============================================
+                $approvalStatus = strtolower($product->approval_status ?? 'pending');
+                $oldApprovalStatus = $product->approval_status;
+
+                if (
+                    $user->role === 'seller' &&
+                    $approvalStatus === 'approved'
+                ) {
+                    return response()->json([
+                        'msg' => 'Approved products cannot be edited directly. Please submit an edit request.'
+                    ], 409);
+                }
+
                 $request->validate([
                     'edit_category_id' => 'required|integer|exists:categories,category_id',
                     'edit_brand_id' => 'required|integer|exists:brands,brand_id',
@@ -467,6 +482,18 @@ class ProductController extends Controller
                         return response()->json(['msg' => 'Failed to upload image.'], 500);
                     }
                     $product->image = $imageName;
+                }
+
+                // If seller edits a rejected product,
+                // resubmit it for approval.
+                if (
+                    $user->role === 'seller' &&
+                    strtolower($oldApprovalStatus ?? '') === 'rejected'
+                ) {
+                    $product->approval_status = 'pending';
+                    $product->approval_reason = null;
+                    $product->approved_at = null;
+                    $product->approved_by = null;
                 }
 
                 $product->save();
@@ -514,6 +541,7 @@ class ProductController extends Controller
         $product->approved_at = now();
         $product->approved_by = $user->user_id;
         $product->status = $this->productStatusFromStock((int) $product->stock_quantity, $product->status);
+
         $product->save();
 
         if ($product->seller_id && $oldApprovalStatus !== 'approved') {

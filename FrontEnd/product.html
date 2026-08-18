@@ -40,7 +40,6 @@
     <script src="assets/js/config.js"></script>
     <script src="assets/js/firebase-notification.js"></script>
 
-
     <script src="assets/js/notification-bell.js"></script>
     <script src="assets/js/product.js"></script>
     <script src="assets/js/role-guard.js"></script>
@@ -327,7 +326,7 @@
       <!-- Working Panel -->
       <section class="working-panel">
         <div class="container-fluid">
-          <h1 class="display-4">Seller Product Lists</h1>
+          <h1 class="display-4">Product Management</h1>
           <hr class="admin-hr" />
 
           <!-- Approved Products -->
@@ -336,7 +335,9 @@
               <h2 class="mb-0">Approved Products</h2>
             </div>
             <div class="card-body table-responsive">
-              <table class="table table-striped table-hover" id="ordersTable">
+              <table
+                class="table table-striped table-hover"
+                id="approvedProductsTable">
                 <thead>
                   <tr>
                     <th class="text-center">ID</th>
@@ -347,7 +348,8 @@
                     <th class="text-center">Price</th>
                     <th class="text-center">Stock</th>
                     <th class="text-center">Image</th>
-                    <th class="text-center">Status</th>
+                    <th class="text-center">Approval Status</th>
+                    <th class="text-center">Availability</th>
                     <th class="text-center">Approved Date</th>
                     <th class="text-center">Action</th>
                   </tr>
@@ -400,6 +402,34 @@
                   </tbody>
                 </table>
               </div>
+            </div>
+          </div>
+
+          <!-- Rejected Products Table -->
+          <div class="card mt-4">
+            <div class="card-header">
+              <h2 class="mb-0">Rejected Products</h2>
+            </div>
+
+            <div class="card-body table-responsive">
+              <table
+                id="rejectedProductsTable"
+                class="table table-striped table-hover">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Product Name</th>
+                    <th>Seller</th>
+                    <th>Category</th>
+                    <th>Brand</th>
+                    <th>Reason</th>
+                    <th>Rejected Date</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+
+                <tbody></tbody>
+              </table>
             </div>
           </div>
 
