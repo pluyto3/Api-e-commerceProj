@@ -186,16 +186,9 @@ function loadProductsForApproval() {
       console.log("All Products:", res);
       allProducts = res.data || res || [];
 
-      // ======================================
-      // FILTER PRODUCTS IF SELLER IS LOGGED IN
-      // ======================================
+      // Backend already scopes seller products by seller_id.
+      // No additional username filtering is needed.
       let filteredProducts = allProducts;
-
-      if (role === "seller") {
-        filteredProducts = allProducts.filter((p) => {
-          return p.seller?.username === usr;
-        });
-      }
 
       // ======================================
       // SEPARATE PRODUCTS BY APPROVAL STATUS
@@ -211,6 +204,10 @@ function loadProductsForApproval() {
       const rejectedProducts = filteredProducts.filter((p) => {
         return (p.approval_status || "").toLowerCase() === "rejected";
       });
+
+      console.log("Pending Products:", pendingProducts);
+      console.log("Approved Products:", approvedProducts);
+      console.log("Rejected Products:", rejectedProducts);
 
       // ======================================
       // DISPLAY TABLES
