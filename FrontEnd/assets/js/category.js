@@ -889,6 +889,7 @@ $(document).ready(function () {
     });
   });
 
+  // Reject Category Button in Approval Modal
   $("#rejectCategoryBtn").on("click", function () {
     const categoryId = $("#categoryApprovalModal").attr("data-category-id");
 
@@ -906,9 +907,17 @@ $(document).ready(function () {
       return;
     }
 
-    openRejectCategoryPrompt(categoryId);
+    // Close Bootstrap modal first.
+    $("#categoryApprovalModal").modal("hide");
+
+    // Wait until Bootstrap completely closes
+    // the modal before opening SweetAlert.
+    $("#categoryApprovalModal").one("hidden.bs.modal", function () {
+      openRejectCategoryPrompt(categoryId);
+    });
   });
 
+  // Approved Category Details Modal Actions
   $("#rejectApprovedCategoryBtn").on("click", function () {
     const categoryId = $("#categoryApprovedDetailsModal").attr(
       "data-category-id",
@@ -928,7 +937,14 @@ $(document).ready(function () {
       return;
     }
 
-    openRejectCategoryPrompt(categoryId);
+    // Close Bootstrap modal first.
+    $("#categoryApprovedDetailsModal").modal("hide");
+
+    // Open rejection prompt only after
+    // Bootstrap modal has completely closed.
+    $("#categoryApprovedDetailsModal").one("hidden.bs.modal", function () {
+      openRejectCategoryPrompt(categoryId);
+    });
   });
 
   // Editing Category
