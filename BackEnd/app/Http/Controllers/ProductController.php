@@ -72,12 +72,36 @@ class ProductController extends Controller
             $query->where("products.{$stockColumn}", '>', 0);
         }
 
-        if ($this->hasColumn('categories', 'status')) {
-            $query->whereHas('category', fn ($categoryQuery) => $categoryQuery->where('status', 'approved'));
+        if (
+            $this->hasColumn('categories', 'status') ||
+            $this->hasColumn('categories', 'is_active')
+        ) {
+            $query->whereHas('category', function ($categoryQuery) {
+
+                if ($this->hasColumn('categories', 'status')) {
+                    $categoryQuery->where('status', 'approved');
+                }
+
+                if ($this->hasColumn('categories', 'is_active')) {
+                    $categoryQuery->where('is_active', true);
+                }
+            });
         }
 
-        if ($this->hasColumn('brands', 'status')) {
-            $query->whereHas('brand', fn ($brandQuery) => $brandQuery->where('status', 'approved'));
+        if (
+            $this->hasColumn('brands', 'status') ||
+            $this->hasColumn('brands', 'is_active')
+        ) {
+            $query->whereHas('brand', function ($brandQuery) {
+
+                if ($this->hasColumn('brands', 'status')) {
+                    $brandQuery->where('status', 'approved');
+                }
+
+                if ($this->hasColumn('brands', 'is_active')) {
+                    $brandQuery->where('is_active', true);
+                }
+            });
         }
 
         return $query;
@@ -111,7 +135,19 @@ class ProductController extends Controller
         return DB::table($table)
             ->where($primaryKey, $id)
             ->where('seller_id', $user->user_id)
-            ->when($this->hasColumn($table, 'status'), fn ($query) => $query->where('status', 'approved'))
+
+            ->when(
+                $this->hasColumn($table, 'status'),
+                fn ($query) =>
+                    $query->where('status', 'approved')
+            )
+
+            ->when(
+                $this->hasColumn($table, 'is_active'),
+                fn ($query) =>
+                    $query->where('is_active', true)
+            )
+
             ->exists();
     }
 
@@ -380,6 +416,17 @@ class ProductController extends Controller
                         'msg' => 'Unauthorized. Sellers can only delete their own products.'
                     ], 403);
                 }
+                if (
+                    $user->role === 'seller' &&
+                    strtolower(
+                        $product->approval_status ?? ''
+                    ) === 'approved'
+                ) {
+                    return response()->json([
+                        'msg' =>
+                            'Approved products cannot be permanently deleted. Deactivate the product instead.'
+                    ], 403);
+                }
                 $product->delete();
                 return response()->json([
                     'msg' => 'Product was successfully deleted.'
@@ -428,17 +475,11 @@ class ProductController extends Controller
                 // PREVENT SELLER FROM DIRECTLY EDITING
                 // AN ALREADY APPROVED PRODUCT
                 // =============================================
-                $approvalStatus = strtolower($product->approval_status ?? 'pending');
-                $oldApprovalStatus = $product->approval_status;
-
-                if (
-                    $user->role === 'seller' &&
-                    $approvalStatus === 'approved'
-                ) {
-                    return response()->json([
-                        'msg' => 'Approved products cannot be edited directly. Please submit an edit request.'
-                    ], 409);
-                }
+                // Remember the approval status before editing.
+                $oldApprovalStatus =
+                    strtolower(
+                        $product->approval_status ?? 'pending'
+                    );
 
                 $request->validate([
                     'edit_category_id' => 'required|integer|exists:categories,category_id',
@@ -484,22 +525,137 @@ class ProductController extends Controller
                     $product->image = $imageName;
                 }
 
-                // If seller edits a rejected product,
-                // resubmit it for approval.
-                if (
-                    $user->role === 'seller' &&
-                    strtolower($oldApprovalStatus ?? '') === 'rejected'
-                ) {
+                /*
+                * Any seller edit requires admin approval again.
+                *
+                * Pending  -> Pending
+                * Approved -> Pending
+                * Rejected -> Pending
+                */
+                if ($user->role === 'seller') {
+
                     $product->approval_status = 'pending';
+
                     $product->approval_reason = null;
+
                     $product->approved_at = null;
+
                     $product->approved_by = null;
                 }
 
                 $product->save();
-            return response()->json([
-                'msg' => 'Product was successfully updated.'
-            ], 200);
+
+                if ($user->role === 'seller') {
+
+                try {
+
+                    $admins =
+                        User::where('role', 'admin')->get();
+
+                    if ($oldApprovalStatus === 'approved') {
+
+                        $notificationTitle =
+                            'Product Edit Request';
+
+                        $notificationMessage =
+                            'Seller "' .
+                            $user->username .
+                            '" submitted changes to approved product "' .
+                            $product->product_name .
+                            '" for review.';
+
+                        $notificationType =
+                            'product_edit_request';
+
+                    } elseif ($oldApprovalStatus === 'rejected') {
+
+                        $notificationTitle =
+                            'Product Resubmitted';
+
+                        $notificationMessage =
+                            'Seller "' .
+                            $user->username .
+                            '" resubmitted product "' .
+                            $product->product_name .
+                            '" for approval.';
+
+                        $notificationType =
+                            'product_resubmitted';
+
+                    } else {
+
+                        $notificationTitle =
+                            'Product Updated';
+
+                        $notificationMessage =
+                            'Seller "' .
+                            $user->username .
+                            '" updated pending product "' .
+                            $product->product_name .
+                            '".';
+
+                        $notificationType =
+                            'product_updated';
+                    }
+
+                    foreach ($admins as $admin) {
+
+                        app(
+                            PushNotificationService::class
+                        )->sendToUser(
+                            $admin->user_id,
+                            $notificationTitle,
+                            $notificationMessage,
+                            'product.html',
+                            $notificationType,
+                            $product->product_id
+                        );
+                    }
+
+                    } catch (\Exception $notificationError) {
+
+                        \Log::error(
+                            'Product update FCM notification failed: ' .
+                            $notificationError->getMessage()
+                        );
+                    }
+                }
+
+                if ($user->role === 'seller') {
+
+                    if ($oldApprovalStatus === 'approved') {
+
+                        $message =
+                            'Product changes submitted successfully and are now pending admin approval.';
+
+                    } elseif ($oldApprovalStatus === 'rejected') {
+
+                        $message =
+                            'Product resubmitted successfully and is now pending admin approval.';
+
+                    } else {
+
+                        $message =
+                            'Product updated successfully and remains pending admin approval.';
+                    }
+
+                } else {
+
+                    $message =
+                        'Product updated successfully.';
+                }
+
+                $product->load([
+                    'category',
+                    'brand',
+                    'seller'
+                ]);
+
+                return response()->json([
+                    'msg' => $message,
+                    'product' => $this->formatProduct($product),
+                    'status' => 200
+                ], 200);
             }
             else {
                 return response()->json([
@@ -582,12 +738,17 @@ class ProductController extends Controller
 
         $oldApprovalStatus = $product->approval_status;
 
-        $data = $request->all();
-        $reason = $data['reason'] ?? null;
+        $request->validate([
+            'reason' =>
+                'required|string|max:1000',
+        ]);
+
+        $reason =
+            trim($request->reason);
 
         $product->approval_status = 'rejected';
         $product->approval_reason = $reason;
-        $product->approved_at = now();
+        $product->approved_at = null;
         $product->approved_by = $user->user_id;
         $product->save();
 
@@ -608,6 +769,89 @@ class ProductController extends Controller
         return response()->json(['msg' => 'Product rejected.'], 200);
     }
 
+
+    /**
+     * Update product availability
+     */
+    public function updateAvailability(Request $request, $id)
+    {
+        $user = $this->getAuthenticatedUser($request);
+
+        // User must be logged in.
+        if (!$user) {
+            return response()->json([
+                'msg' => 'Unauthorized.'
+            ], 401);
+        }
+
+        // Only sellers can activate/deactivate products.
+        if ($user->role !== 'seller') {
+            return response()->json([
+                'msg' => 'Only sellers can change product availability.'
+            ], 403);
+        }
+
+        $product = Product::find($id);
+
+        if (!$product) {
+            return response()->json([
+                'msg' => 'Product not found.'
+            ], 404);
+        }
+
+        // Seller can only manage their own product.
+        if (
+            (int) $product->seller_id !==
+            (int) $user->user_id
+        ) {
+            return response()->json([
+                'msg' => 'You can only change the availability of your own products.'
+            ], 403);
+        }
+
+        // Only approved products can be activated/deactivated.
+        if (
+            strtolower(
+                $product->approval_status ?? ''
+            ) !== 'approved'
+        ) {
+            return response()->json([
+                'msg' =>
+                    'Only approved products can be activated or deactivated.'
+            ], 422);
+        }
+
+        $request->validate([
+            'status' => 'required|in:active,inactive'
+        ]);
+
+        /*
+        * A product with zero stock
+        * cannot be reactivated.
+        */
+        if (
+            $request->status === 'active' &&
+            (int) $product->stock_quantity <= 0
+        ) {
+            return response()->json([
+                'msg' =>
+                    'Cannot activate a product with zero stock.'
+            ], 422);
+        }
+
+        $product->status = $request->status;
+
+        $product->save();
+
+        return response()->json([
+            'msg' => $request->status === 'active'
+                ? 'Product reactivated successfully.'
+                : 'Product deactivated successfully.',
+
+            'status' => $product->status
+        ], 200);
+    }
+    
     /**
      * Update product stock
      */
@@ -621,6 +865,12 @@ class ProductController extends Controller
             ], 401);
         }
 
+        if ($user->role !== 'seller') {
+            return response()->json([
+                'msg' => 'Only sellers can update product stock.'
+            ], 403);
+        }
+
         $product = Product::find($id);
 
         if (!$product) {
@@ -629,10 +879,21 @@ class ProductController extends Controller
             ], 404);
         }
 
-        if (!$this->authorizeProductOwner($user, $product)) {
+        if (
+            (int) $product->seller_id !==
+            (int) $user->user_id
+        ) {
             return response()->json([
-                'msg' => 'Unauthorized.'
+                'msg' => 'You can only update the stock of your own products.'
             ], 403);
+        }
+
+        if (
+            strtolower($product->approval_status ?? '') !== 'approved'
+        ) {
+            return response()->json([
+                'msg' => 'Only approved products can have their stock updated.'
+            ], 422);
         }
 
         $request->validate([
@@ -654,61 +915,4 @@ class ProductController extends Controller
             'status' => $product->status
         ], 200);
     }
-
-    /**
-     * Update product availability
-     */
-    public function updateAvailability(Request $request, $id)
-    {
-        $user = $this->getAuthenticatedUser($request);
-
-        if (!$user) {
-            return response()->json([
-                'msg' => 'Unauthorized.'
-            ], 401);
-        }
-
-        $product = Product::find($id);
-
-        if (!$product) {
-            return response()->json([
-                'msg' => 'Product not found.'
-            ], 404);
-        }
-
-        if (!$this->authorizeProductOwner($user, $product)) {
-            return response()->json([
-                'msg' => 'Unauthorized.'
-            ], 403);
-        }
-
-        $request->validate([
-            'status' => 'required|in:active,inactive'
-        ]);
-
-        /*
-        * A product with zero stock cannot
-        * be activated.
-        */
-        if (
-            $request->status === 'active' &&
-            (int) $product->stock_quantity <= 0
-        ) {
-            return response()->json([
-                'msg' => 'Cannot activate a product with zero stock.'
-            ], 422);
-        }
-
-        $product->status = $request->status;
-
-        $product->save();
-
-        return response()->json([
-            'msg' => $request->status === 'active'
-                ? 'Product activated successfully.'
-                : 'Product deactivated successfully.',
-            'status' => $product->status
-        ], 200);
-    }
-
 }

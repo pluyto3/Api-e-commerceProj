@@ -613,6 +613,7 @@
                       type="hidden"
                       id="edit_product_id"
                       name="product_id" />
+                    <input type="hidden" name="_method" value="PUT" />
                     <div class="form-group">
                       <label for="edit_category_id" class="font-weight-bold"
                         >Category</label
@@ -810,6 +811,16 @@
                         <strong>Status:</strong>
                         <span id="detailPendingStatus" class="badge"></span>
                       </p>
+                      <div
+                        id="detailProductRejectionReasonWrap"
+                        class="alert alert-danger"
+                        style="display: none">
+                        <strong>Rejection Reason:</strong>
+
+                        <p
+                          id="detailProductRejectionReason"
+                          class="mb-0 mt-1"></p>
+                      </div>
                       <p>
                         <strong>Submitted Date:</strong>
                         <span id="detailDate"></span>
