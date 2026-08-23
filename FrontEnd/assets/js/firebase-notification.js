@@ -86,34 +86,36 @@
   }
 
   function handleUnauthorized(xhr) {
-    if (xhr.status !== 401 || unauthorizedHandled) {
+    if (unauthorizedHandled) {
+      return false;
+    }
+
+    const message = (
+      xhr.responseJSON?.msg ||
+      xhr.responseJSON?.message ||
+      ""
+    ).toLowerCase();
+
+    const invalidToken =
+      (xhr.status === 400 || xhr.status === 401) &&
+      message.includes("invalid token");
+
+    if (!invalidToken) {
       return false;
     }
 
     unauthorizedHandled = true;
 
-    console.error(
-      "Authentication token rejected by:",
-      window.APP_CONFIG.API_BASE_URL,
-    );
-
     clearFcmLocalStorage();
     clearAuthenticationCookies();
 
-    if (typeof Swal !== "undefined") {
-      Swal.fire({
-        icon: "warning",
-        title: "Session Expired",
-        text: "Your login token is invalid. Please log in again.",
-        confirmButtonText: "Go to Login",
-        allowOutsideClick: false,
-        allowEscapeKey: false,
-      }).then(function () {
-        window.location.replace("login.html");
-      });
-    } else {
+    Swal.fire({
+      icon: "warning",
+      title: "Session Expired",
+      text: "Your login session is invalid. Please log in again.",
+    }).then(() => {
       window.location.replace("login.html");
-    }
+    });
 
     return true;
   }
@@ -203,25 +205,6 @@
 
     localStorage.setItem("fcm_token", fcmToken);
 
-    const savedTokenKey = "saved_fcm_token";
-    const savedAuthKey = "saved_fcm_auth_token";
-    const savedAtKey = "saved_fcm_token_at";
-
-    const savedAt = Number(localStorage.getItem(savedAtKey) || 0);
-
-    const oneDay = 24 * 60 * 60 * 1000;
-
-    const sameFcmToken = localStorage.getItem(savedTokenKey) === fcmToken;
-
-    const sameAuthToken = localStorage.getItem(savedAuthKey) === authToken;
-
-    const recentlySaved = Date.now() - savedAt < oneDay;
-
-    if (sameFcmToken && sameAuthToken && recentlySaved) {
-      console.log("FCM token is already saved.");
-      return;
-    }
-
     $.ajax({
       url: FCM_TOKEN_API,
       method: "POST",
@@ -238,11 +221,7 @@
       headers: getAuthHeaders(),
 
       success: function (response) {
-        localStorage.setItem(savedTokenKey, fcmToken);
-        localStorage.setItem(savedAuthKey, authToken);
-        localStorage.setItem(savedAtKey, String(Date.now()));
-
-        console.log("FCM token saved:", response);
+        console.log("FCM token confirmed on server:", response);
       },
 
       error: function (xhr) {

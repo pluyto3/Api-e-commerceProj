@@ -1,4 +1,10 @@
-var ip = "https://api.hanzgo.me"; // Production server
+//var ip = "https://api.hanzgo.me"; // Production server
+
+if (!window.APP_CONFIG?.API_BASE_URL) {
+  throw new Error("APP_CONFIG is missing. Load config.js before checkout.js.");
+}
+
+const ip = window.APP_CONFIG.API_BASE_URL;
 
 function load_user() {
   var usr = $.cookie("username");

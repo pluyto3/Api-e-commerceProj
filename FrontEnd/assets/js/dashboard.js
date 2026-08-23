@@ -1,7 +1,14 @@
 // =======================================
 // GLOBAL VARIABLES
 // =======================================
-const ip = "https://api.hanzgo.me";
+//const ip = "https://api.hanzgo.me";
+
+if (!window.APP_CONFIG?.API_BASE_URL) {
+  throw new Error("APP_CONFIG is missing. Load config.js before checkout.js.");
+}
+
+const ip = window.APP_CONFIG.API_BASE_URL;
+
 let token = $.cookie("token");
 let usr = $.cookie("username");
 let role = $.cookie("role");
@@ -1769,36 +1776,35 @@ $(document).ready(function () {
   }
 
   $("#logout").click((e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  function clearCookiesAndRedirect() {
-    Object.keys($.cookie()).forEach((cookie) => {
-      $.removeCookie(cookie, { path: "/" });
-      $.removeCookie(cookie);
-    });
+    function clearCookiesAndRedirect() {
+      Object.keys($.cookie()).forEach((cookie) => {
+        $.removeCookie(cookie, { path: "/" });
+        $.removeCookie(cookie);
+      });
 
-    window.location.replace("login.html");
-  }
+      window.location.replace("login.html");
+    }
 
-  function logoutFromServer() {
-    $.ajax({
-      url: `${ip}/api/logout`,
-      type: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-      data: { token },
-      complete: () => {
-        clearCookiesAndRedirect();
-      },
-    });
-  }
+    function logoutFromServer() {
+      $.ajax({
+        url: `${ip}/api/logout`,
+        type: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        data: { token },
+        complete: () => {
+          clearCookiesAndRedirect();
+        },
+      });
+    }
 
-  if (typeof removeFcmTokenFromServer === "function") {
-    removeFcmTokenFromServer(function () {
+    if (typeof removeFcmTokenFromServer === "function") {
+      removeFcmTokenFromServer(function () {
+        logoutFromServer();
+      });
+    } else {
       logoutFromServer();
-    });
-  } else {
-    logoutFromServer();
-  }
+    }
+  });
 });
-});
-

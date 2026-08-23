@@ -7,8 +7,6 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Kreait\Laravel\Firebase\Facades\Firebase;
 use Kreait\Firebase\Messaging\CloudMessage;
-use Kreait\Firebase\Messaging\Notification;
-use Kreait\Firebase\Messaging\WebPushConfig;
 
 class FcmTokenController extends Controller
 {
@@ -24,31 +22,19 @@ class FcmTokenController extends Controller
         }
 
         $message = CloudMessage::new()
-            ->withNotification(Notification::create(
-                'Hanz-Go Notification',
-                'This is a test push notification from your Laravel backend.'
-            ))
             ->withData([
+                'title' => 'Hanz-Go Notification',
+                'body' => 'This is a test push notification from your Laravel backend.',
                 'type' => 'test',
                 'url' => 'orderDetails.html',
             ])
-            ->withWebPushConfig(WebPushConfig::fromArray([
-                'notification' => [
-                    'title' => 'Hanz-Go Notification',
-                    'body' => 'This is a test push notification from your Laravel backend.',
-                    'icon' => 'http://localhost/e-commerce/FrontEnd/assets/img/hanz-goLogo.png',
-                ],
-                'fcm_options' => [
-                    'link' => 'http://localhost/e-commerce/FrontEnd/orderDetails.html',
-                ],
-            ]))
             ->toToken($fcmToken);
 
         Firebase::messaging()->send($message);
 
         return response()->json([
             'message' => 'Test notification sent successfully.',
-        ]);
+        ], 200);
     }
 
     public function store(Request $request)
@@ -94,10 +80,22 @@ class FcmTokenController extends Controller
             'token' => 'required|string',
         ]);
 
-        FcmToken::where('token', $request->token)->delete();
+        $bearerToken = $request->bearerToken();
+
+        $user = User::where('token', $bearerToken)->first();
+
+        if (!$user) {
+            return response()->json([
+                'msg' => 'Invalid Token.',
+            ], 401);
+        }
+
+        FcmToken::where('token', $request->token)
+            ->where('user_id', $user->user_id)
+            ->delete();
 
         return response()->json([
             'message' => 'FCM token removed successfully.',
-        ]);
+        ], 200);
     }
 }

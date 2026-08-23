@@ -14,6 +14,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Mail;
 use App\Services\PushNotificationService;
+use App\Models\FcmToken;
 
 class AuthController extends Controller
 {
@@ -458,6 +459,8 @@ class AuthController extends Controller
 
         $user->token = bin2hex(random_bytes(16));
         $user->save();
+
+        FcmToken::where('user_id', $user->user_id)->delete();
 
         return response()->json([
             'token' => $user->token,

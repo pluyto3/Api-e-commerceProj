@@ -2,8 +2,13 @@
    ADMIN PRODUCT APPROVAL SYSTEM
 ================================ */
 
-const ip = "https://api.hanzgo.me"; // Production API endpoint
-// const ip = "http://localhost:8000"; // Localhost API endpoint for development
+// const ip = "https://api.hanzgo.me";
+
+if (!window.APP_CONFIG?.API_BASE_URL) {
+  throw new Error("APP_CONFIG is missing. Load config.js before checkout.js.");
+}
+
+const ip = window.APP_CONFIG.API_BASE_URL;
 
 let token = $.cookie("token");
 let usr = $.cookie("username");
@@ -186,9 +191,16 @@ function loadProductsForApproval() {
       console.log("All Products:", res);
       allProducts = res.data || res || [];
 
-      // Backend already scopes seller products by seller_id.
-      // No additional username filtering is needed.
+      // ======================================
+      // FILTER PRODUCTS IF SELLER IS LOGGED IN
+      // ======================================
       let filteredProducts = allProducts;
+
+      if (role === "seller") {
+        filteredProducts = allProducts.filter((p) => {
+          return p.seller?.username === usr;
+        });
+      }
 
       // ======================================
       // SEPARATE PRODUCTS BY APPROVAL STATUS
@@ -204,10 +216,6 @@ function loadProductsForApproval() {
       const rejectedProducts = filteredProducts.filter((p) => {
         return (p.approval_status || "").toLowerCase() === "rejected";
       });
-
-      console.log("Pending Products:", pendingProducts);
-      console.log("Approved Products:", approvedProducts);
-      console.log("Rejected Products:", rejectedProducts);
 
       // ======================================
       // DISPLAY TABLES
@@ -268,7 +276,7 @@ function displayProductsTable(products, statusFilter = "all") {
     // Seller Actions: Edit
     if (role === "seller") {
       actionButtons += `
-        <button class="btn btn-sm btn-primary edit-product" data-id="${product.product_id}" title="Edit">
+        <button class="btn btn-sm btn-primary edit-product" data-id="${product.product_id}" title="Edit" data-toggle="modal" data-target="#editProductModal">
           <i class="fas fa-edit"></i> Edit
         </button>`;
     }
@@ -398,7 +406,7 @@ function displayApprovedOrders(products) {
             class="btn btn-sm btn-success toggle-product-availability"
             data-id="${product.product_id}"
             data-action="active">
-            <i class="fas fa-check-circle"></i> Reactivate
+            <i class="fas fa-check"></i> Activate
           </button>
         `;
       }
@@ -444,11 +452,7 @@ function getAvailabilityBadge(status) {
   }
 
   if (normalizedStatus === "inactive") {
-    return `
-    <span class="badge badge-secondary">
-      DEACTIVATED
-    </span>
-  `;
+    return `<span class="badge badge-secondary">INACTIVE</span>`;
   }
 
   if (normalizedStatus === "out_of_stock") {
@@ -952,17 +956,7 @@ function loadCategories($select = $("#category_id"), callback) {
           '<option value="" disabled selected>Select a category</option>',
         );
       (Array.isArray(categories) ? categories : []).forEach((cat) => {
-        if ((cat.status || "pending").toLowerCase() !== "approved") {
-          return;
-        }
-
-        if (
-          cat.is_active === false ||
-          cat.is_active === 0 ||
-          cat.is_active === "0"
-        ) {
-          return;
-        }
+        if ((cat.status || "pending").toLowerCase() !== "approved") return;
         const id = cat.category_id || cat.id;
         const name = cat.name || cat.category_name;
         if (id && name)
@@ -978,9 +972,6 @@ function loadCategories($select = $("#category_id"), callback) {
   });
 }
 
-//=======================================
-// Load Brands
-//=======================================
 function loadBrands($select = $("#brand_id"), callback) {
   $.ajax({
     url: `${ip}/api/brands`,
@@ -993,17 +984,7 @@ function loadBrands($select = $("#brand_id"), callback) {
         .empty()
         .append('<option value="" disabled selected>Select a brand</option>');
       (Array.isArray(brands) ? brands : []).forEach((brand) => {
-        if ((brand.status || "pending").toLowerCase() !== "approved") {
-          return;
-        }
-
-        if (
-          brand.is_active === false ||
-          brand.is_active === 0 ||
-          brand.is_active === "0"
-        ) {
-          return;
-        }
+        if ((brand.status || "pending").toLowerCase() !== "approved") return;
         const id = brand.brand_id || brand.id;
         const name = brand.name || brand.brand_name;
         if (id && name)
@@ -1062,18 +1043,6 @@ function loadProductDetails(productId) {
     )
     .text(status.toUpperCase());
 
-  if (status === "rejected") {
-    $("#detailProductRejectionReason").text(
-      product.approval_reason || "No rejection reason was provided.",
-    );
-
-    $("#detailProductRejectionReasonWrap").show();
-  } else {
-    $("#detailProductRejectionReason").text("");
-
-    $("#detailProductRejectionReasonWrap").hide();
-  }
-
   // Product image with chained fallbacks
   const _candidates = buildImageCandidates(product.image);
   const $prodImg = $("#productImage");
@@ -1091,17 +1060,9 @@ function loadProductDetails(productId) {
   currentProductId = product.product_id;
 
   // Show/hide approve/reject buttons based on status
-  if (role === "admin") {
-    if (status === "pending") {
-      $("#approveBtn").show();
-      $("#rejectBtn").show();
-    } else if (status === "approved") {
-      $("#approveBtn").hide();
-      $("#rejectBtn").show();
-    } else {
-      $("#approveBtn").hide();
-      $("#rejectBtn").hide();
-    }
+  if (role === "admin" && status === "pending") {
+    $("#approveBtn").show();
+    $("#rejectBtn").show();
   } else {
     $("#approveBtn").hide();
     $("#rejectBtn").hide();
@@ -1207,8 +1168,10 @@ function displayRejectedProducts(products) {
     if (role === "seller") {
       actionButtons += `
         <button
-          class="btn btn-sm btn-warning resubmit-product-btn"
-          data-id="${product.product_id}">
+          class="btn btn-sm btn-warning edit-product"
+          data-id="${product.product_id}"
+          data-toggle="modal"
+          data-target="#editProductModal">
           <i class="fas fa-edit"></i> Edit & Resubmit
         </button>
       `;
@@ -1237,70 +1200,6 @@ function displayRejectedProducts(products) {
     `;
 
     tbody.append(row);
-  });
-}
-
-// =======================================
-// Open Product Edit Modal
-// =======================================
-function openProductEditModal(productId, mode = "edit") {
-  const product = allProducts.find(
-    (p) => String(p.product_id) === String(productId),
-  );
-
-  if (!product) {
-    Swal.fire("Error", "Product not found.", "error");
-    return;
-  }
-
-  $("#edit_product_id").val(productId);
-
-  $("#editProductForm").data("edit-mode", mode);
-
-  loadCategories($("#edit_category_id"), () => {
-    loadBrands($("#edit_brand_id"), () => {
-      $("#edit_category_id").val(product.category_id);
-
-      $("#edit_brand_id").val(product.brand_id);
-
-      $("#edit_product_name").val(product.product_name || "");
-
-      $("#edit_product_price").val(product.product_price || "");
-
-      $("#edit_product_description").val(product.product_description || "");
-
-      $("#edit_stock_quantity").val(product.stock_quantity ?? 0);
-
-      $("#edit_status").val(product.status || "active");
-
-      if (product.image) {
-        $("#edit_image_preview")
-          .attr("src", buildImageCandidates(product.image)[0])
-          .show();
-      } else {
-        $("#edit_image_preview").hide();
-      }
-
-      if (mode === "request-edit") {
-        $("#editProductModal .modal-title").text("Request Product Update");
-
-        $("#updateProductBtn").html(
-          '<i class="fas fa-paper-plane"></i> Submit for Review',
-        );
-      } else if (mode === "resubmit") {
-        $("#editProductModal .modal-title").text("Edit and Resubmit Product");
-
-        $("#updateProductBtn").html(
-          '<i class="fas fa-redo"></i> Resubmit for Review',
-        );
-      } else {
-        $("#editProductModal .modal-title").text("Edit Pending Product");
-
-        $("#updateProductBtn").html('<i class="fas fa-save"></i> Update');
-      }
-
-      $("#editProductModal").modal("show");
-    });
   });
 }
 
@@ -1374,72 +1273,70 @@ $(document).ready(function () {
   });
 
   // --- Edit Product Handler (Populate Modal) ---
-  $(document).on("click", ".edit-product", function (e) {
-    e.preventDefault();
+  $(document).on("click", ".edit-product", function () {
+    const productId = $(this).data("id");
+    $("#edit_product_id").val(productId);
 
-    openProductEditModal($(this).data("id"), "edit");
+    // Load categories and brands into the edit modal dropdowns
+    loadCategories($("#edit_category_id"), () => {
+      loadBrands($("#edit_brand_id"), () => {
+        // Fetch product details
+        const product = allProducts.find((p) => p.product_id == productId);
+        if (product) {
+          $("#edit_category_id").val(
+            product.category_id || product.category?.category_id,
+          );
+          $("#edit_brand_id").val(product.brand_id || product.brand?.brand_id);
+          $("#edit_product_name").val(product.product_name);
+          $("#edit_product_price").val(product.product_price);
+          $("#edit_product_description").val(product.product_description);
+          $("#edit_stock_quantity").val(product.stock_quantity);
+          $("#edit_status").val(product.status || "active");
+
+          const imgUrl = buildImageCandidates(product.image)[0];
+          $("#edit_image_preview").attr("src", imgUrl).show();
+        }
+      });
+    });
   });
 
   // --- Edit Product Form Submit ---
   $("#editProductForm").on("submit", function (e) {
     e.preventDefault();
-
     const productId = $("#edit_product_id").val();
-
     const fd = new FormData(this);
+    fd.append("_method", "PUT"); // Important for Laravel PUT requests via POST
 
-    const mode = $(this).data("edit-mode") || "edit";
-
-    $("#updateProductBtn").text("Submitting...").prop("disabled", true);
+    $("#updateProductBtn").text("Updating...").prop("disabled", true);
 
     $.ajax({
       url: `${ip}/api/products/${productId}`,
-      method: "POST",
+      method: "POST", // Use POST with _method=PUT
       data: fd,
       processData: false,
       contentType: false,
-
-      headers: {
-        Authorization: `Bearer ${token}`,
-
-        Accept: "application/json",
-      },
-
-      success: function (res) {
-        $("#editProductModal").modal("hide");
-
-        let title = "Product Updated";
-
-        if (mode === "request-edit") {
-          title = "Edit Request Submitted";
-        }
-
-        if (mode === "resubmit") {
-          title = "Product Resubmitted";
-        }
-
+      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+      success: (res) => {
+        $("#updateProductBtn").text("Update").prop("disabled", false);
         Swal.fire({
           icon: "success",
-
-          title: title,
-
-          text: res?.msg || "Product submitted successfully.",
+          title: "Product Updated",
+          text: "Product details have been updated successfully.",
+          timer: 2000,
+          showConfirmButton: false,
         }).then(() => {
+          $("#editProductModal").modal("hide");
           loadProductsForApproval();
         });
       },
-
-      error: function (xhr) {
-        $("#updateProductBtn").prop("disabled", false);
-
-        let msg = xhr.responseJSON?.msg || "Unable to update product.";
-
+      error: (xhr) => {
+        $("#updateProductBtn").text("Update").prop("disabled", false);
+        let msg = xhr.responseJSON?.msg || "Failed to update product";
         if (xhr.status === 422 && xhr.responseJSON?.errors) {
           msg = Object.values(xhr.responseJSON.errors)
-            .map((error) => error[0])
+            .map((e) => e[0])
             .join("\n");
         }
-
         Swal.fire("Error", msg, "error");
       },
     });
@@ -1675,89 +1572,6 @@ $(document).ready(function () {
           });
         },
       });
-    });
-  });
-
-  // =======================================
-  // Request Product Edit (for approved products)
-  // =======================================
-  $(document).on("click", ".request-product-edit", function (e) {
-    e.preventDefault();
-
-    const productId = $(this).data("id");
-
-    Swal.fire({
-      title: "Request Product Edit?",
-
-      html: `
-        <p>
-          Changes to an approved product
-          must be reviewed again by an administrator.
-        </p>
-
-        <p class="mb-0">
-          <strong>
-            After you submit the changes,
-            the product will return to Pending
-            status until approved again.
-          </strong>
-        </p>
-      `,
-
-      icon: "warning",
-
-      showCancelButton: true,
-
-      confirmButtonText: "Continue Editing",
-
-      cancelButtonText: "Cancel",
-    }).then((result) => {
-      if (!result.isConfirmed) {
-        return;
-      }
-
-      openProductEditModal(productId, "request-edit");
-    });
-  });
-
-  // =======================================
-  // Resubmit Rejected Product
-  // =======================================
-  $(document).on("click", ".resubmit-product-btn", function (e) {
-    e.preventDefault();
-
-    const productId = $(this).data("id");
-
-    Swal.fire({
-      title: "Resubmit Product?",
-
-      html: `
-        <p>
-          You can correct the information
-          that caused the product to be rejected.
-        </p>
-
-        <p class="mb-0">
-          After submitting the changes,
-          the product will return to
-          <strong>Pending</strong>
-          status for administrator review.
-        </p>
-      `,
-
-      icon: "info",
-
-      showCancelButton: true,
-
-      confirmButtonText: "Edit Product",
-
-      cancelButtonText: "Cancel",
-    }).then((result) => {
-      if (!result.isConfirmed) {
-        return;
-      }
-
-      openProductEditModal(productId, "resubmit");
     });
   });
 

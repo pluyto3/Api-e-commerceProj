@@ -1,7 +1,14 @@
 /* ================================
    GLOBAL VARIABLES
 ================================ */
-const ip = "https://api.hanzgo.me";
+// const ip = "https://api.hanzgo.me";
+
+if (!window.APP_CONFIG?.API_BASE_URL) {
+  throw new Error("APP_CONFIG is missing. Load config.js before checkout.js.");
+}
+
+const ip = window.APP_CONFIG.API_BASE_URL;
+
 let token = null;
 let usr = null;
 let role = null;
@@ -9,7 +16,7 @@ let profileImage = null;
 let currentUserId = null;
 let brandsCache = [];
 let sellerLookup = {};
-const brandImageBaseUrl = "https://api.hanzgo.me/FrontEnd/assets/img/brand";
+const brandImageBaseUrl = `${ip}/FrontEnd/assets/img/brand`;
 
 function getBrandImageUrl(imageName) {
   return imageName

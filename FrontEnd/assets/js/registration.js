@@ -1,5 +1,13 @@
 $(document).ready(function () {
-  var ip = "https://api.hanzgo.me"; // Change this to your server IP or domain
+  //var ip = "https://api.hanzgo.me"; // Change this to your server IP or domain
+
+  if (!window.APP_CONFIG?.API_BASE_URL) {
+    throw new Error(
+      "APP_CONFIG is missing. Load config.js before checkout.js.",
+    );
+  }
+
+  const ip = window.APP_CONFIG.API_BASE_URL;
 
   $(document).ajaxStart(function () {
     $("#wait").css("display", "block");
