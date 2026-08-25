@@ -90,11 +90,19 @@ $(document).ready(function () {
       data: JSON.stringify({ username: usr, password: pwd }),
       contentType: "application/json",
       success: function (res) {
-        $.cookie("token", res.token);
-        $.cookie("username", $("#username").val()); // Set username cookie for redirection
-        $.cookie("role", res.role);
-        $.cookie("user_id", res.user_id);
-        $.cookie("profileImage", res.profile_image, { path: "/" }); // Set profile image cookie
+        const cookieOptions = {
+          expires: 1,
+          path: "/",
+        };
+
+        $.cookie("token", res.token, cookieOptions);
+        $.cookie("username", $("#username").val(), cookieOptions);
+        $.cookie("role", res.role, cookieOptions);
+        $.cookie("user_id", res.user_id, cookieOptions);
+
+        if (res.profile_image) {
+          $.cookie("profileImage", res.profile_image, cookieOptions);
+        }
 
         console.log("Login response:", res.role);
         console.log("Saved role:", res.role);

@@ -13,9 +13,7 @@
   window.APP_CONFIG = Object.freeze({
     ENVIRONMENT: isLocal ? "local" : "production",
 
-    API_BASE_URL: isLocal
-      ? "http://127.0.0.1:8000"
-      : "https://api.hanzgo.me",
+    API_BASE_URL: isLocal ? "http://127.0.0.1:8000" : "https://api.hanzgo.me",
 
     FRONTEND_URL: isLocal
       ? "http://localhost/e-commerce/FrontEnd"
