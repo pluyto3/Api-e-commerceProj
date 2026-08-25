@@ -493,7 +493,7 @@ $(document).ready(function () {
       error: function (xhr) {
         Swal.fire({
           icon: "error",
-          title: "Error Adding Brand",
+          title: "Error Adding Address",
           text: xhr.responseText,
         });
       },
