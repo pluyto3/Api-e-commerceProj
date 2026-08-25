@@ -4,7 +4,7 @@
 //const ip = "https://api.hanzgo.me";
 
 if (!window.APP_CONFIG?.API_BASE_URL) {
-  throw new Error("APP_CONFIG is missing. Load config.js before checkout.js.");
+  throw new Error("APP_CONFIG is missing. Load config.js before dashboard.js.");
 }
 
 const ip = window.APP_CONFIG.API_BASE_URL;
@@ -72,9 +72,9 @@ function pluralize(count, singular, plural = `${singular}s`) {
 }
 
 function formatCurrency(value) {
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat("en-PH", {
     style: "currency",
-    currency: "USD",
+    currency: "PHP",
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(normalizeNumber(value));
@@ -1734,7 +1734,6 @@ $(document).ready(function () {
   loadCounts();
   setupSidebarToggle();
   loadRecentOrders();
-  setupSidebarToggle();
 
   if (typeof window.updateNavbarCount === "function") {
     window.updateNavbarCount();

@@ -4,7 +4,9 @@
 //const ip = "https://api.hanzgo.me";
 
 if (!window.APP_CONFIG?.API_BASE_URL) {
-  throw new Error("APP_CONFIG is missing. Load config.js before checkout.js.");
+  throw new Error(
+    "APP_CONFIG is missing. Load config.js before account/address.js.",
+  );
 }
 
 const ip = window.APP_CONFIG.API_BASE_URL;
@@ -638,7 +640,7 @@ $(document).ready(function () {
   });
 
   $(document).on("click", ".deleteAddress", function (e) {
-    event.preventDefault();
+    e.preventDefault();
     const addressId = $(this).data("id");
 
     Swal.fire({
@@ -656,13 +658,14 @@ $(document).ready(function () {
             Accept: "application/json",
             Authorization: `Bearer ${token}`,
           },
-          success: function () {
-            Swal.fire("Deleted!", res.msg, "success").then(() => {
+          success: function (response) {
+            Swal.fire(
+              "Deleted!",
+              response.msg || "Address deleted successfully.",
+              "success",
+            ).then(() => {
               location.reload();
             });
-          },
-          error: function (xhr) {
-            Swal.fire("Error", xhr.responseText, "error");
           },
         });
       }

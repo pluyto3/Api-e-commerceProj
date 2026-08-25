@@ -3,7 +3,7 @@
 ================================ */
 // const ip = "https://api.hanzgo.me";
 if (!window.APP_CONFIG?.API_BASE_URL) {
-  throw new Error("APP_CONFIG is missing. Load config.js before checkout.js.");
+  throw new Error("APP_CONFIG is missing. Load config.js before main.js.");
 }
 
 const ip = window.APP_CONFIG.API_BASE_URL;
@@ -452,7 +452,9 @@ $(document).ready(() => {
                    alt="${b.brand_name || "Brand"}" height="100px" />
             </div>
             
-            <a href="products.html?brand=${b.brand_id}" 
+            <a href="shop.html?brand_id=${b.brand_id}&brand=${encodeURIComponent(
+              b.name || b.brand_name || "",
+            )}"
                class="text-success mx-1 productDetails">
               <div class="card-contents">
               </div>

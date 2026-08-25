@@ -3,7 +3,9 @@
 ================================ */
 // const ip = "https://api.hanzgo.me"; // For local testing
 if (!window.APP_CONFIG?.API_BASE_URL) {
-  throw new Error("APP_CONFIG is missing. Load config.js before cart.js.");
+  throw new Error(
+    "APP_CONFIG is missing. Load config.js before single-product.js.",
+  );
 }
 
 const ip = window.APP_CONFIG.API_BASE_URL;

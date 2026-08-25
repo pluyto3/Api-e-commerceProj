@@ -1,6 +1,5 @@
 (function ($) {
   const SELLER_CAN_BUY = true;
-  const apiBase = "https://api.hanzgo.me";
   const LOW_STOCK_ALERT_THRESHOLD = 3;
   let notificationRequestKey = null;
 

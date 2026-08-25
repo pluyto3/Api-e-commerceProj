@@ -3,7 +3,7 @@ $(document).ready(function () {
 
   if (!window.APP_CONFIG?.API_BASE_URL) {
     throw new Error(
-      "APP_CONFIG is missing. Load config.js before checkout.js.",
+      "APP_CONFIG is missing. Load config.js before registration.js.",
     );
   }
 
@@ -25,16 +25,6 @@ $(document).ready(function () {
     var confirmPwd = $("#password_confirmation").val();
     var fnm = $("#fullname").val();
     var role = $("#role").val();
-
-    // console.log({
-    //   username: usr,
-    //   email: email,
-    //   phone_number: phoneNum,
-    //   password: pwd,
-    //   password_confirmation: confirmPwd,
-    //   fullname: fnm,
-    //   role: role,
-    // });
 
     if (!usr.trim()) {
       $("#usernameError").text("Please enter a username.");
@@ -69,56 +59,34 @@ $(document).ready(function () {
         });
       },
       error: function (xhr) {
-        // Clear old error messages
+        // Clear previous validation errors
         $(".error-message").text("");
+        $(".form-control").removeClass("is-invalid");
 
-        if (xhr.status === 422) {
-          // Laravel validation error
-          let errors = xhr.responseJSON.errors;
+        if (xhr.status === 422 && xhr.responseJSON?.errors) {
+          const errors = xhr.responseJSON.errors;
 
-          //   if (errors.username) {
-          //     $("#usernameError").text(errors.username[0]);
-          //   }
-          //   if (errors.email) {
-          //     $("#emailError").text(errors.email[0]);
-          //   }
-          //   if (errors.phone_number) {
-          //     $("#phone_numberError").text(errors.phone_number[0]);
-          //   }
-          //   if (errors.password) {
-          //     $("#passwordError").text(errors.password[0]);
-          //   }
-          //   if (errors.password_confirmation) {
-          //     $("#password_confirmationError").text(
-          //       errors.password_confirmation[0]
-          //     );
-          //   }
-
-          // Laravel validation error
           Object.keys(errors).forEach((field) => {
-            $(".error-message").text("");
-            $(".form-control").removeClass("is-invalid");
+            const message = errors[field][0];
 
-            // Laravel validation error
-            Object.keys(errors).forEach((field) => {
-              const message = errors[field][0];
-
-              if (
-                field === "password" &&
-                message.toLowerCase().includes("confirmation")
-              ) {
-                $("#password_confirmationError").text(message);
-                $("#password_confirmation").addClass("is-invalid");
-              } else {
-                $("#" + field + "Error").text(message);
-                $("#" + field).addClass("is-invalid");
-              }
-            });
+            if (
+              field === "password" &&
+              message.toLowerCase().includes("confirmation")
+            ) {
+              $("#password_confirmationError").text(message);
+              $("#password_confirmation").addClass("is-invalid");
+            } else {
+              $(`#${field}Error`).text(message);
+              $(`#${field}`).addClass("is-invalid");
+            }
           });
         } else {
           Swal.fire({
             title: "Registration Failed",
-            text: xhr.responseJSON ? xhr.responseJSON.msg : "Unknown error",
+            text:
+              xhr.responseJSON?.msg ||
+              xhr.responseJSON?.message ||
+              "Unknown error",
             icon: "error",
           });
         }

@@ -4,10 +4,11 @@
 // const ip = "https://api.hanzgo.me"; // For production server
 //const apiBaseUrl = "https://api.hanzgo.me";
 if (!window.APP_CONFIG?.API_BASE_URL) {
-  throw new Error("APP_CONFIG is missing. Load config.js before checkout.js.");
+  throw new Error("APP_CONFIG is missing. Load config.js before shop.js.");
 }
 
 const ip = window.APP_CONFIG.API_BASE_URL;
+const apiBaseUrl = ip;
 
 let token = null;
 let usr = null;
@@ -24,31 +25,6 @@ let activeSort = "relevance";
 let activeSearch = "";
 let activeMinPrice = "";
 let activeMaxPrice = "";
-
-function getApiBaseUrl() {
-  if (window.SHOP_API_BASE_URL) {
-    return String(window.SHOP_API_BASE_URL).replace(/\/+$/, "");
-  }
-
-  const pathname = window.location.pathname || "";
-  const projectRoot = pathname.includes("/FrontEnd/")
-    ? pathname.split("/FrontEnd/")[0]
-    : "";
-
-  if (projectRoot.endsWith("/BackEnd/public")) {
-    return `${window.location.origin}${projectRoot}`;
-  }
-
-  if (projectRoot) {
-    return `${window.location.origin}${projectRoot}/BackEnd/public`;
-  }
-
-  if (window.location.port === "8000") {
-    return window.location.origin;
-  }
-
-  return "https://api.hanzgo.me";
-}
 
 function getApiHeaders(extraHeaders = {}) {
   return {
