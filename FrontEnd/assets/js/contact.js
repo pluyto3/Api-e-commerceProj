@@ -279,23 +279,78 @@ $(document).ready(function () {
   /* -----------------------------
      LOGOUT HANDLER
   ----------------------------- */
-  $("#logout").click(() => {
-    $.ajax({
-      url: `${ip}/api/logout`,
-      type: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-      data: { token },
-      success: () => {
-        Swal.fire({ icon: "success", title: "Logout Successful" }).then(() => {
-          // Clear all cookies
-          Object.keys($.cookie()).forEach((cookie) => $.removeCookie(cookie));
-          window.location.replace("index.html");
-        });
-      },
-      error: (res) => {
-        const msg = res.responseJSON?.msg || "Logout failed. Please try again.";
-        Swal.fire({ icon: "error", title: "Error", text: msg });
-      },
-    });
+  $("#logout").click((e) => {
+    e.preventDefault();
+
+    function clearAuthCookies() {
+      const authCookies = [
+        "token",
+        "username",
+        "role",
+        "user_id",
+        "profileImage",
+      ];
+
+      authCookies.forEach((cookie) => {
+        // Remove cookies created with path "/"
+        $.removeCookie(cookie, { path: "/" });
+
+        // Also remove older cookies that may not have an explicit path
+        $.removeCookie(cookie);
+      });
+    }
+
+    function logoutFromServer() {
+      $.ajax({
+        url: `${ip}/api/logout`,
+        type: "POST",
+
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+
+        data: {
+          token: token,
+        },
+
+        success: () => {
+          clearAuthCookies();
+
+          Swal.fire({
+            icon: "success",
+            title: "Logout Successful",
+          }).then(() => {
+            window.location.replace("login.html");
+          });
+        },
+
+        error: (res) => {
+          // Even if the backend token is already invalid,
+          // clear the local login session.
+          const msg =
+            res.responseJSON?.msg ||
+            "Your session has ended. Please log in again.";
+
+          clearAuthCookies();
+
+          Swal.fire({
+            icon: "warning",
+            title: "Logged Out",
+            text: msg,
+          }).then(() => {
+            window.location.replace("login.html");
+          });
+        },
+      });
+    }
+
+    // Explicit logout should remove the browser's FCM token.
+    if (typeof removeFcmTokenFromServer === "function") {
+      removeFcmTokenFromServer(function () {
+        logoutFromServer();
+      });
+    } else {
+      logoutFromServer();
+    }
   });
 });

@@ -1775,30 +1775,73 @@ $(document).ready(function () {
     console.error("No username found in cookie.");
   }
 
+  // --- Logout Functionality ---
   $("#logout").click((e) => {
     e.preventDefault();
 
-    function clearCookiesAndRedirect() {
-      Object.keys($.cookie()).forEach((cookie) => {
+    function clearAuthCookies() {
+      const authCookies = [
+        "token",
+        "username",
+        "role",
+        "user_id",
+        "profileImage",
+      ];
+
+      authCookies.forEach((cookie) => {
+        // Remove cookies created with path "/"
         $.removeCookie(cookie, { path: "/" });
+
+        // Also remove older cookies that may not have an explicit path
         $.removeCookie(cookie);
       });
-
-      window.location.replace("login.html");
     }
 
     function logoutFromServer() {
       $.ajax({
         url: `${ip}/api/logout`,
         type: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        data: { token },
-        complete: () => {
-          clearCookiesAndRedirect();
+
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+
+        data: {
+          token: token,
+        },
+
+        success: () => {
+          clearAuthCookies();
+
+          Swal.fire({
+            icon: "success",
+            title: "Logout Successful",
+          }).then(() => {
+            window.location.replace("login.html");
+          });
+        },
+
+        error: (res) => {
+          // Even if the backend token is already invalid,
+          // clear the local login session.
+          const msg =
+            res.responseJSON?.msg ||
+            "Your session has ended. Please log in again.";
+
+          clearAuthCookies();
+
+          Swal.fire({
+            icon: "warning",
+            title: "Logged Out",
+            text: msg,
+          }).then(() => {
+            window.location.replace("login.html");
+          });
         },
       });
     }
 
+    // Explicit logout should remove the browser's FCM token.
     if (typeof removeFcmTokenFromServer === "function") {
       removeFcmTokenFromServer(function () {
         logoutFromServer();
