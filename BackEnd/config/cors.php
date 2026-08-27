@@ -19,7 +19,12 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['*', 'http://localhost', 'http://127.0.0.1:8000'],
+    'allowed_origins' => [
+    	'https://hanzgo.me',
+    	'https://www.hanzgo.me',
+    	'http://localhost',
+    	'http://127.0.0.1:8000',
+     ],
 
     'allowed_origins_patterns' => [],
 
