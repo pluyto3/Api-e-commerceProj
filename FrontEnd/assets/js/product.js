@@ -5,7 +5,7 @@
 // const ip = "https://api.hanzgo.me";
 
 if (!window.APP_CONFIG?.API_BASE_URL) {
-  throw new Error("APP_CONFIG is missing. Load config.js before checkout.js.");
+  throw new Error("APP_CONFIG is missing. Load config.js before product.js.");
 }
 
 const ip = window.APP_CONFIG.API_BASE_URL;
@@ -1272,40 +1272,135 @@ $(document).ready(function () {
     });
   });
 
-  // --- Edit Product Handler (Populate Modal) ---
-  $(document).on("click", ".edit-product", function () {
-    const productId = $(this).data("id");
+  // =======================================
+  // Open Product Edit Modal
+  // =======================================
+  function openProductEditModal(productId, mode = "edit") {
+    const product = allProducts.find(
+      (p) => String(p.product_id) === String(productId),
+    );
+
+    if (!product) {
+      Swal.fire({
+        icon: "error",
+        title: "Product Not Found",
+        text: "Unable to find the selected product.",
+      });
+      return;
+    }
+
     $("#edit_product_id").val(productId);
 
-    // Load categories and brands into the edit modal dropdowns
+    // Remember why the modal was opened
+    $("#editProductForm").data("edit-mode", mode);
+
     loadCategories($("#edit_category_id"), () => {
       loadBrands($("#edit_brand_id"), () => {
-        // Fetch product details
-        const product = allProducts.find((p) => p.product_id == productId);
-        if (product) {
-          $("#edit_category_id").val(
-            product.category_id || product.category?.category_id,
-          );
-          $("#edit_brand_id").val(product.brand_id || product.brand?.brand_id);
-          $("#edit_product_name").val(product.product_name);
-          $("#edit_product_price").val(product.product_price);
-          $("#edit_product_description").val(product.product_description);
-          $("#edit_stock_quantity").val(product.stock_quantity);
-          $("#edit_status").val(product.status || "active");
+        $("#edit_category_id").val(
+          product.category_id || product.category?.category_id,
+        );
 
+        $("#edit_brand_id").val(product.brand_id || product.brand?.brand_id);
+
+        $("#edit_product_name").val(product.product_name || "");
+        $("#edit_product_price").val(product.product_price || "");
+        $("#edit_product_description").val(product.product_description || "");
+        $("#edit_stock_quantity").val(product.stock_quantity ?? 0);
+        $("#edit_status").val(product.status || "active");
+
+        if (product.image) {
           const imgUrl = buildImageCandidates(product.image)[0];
+
           $("#edit_image_preview").attr("src", imgUrl).show();
+        } else {
+          $("#edit_image_preview").hide();
         }
+
+        // Change modal wording depending on edit type
+        if (mode === "request-edit") {
+          $("#editProductModalLabel").text("Request Product Update");
+          $("#updateProductBtn").html(
+            '<i class="fas fa-paper-plane"></i> Submit for Review',
+          );
+        } else if (mode === "resubmit") {
+          $("#editProductModalLabel").text("Edit and Resubmit Product");
+          $("#updateProductBtn").html(
+            '<i class="fas fa-redo"></i> Resubmit for Review',
+          );
+        } else {
+          $("#editProductModalLabel").text("Edit Product");
+          $("#updateProductBtn").text("Update");
+        }
+
+        $("#editProductModal").modal("show");
       });
+    });
+  }
+
+  // =======================================
+  // Edit Pending / Rejected Product
+  // =======================================
+  $(document).on("click", ".edit-product", function (e) {
+    e.preventDefault();
+
+    const productId = $(this).data("id");
+
+    const product = allProducts.find(
+      (p) => String(p.product_id) === String(productId),
+    );
+
+    const status = String(product?.approval_status || "pending").toLowerCase();
+
+    const mode = status === "rejected" ? "resubmit" : "edit";
+
+    openProductEditModal(productId, mode);
+  });
+
+  // =======================================
+  // Request Edit for Approved Product
+  // =======================================
+  $(document).on("click", ".request-product-edit", function (e) {
+    e.preventDefault();
+
+    const productId = $(this).data("id");
+
+    Swal.fire({
+      title: "Request Product Edit?",
+      html: `
+        <p>
+          Changes to an approved product must be reviewed
+          again by an administrator.
+        </p>
+
+        <p class="mb-0">
+          <strong>
+            After you submit the changes, the product will
+            return to Pending status until it is approved again.
+          </strong>
+        </p>
+      `,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Continue Editing",
+      cancelButtonText: "Cancel",
+    }).then((result) => {
+      if (!result.isConfirmed) {
+        return;
+      }
+
+      openProductEditModal(productId, "request-edit");
     });
   });
 
   // --- Edit Product Form Submit ---
   $("#editProductForm").on("submit", function (e) {
     e.preventDefault();
+
     const productId = $("#edit_product_id").val();
+    const mode = $(this).data("edit-mode") || "edit";
+
     const fd = new FormData(this);
-    fd.append("_method", "PUT"); // Important for Laravel PUT requests via POST
+    fd.set("_method", "PUT"); // Important for Laravel PUT requests via POST
 
     $("#updateProductBtn").text("Updating...").prop("disabled", true);
 
@@ -1318,10 +1413,22 @@ $(document).ready(function () {
       headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
       success: (res) => {
         $("#updateProductBtn").text("Update").prop("disabled", false);
+        let title = "Product Updated";
+        let message = "Product details have been updated successfully.";
+
+        if (mode === "request-edit") {
+          title = "Edit Request Submitted";
+          message = "Your product changes were submitted for admin approval.";
+        }
+
+        if (mode === "resubmit") {
+          title = "Product Resubmitted";
+          message = "Your product was resubmitted for admin approval.";
+        }
         Swal.fire({
           icon: "success",
-          title: "Product Updated",
-          text: "Product details have been updated successfully.",
+          title: title,
+          text: message,
           timer: 2000,
           showConfirmButton: false,
         }).then(() => {
