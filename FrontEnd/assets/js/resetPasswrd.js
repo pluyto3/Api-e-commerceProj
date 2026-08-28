@@ -1,10 +1,11 @@
-// var ip = "https://api.hanzgo.me";
+// Function to get the API base URL from the APP_CONFIG
+function getApiBaseUrl() {
+  if (!window.APP_CONFIG?.API_BASE_URL) {
+    return null;
+  }
 
-if (!window.APP_CONFIG?.API_BASE_URL) {
-  throw new Error("APP_CONFIG is missing. Load config.js before checkout.js.");
+  return window.APP_CONFIG.API_BASE_URL.replace(/\/$/, "");
 }
-
-const ip = window.APP_CONFIG.API_BASE_URL;
 
 // Extract token from URL
 function getToken() {
@@ -38,8 +39,23 @@ $(document).ready(function () {
   $("#resetPasswordForm").on("submit", function (e) {
     e.preventDefault();
 
-    const password = $("#password").val().trim();
-    const confirmPassword = $("#confirm_password").val().trim();
+    const password = $("#password").val();
+    const confirmPassword = $("#confirm_password").val();
+
+    const ip = getApiBaseUrl();
+
+    // Check if APP_CONFIG is available
+    if (!ip) {
+      console.error("APP_CONFIG is missing.");
+
+      Swal.fire({
+        title: "Configuration Error",
+        text: "Unable to connect to the server. Please try again later.",
+        icon: "error",
+      });
+
+      return;
+    }
 
     if (!password || !confirmPassword) {
       $("#passwordError").text("Please fill in both fields.");
@@ -55,8 +71,11 @@ $(document).ready(function () {
 
     $.ajax({
       type: "POST",
-      url: ip + "/api/reset-password/" + token,
+      url: ip + "/api/reset-password/" + encodeURIComponent(token),
       contentType: "application/json",
+      headers: {
+        Accept: "application/json",
+      },
       data: JSON.stringify({
         password: password,
         password_confirmation: confirmPassword,
