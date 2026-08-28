@@ -1,25 +1,29 @@
-// var ip = "https://api.hanzgo.me";
-
-if (!window.APP_CONFIG?.API_BASE_URL) {
-  throw new Error("APP_CONFIG is missing. Load config.js before forgotpwd.js.");
-}
-
-const ip = window.APP_CONFIG.API_BASE_URL;
-
-$(document).ajaxStart(function () {
-  $("#wait").css("display", "block");
-});
-$(document).ajaxComplete(function () {
-  $("#wait").css("display", "none");
-});
-
 $(document).ready(function () {
-  $("#forgotPasswordForm").on("submit", function (e) {
-    e.preventDefault();
-    sendForgotPasswordRequest();
+  $(document).ajaxStart(function () {
+    $("#wait").css("display", "block");
   });
 
-  function sendForgotPasswordRequest() {
+  $(document).ajaxComplete(function () {
+    $("#wait").css("display", "none");
+  });
+
+  $("#forgotPasswordForm").on("submit", function (e) {
+    e.preventDefault();
+
+    if (!window.APP_CONFIG?.API_BASE_URL) {
+      console.error("APP_CONFIG is missing.");
+
+      Swal.fire({
+        title: "Configuration Error",
+        text: "Unable to connect to the server. Please try again later.",
+        icon: "error",
+      });
+
+      return;
+    }
+
+    const ip = window.APP_CONFIG.API_BASE_URL.replace(/\/$/, "");
+
     var email = $("#email").val().trim();
 
     if (!email) {
@@ -33,6 +37,9 @@ $(document).ready(function () {
       type: "POST",
       url: ip + "/api/forgot-password",
       contentType: "application/json",
+      headers: {
+        Accept: "application/json",
+      },
       data: JSON.stringify({ email: email }),
 
       success: function (res) {
@@ -42,7 +49,7 @@ $(document).ready(function () {
           icon: "success",
           confirmButtonText: "OK",
         }).then(() => {
-          window.location.replace("forgot.html");
+          window.location.replace("login.html");
         });
       },
 
@@ -89,5 +96,5 @@ $(document).ready(function () {
         });
       },
     });
-  }
+  });
 });
