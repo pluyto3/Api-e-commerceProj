@@ -1,40 +1,51 @@
 $(document).ready(function () {
-  //var ip = "https://api.hanzgo.me"; // Change this to your server IP or domain
-
-  if (!window.APP_CONFIG?.API_BASE_URL) {
-    throw new Error(
-      "APP_CONFIG is missing. Load config.js before registration.js.",
-    );
-  }
-
-  const ip = window.APP_CONFIG.API_BASE_URL;
-
   $(document).ajaxStart(function () {
     $("#wait").css("display", "block");
   });
+
   $(document).ajaxComplete(function () {
     $("#wait").css("display", "none");
   });
+
   $("#signupForm").on("submit", function (e) {
     e.preventDefault();
 
+    if (!window.APP_CONFIG?.API_BASE_URL) {
+      console.error("APP_CONFIG is missing.");
+
+      Swal.fire({
+        title: "Configuration Error",
+        text: "Unable to connect to the server. Please try again later.",
+        icon: "error",
+      });
+
+      return;
+    }
+
+    const ip = window.APP_CONFIG.API_BASE_URL.replace(/\/$/, "");
+
     var usr = $("#username").val().trim();
-    var email = $("#email").val();
-    var phoneNum = $("#phone_number").val();
+    var email = $("#email").val().trim();
+    var phoneNum = $("#phone_number").val().trim();
     var pwd = $("#password").val();
     var confirmPwd = $("#password_confirmation").val();
-    var fnm = $("#fullname").val();
+    var fnm = $("#fullname").val().trim();
     var role = $("#role").val();
 
-    if (!usr.trim()) {
+    if (!usr) {
       $("#usernameError").text("Please enter a username.");
-      return; // stop the AJAX request
+      return;
     }
 
     $.ajax({
       type: "POST",
-      url: ip + "/api/register",
+      url: `${ip}/api/register`,
       contentType: "application/json",
+
+      headers: {
+        Accept: "application/json",
+      },
+
       data: JSON.stringify({
         username: usr,
         email: email,
@@ -44,22 +55,23 @@ $(document).ready(function () {
         fullname: fnm,
         role: role,
       }),
+
       success: function (res) {
-        // Clear previous errors
         $(".error-message").text("");
         $(".form-control").removeClass("is-invalid");
+
         $("#signupForm")[0].reset();
 
         Swal.fire({
           title: "Successfully Registered",
-          text: "Registration successful. Please go to your Email for Verification.",
+          text: "Registration successful. Please check your email for verification.",
           icon: "success",
         }).then(() => {
           window.location.replace("login.html");
         });
       },
+
       error: function (xhr) {
-        // Clear previous validation errors
         $(".error-message").text("");
         $(".form-control").removeClass("is-invalid");
 
@@ -86,7 +98,7 @@ $(document).ready(function () {
             text:
               xhr.responseJSON?.msg ||
               xhr.responseJSON?.message ||
-              "Unknown error",
+              "Unable to register. Please try again.",
             icon: "error",
           });
         }

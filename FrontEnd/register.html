@@ -21,6 +21,7 @@
     <script src="assets/js/jquery.cookie.js"></script>
     <script src="assets/js/owl.carousel.min.js"></script>
     <script src="assets/js/jquery.bxslider.min.js"></script>
+    <script src="assets/js/config.js"></script>
     <script src="assets/js/registration.js"></script>
   </head>
   <body>
@@ -33,11 +34,7 @@
           <img src="assets/img/hanz-goLogo.png" alt="Logo" class="img-fluid" />
         </div>
         <h2 class="text-center my-4">Registration</h2>
-        <form
-          action="#"
-          method="POST"
-          id="signupForm"
-          enctype="multipart/form-data">
+        <form id="signupForm">
           <div class="row">
             <!-- Username -->
             <div class="col-md-6">
@@ -98,7 +95,7 @@
                   id="password"
                   name="password"
                   placeholder="Enter password "
-                  minlength="5"
+                  minlength="8"
                   required />
                 <small
                   class="text-danger error-message"
@@ -117,7 +114,7 @@
                   id="password_confirmation"
                   name="password_confirmation"
                   placeholder="Confirm Password "
-                  minlength="5"
+                  minlength="8"
                   required />
                 <small
                   class="text-danger error-message"
