@@ -1,22 +1,33 @@
-//var ip = "https://api.hanzgo.me"; // Production server
+function getApiBaseUrl() {
+  if (!window.APP_CONFIG?.API_BASE_URL) {
+    return null;
+  }
 
-if (!window.APP_CONFIG?.API_BASE_URL) {
-  throw new Error("APP_CONFIG is missing. Load config.js before checkout.js.");
+  return window.APP_CONFIG.API_BASE_URL.replace(/\/$/, "");
 }
-
-const ip = window.APP_CONFIG.API_BASE_URL;
 
 function load_user() {
   var usr = $.cookie("username");
   var token = $.cookie("token");
 
-  if (usr != undefined && token != undefined) {
+  if (usr !== undefined && token !== undefined) {
     window.location.replace("index.html");
   }
 }
 
 // Function to resend verification email
 function resendVerificationEmail(username) {
+  const ip = getApiBaseUrl();
+
+  if (!ip) {
+    Swal.fire({
+      icon: "error",
+      title: "Configuration Error",
+      text: "Unable to connect to the server. Please try again later.",
+    });
+    return;
+  }
+
   Swal.fire({
     title: "Sending Verification Email",
     text: "Please wait...",
@@ -30,10 +41,13 @@ function resendVerificationEmail(username) {
   $.ajax({
     type: "POST",
     url: ip + "/api/resend-verification",
+
     data: JSON.stringify({
       username: username,
     }),
+
     contentType: "application/json",
+
     headers: {
       Accept: "application/json",
     },
@@ -77,18 +91,46 @@ $(document).ready(function () {
   $(document).ajaxStart(function () {
     $("#wait").css("display", "block");
   });
+
   $(document).ajaxComplete(function () {
     $("#wait").css("display", "none");
   });
+
   $("#loginForm").on("submit", function (e) {
     e.preventDefault();
-    var usr = $("#username").val();
+
+    const ip = getApiBaseUrl();
+
+    if (!ip) {
+      console.error("APP_CONFIG is missing.");
+
+      Swal.fire({
+        title: "Configuration Error",
+        text: "Unable to connect to the server. Please try again later.",
+        icon: "error",
+      });
+
+      return;
+    }
+
+    var usr = $("#username").val().trim();
     var pwd = $("#password").val();
+
     $.ajax({
       type: "POST",
       url: ip + "/api/login",
-      data: JSON.stringify({ username: usr, password: pwd }),
+
+      data: JSON.stringify({
+        username: usr,
+        password: pwd,
+      }),
+
       contentType: "application/json",
+
+      headers: {
+        Accept: "application/json",
+      },
+
       success: function (res) {
         const cookieOptions = {
           expires: 1,
@@ -96,7 +138,7 @@ $(document).ready(function () {
         };
 
         $.cookie("token", res.token, cookieOptions);
-        $.cookie("username", $("#username").val(), cookieOptions);
+        $.cookie("username", usr, cookieOptions);
         $.cookie("role", res.role, cookieOptions);
         $.cookie("user_id", res.user_id, cookieOptions);
 
@@ -112,20 +154,15 @@ $(document).ready(function () {
           title: "Logged in successfully",
           icon: "success",
         }).then(() => {
-          if (res.role === "admin") {
-            // window.location.replace("dashboard.php");
-            window.location.href = "dashboard.html";
-          } else if (res.role === "seller") {
-            // window.location.replace("seller-dashboard.php");
+          if (res.role === "admin" || res.role === "seller") {
             window.location.href = "dashboard.html";
           } else {
-            // window.location.replace("dashboard.php");
             window.location.href = "index.html";
           }
         });
       },
+
       error: function (xhr) {
-        // Default error message
         let errorMessage = "Access Denied: Invalid username or password.";
 
         if (xhr.responseJSON) {
@@ -136,7 +173,6 @@ $(document).ready(function () {
             errorMessage;
         }
 
-        // Check if account is not yet verified
         if (
           errorMessage.toLowerCase().includes("verify your email") ||
           errorMessage.toLowerCase().includes("email verification")
@@ -145,16 +181,12 @@ $(document).ready(function () {
             icon: "warning",
             title: "Email Not Verified",
             text: errorMessage,
-
             showDenyButton: true,
-
             confirmButtonText: "OK",
             denyButtonText: "Resend Verification Email",
-
             footer: '<a href="forgot.html">Forgot Password?</a>',
           }).then((result) => {
             if (result.isDenied) {
-              // Use the username already entered in the login form
               resendVerificationEmail(usr);
             }
           });
@@ -162,7 +194,6 @@ $(document).ready(function () {
           return;
         }
 
-        // Normal login errors
         Swal.fire({
           icon: "error",
           title: "Error",

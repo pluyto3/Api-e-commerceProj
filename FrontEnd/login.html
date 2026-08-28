@@ -28,9 +28,10 @@
     <script src="assets/js/config.js"></script>
     <script src="assets/js/firebase-notification.js"></script>
 
+    <!-- Custom JS -->
     <script src="assets/js/login.js"></script>
   </head>
-  <body onload="load_user()">
+  <body>
     <div class="login-container">
       <div class="loginform shadow rounded p-4 mt-5 col-12">
         <div class="logo mb-4">
@@ -39,11 +40,7 @@
         <div class="row justify-content-center">
           <div class="col-md-6">
             <h2 class="text-center">Login</h2>
-            <form
-              id="loginForm"
-              action="#"
-              method="POST"
-              enctype="multipart/form-data">
+            <form id="loginForm">
               <div class="form-group mb-3">
                 <label for="username" class="form-label">Username</label>
                 <input
@@ -71,14 +68,14 @@
                 </button>
               </div>
               <div class="text-center">
-                <a href="forgot.html?v=20260421" class="text-decoration-none"
+                <a href="forgot.html" class="text-decoration-none"
                   >Forgot Password</a
                 >
               </div>
             </form>
             <div class="mb-3 text-center">
               Don't have an account?
-              <a href="register.html?v=20260421" class="text-decoration-none"
+              <a href="register.html" class="text-decoration-none"
                 >Register Here</a
               >
             </div>
