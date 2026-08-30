@@ -408,8 +408,10 @@ $(document).ready(function () {
     e.preventDefault();
 
     const fd = new FormData(this);
+    const $button = $("#editProfilePic");
 
-    console.log("Uploading form data:", Array.from(fd.entries()));
+    // Disable button while uploading
+    $button.prop("disabled", true).text("Uploading...");
 
     $.ajax({
       url: `${ip}/api/updateImageAccount/${$("#user_id").val()}`,
@@ -421,22 +423,33 @@ $(document).ready(function () {
       data: fd,
       processData: false,
       contentType: false,
+
       success: function (res) {
         if (res.status === 200) {
           Swal.fire({
             icon: "success",
             title: "Profile Saved",
-            text: "Your account has been updated.",
-            showConfirmButton: false,
-          }).then(() => location.reload());
+            text: "Your profile picture has been updated.",
+          }).then(() => {
+            location.reload();
+          });
         }
       },
+
       error: function (xhr) {
         Swal.fire({
           icon: "error",
-          title: "Error Updating Profile",
-          text: xhr.responseText,
+          title: "Error Uploading Profile Picture",
+          text:
+            xhr.responseJSON?.msg ||
+            xhr.responseJSON?.message ||
+            "Unable to upload your profile picture.",
         });
+      },
+
+      complete: function () {
+        // Restore button whether upload succeeds or fails
+        $button.prop("disabled", false).text("Upload Profile Picture");
       },
     });
   });
