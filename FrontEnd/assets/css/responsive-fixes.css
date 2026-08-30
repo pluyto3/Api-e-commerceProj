@@ -271,7 +271,12 @@ nav.navbar.sticky-top {
 @media (min-width: 992px) {
   .wrapper .sidebar,
   .sidebar {
+    position: fixed !important;
     top: 66px !important;
+    left: 0 !important;
+    height: calc(100vh - 66px) !important;
+    overflow-y: auto;
+    z-index: 2000;
   }
 }
 
