@@ -738,7 +738,7 @@ class AuthController extends Controller
             $account = $user;
 
             $request->validate([
-                'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:102400',
+                'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:10240',
             ]);
 
             $image = $request->file('image');
