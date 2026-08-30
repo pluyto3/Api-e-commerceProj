@@ -1,15 +1,7 @@
 // ==========================
 // Global Configuration
 // ==========================
-//const ip = "https://api.hanzgo.me";
-
-if (!window.APP_CONFIG?.API_BASE_URL) {
-  throw new Error(
-    "APP_CONFIG is missing. Load config.js before account/address.js.",
-  );
-}
-
-const ip = window.APP_CONFIG.API_BASE_URL;
+const ip = window.APP_CONFIG?.API_BASE_URL?.replace(/\/$/, "") || null;
 
 let token = null;
 let usr = null;
@@ -223,6 +215,13 @@ function showToast(message, type = "success") {
 // Display User Addresses
 // ==========================
 function displayAddresses() {
+  const $addressList = $("#addressList");
+
+  // Only run on address.html
+  if (!$addressList.length) {
+    return;
+  }
+
   // Add loading indicator
   $("#addressList").html("<p>Loading addresses...</p>");
 
@@ -368,6 +367,18 @@ function setupSidebarToggle() {
 // Document Ready
 // ==========================
 $(document).ready(function () {
+  // Check if ip is defined
+  if (!ip) {
+    console.error("APP_CONFIG is missing.");
+
+    Swal.fire({
+      title: "Configuration Error",
+      text: "Unable to connect to the server. Please try again later.",
+      icon: "error",
+    });
+
+    return;
+  }
   /* ------------------------------
      Load User Session
   ------------------------------ */
@@ -378,25 +389,6 @@ $(document).ready(function () {
   $(document)
     .ajaxStart(() => $("#wait").show())
     .ajaxComplete(() => $("#wait").hide());
-
-  // console.log("Loading profile for user:", usr);
-
-  // --- Sidebar Toggle ---
-  // $(".menu-btn").on("click", function () {
-  //   $(".sidebar").addClass("collapsed");
-  //   $(".wrapper").addClass("sidebar-collapsed");
-  //   $(".text-link").hide();
-  //   $(".close-btn").show();
-  //   $(".menu-btn").hide();
-  // });
-
-  // $(".close-btn").on("click", function () {
-  //   $(".sidebar").removeClass("collapsed");
-  //   $(".wrapper").removeClass("sidebar-collapsed");
-  //   $(".text-link").show();
-  //   $(".close-btn").hide();
-  //   $(".menu-btn").show();
-  // });
 
   // --- Profile Image Preview ---
   $("#image").on("change", function (e) {
@@ -416,7 +408,6 @@ $(document).ready(function () {
     e.preventDefault();
 
     const fd = new FormData(this);
-    fd.append("_method", "PUT");
 
     console.log("Uploading form data:", Array.from(fd.entries()));
 
@@ -543,9 +534,8 @@ $(document).ready(function () {
     e.preventDefault();
 
     const fd = new FormData(this);
-    fd.append("_method", "PUT");
 
-    $(".editAddress").text("Updating....");
+    $("#editLocation").prop("disabled", true).text("Updating...");
 
     $.ajax({
       url: `${ip}/api/location/${$("#location_id").val()}`,
@@ -578,6 +568,9 @@ $(document).ready(function () {
           title: "Error Updating Location",
           text: xhr.responseText,
         });
+      },
+      complete: function () {
+        $("#editLocation").prop("disabled", false).text("Edit");
       },
     });
   });
@@ -669,6 +662,129 @@ $(document).ready(function () {
           },
         });
       }
+    });
+  });
+
+  // ==========================
+  // Update Own Account
+  // ==========================
+  $("#signupForm").on("submit", function (e) {
+    e.preventDefault();
+
+    const username = $("#username").val().trim();
+    const phoneNumber = $("#phone_number").val().trim();
+    const fullname = $("#fullname").val().trim();
+    const password = $("#password").val();
+    const passwordConfirmation = $("#password_confirmation").val();
+
+    // Clear old error messages
+    $(".error-message").text("");
+
+    if (!username || !phoneNumber || !fullname) {
+      Swal.fire({
+        icon: "warning",
+        title: "Missing Information",
+        text: "Please complete all required fields.",
+      });
+      return;
+    }
+
+    // If either password field is used, both must match
+    if (password || passwordConfirmation) {
+      if (password.length < 8) {
+        $("#passwordError").text("Password must be at least 8 characters.");
+        return;
+      }
+
+      if (password !== passwordConfirmation) {
+        $("#password_confirmationError").text("Passwords do not match.");
+        return;
+      }
+    }
+
+    const data = {
+      username: username,
+      phone_number: phoneNumber,
+      fullname: fullname,
+    };
+
+    // Only send password when user actually entered a new one
+    if (password) {
+      data.password = password;
+      data.password_confirmation = passwordConfirmation;
+    }
+
+    const $button = $("#updateAccountInfo");
+
+    $button.prop("disabled", true).text("Updating...");
+
+    $.ajax({
+      url: `${ip}/api/account/profile`,
+      type: "PUT",
+      contentType: "application/json",
+
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+
+      data: JSON.stringify(data),
+
+      success: function (res) {
+        // Username may have changed, so update the cookie
+        if (res.user && res.user.username) {
+          $.cookie("username", res.user.username, {
+            expires: 1,
+            path: "/",
+          });
+        }
+
+        $("#password").val("");
+        $("#password_confirmation").val("");
+
+        Swal.fire({
+          icon: "success",
+          title: "Profile Updated",
+          text: res.msg || "Your profile has been updated successfully.",
+        }).then(() => {
+          window.location.reload();
+        });
+      },
+
+      error: function (xhr) {
+        if (xhr.status === 422 && xhr.responseJSON?.errors) {
+          const errors = xhr.responseJSON.errors;
+
+          if (errors.username) {
+            $("#usernameError").text(errors.username[0]);
+          }
+
+          if (errors.phone_number) {
+            $("#phone_numberError").text(errors.phone_number[0]);
+          }
+
+          if (errors.password) {
+            $("#passwordError").text(errors.password[0]);
+          }
+
+          return;
+        }
+
+        const msg =
+          xhr.responseJSON?.msg ||
+          xhr.responseJSON?.message ||
+          "Unable to update your profile.";
+
+        Swal.fire({
+          icon: "error",
+          title: "Update Failed",
+          text: msg,
+        });
+      },
+
+      complete: function () {
+        $button.prop("disabled", false).text("Update Account");
+      },
     });
   });
 

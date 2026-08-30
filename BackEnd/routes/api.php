@@ -1,13 +1,11 @@
 <?php
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BrandsController;
 use App\Http\Controllers\LocationController;
-use App\Http\Controllers\OrderController;
 use App\Http\Controllers\AddToCartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\DashboardController;
@@ -57,6 +55,7 @@ Route::controller(AuthController::class)->group(function () {
   Route::post('/contact/send-email', 'sendContactEmail'); // Send Contact Message
   Route::post('/resend-verification', 'resendVerificationEmail') ->middleware('throttle:3,1'); // Resend Verification Email
   Route::post('/admin/create-account', 'adminCreateAccount'); // Admin Create Account
+  Route::put('/account/profile', 'updateOwnAccount'); // Update logged-in user's own profile
 });
 
 // Product Routes

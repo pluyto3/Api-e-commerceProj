@@ -616,26 +616,127 @@ class AuthController extends Controller
     }
 
     /**
+     * Update logged-in user's own profile
+     */
+    public function updateOwnAccount(Request $request)
+    {
+        $token = $request->bearerToken();
+
+        if (!$token) {
+            return response()->json([
+                'msg' => 'No Token Provided.'
+            ], 401);
+        }
+
+        $user = User::where('token', $token)->first();
+
+        if (!$user) {
+            return response()->json([
+                'msg' => 'Invalid Token.'
+            ], 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'username' => [
+                'required',
+                'string',
+                'max:255',
+                'unique:users,username,' . $user->user_id . ',user_id',
+            ],
+
+            'phone_number' => [
+                'required',
+                'string',
+                'max:13',
+                'unique:users,phone_number,' . $user->user_id . ',user_id',
+            ],
+
+            'fullname' => [
+                'required',
+                'string',
+                'max:255',
+            ],
+
+            'password' => [
+                'nullable',
+                'string',
+                'min:8',
+                'confirmed',
+            ],
+        ], [
+            'username.unique' =>
+                'This username is already taken.',
+
+            'phone_number.unique' =>
+                'This phone number is already registered.',
+
+            'password.confirmed' =>
+                'Password confirmation does not match.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $validated = $validator->validated();
+
+        $user->username = $validated['username'];
+        $user->phone_number = $validated['phone_number'];
+        $user->fullname = $validated['fullname'];
+
+        // Only change the password if a new password was entered
+        if (!empty($validated['password'])) {
+            $user->password = Hash::make($validated['password']);
+        }
+
+        $user->save();
+
+        return response()->json([
+            'msg' => 'Profile updated successfully.',
+            'user' => $user->only([
+                'user_id',
+                'username',
+                'email',
+                'phone_number',
+                'fullname',
+                'role',
+                'image',
+            ]),
+            'status' => 200,
+        ], 200);
+    }
+
+    /**
      * Update Image Accounts
      */
     public function updateImageAccount(Request $request, $id){
         try {
             $token = $request->bearerToken();
+
             if (!$token) {
-                return response()->json(['msg' => 'No Token Provided.'], 400);
+                return response()->json([
+                    'msg' => 'No Token Provided.'
+                ], 401);
             }
 
             $user = User::where('token', $token)->first();
+
             if (!$user) {
-                return response()->json(['msg' => 'Not Authorized to Update Account'], 403);
+                return response()->json([
+                    'msg' => 'Not Authorized to Update Account'
+                ], 403);
             }
 
-            $account = User::find($id);
-            if (!$account) {
-                return response()->json(['msg' => 'Account not found.'], 404);
+            if ((int) $user->user_id !== (int) $id) {
+                return response()->json([
+                    'msg' => 'You are not authorized to update this profile image.'
+                ], 403);
             }
 
-            // safer validation
+            $account = $user;
+
             $request->validate([
                 'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:102400',
             ]);

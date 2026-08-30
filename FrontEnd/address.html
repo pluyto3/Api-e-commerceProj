@@ -40,7 +40,6 @@
     <script src="assets/js/config.js"></script>
     <script src="assets/js/firebase-notification.js"></script>
 
-
     <script src="assets/js/notification-bell.js"></script>
     <script src="assets/js/account.js"></script>
     <script src="assets/js/sidebar-role.js"></script>
@@ -57,7 +56,7 @@
       }
     </script>
   </head>
-  <body onload="load_user()">
+  <body>
     <!--Navbar-->
     <nav
       class="navbar navbar-expand-lg navbar-dark sticky-top dashboard-navbar">
@@ -370,11 +369,7 @@
                     </button>
                   </div>
                   <div class="modal-body">
-                    <form
-                      action="#"
-                      method="POST"
-                      id="locationForm"
-                      enctype="multipart/form-data">
+                    <form id="locationForm" enctype="multipart/form-data">
                       <div class="form-group">
                         <label for="name" class="font-weight-bold">Purok</label>
                         <input
@@ -473,11 +468,7 @@
                     </button>
                   </div>
                   <div class="modal-body">
-                    <form
-                      action="#"
-                      method="POST"
-                      id="editLocationForm"
-                      enctype="multipart/form-data">
+                    <form id="editLocationForm" enctype="multipart/form-data">
                       <div class="form-group">
                         <input
                           type="hidden"
