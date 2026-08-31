@@ -844,3 +844,189 @@ body.modal-open .navbar.sticky-top {
     margin-top: 66px !important;
   }
 }
+
+/* =========================================================
+   MANAGE ACCOUNTS - LAPTOP LAYOUT
+   ========================================================= */
+
+@media (min-width: 992px) and (max-width: 1399.98px) {
+  /* Compact sidebar on laptop-sized screens */
+  .wrapper .sidebar,
+  .sidebar {
+    width: 78px !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+
+  .sidebar .text-link {
+    display: none !important;
+  }
+
+  .wrapper .sidebar .nav-bar li a {
+    justify-content: center;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .wrapper .sidebar .nav-bar li a i {
+    width: auto;
+    margin: 0;
+  }
+
+  /* Give content almost the full laptop width */
+  .wrapper .working-panel,
+  .working-panel,
+  .sidebar.collapsed ~ .working-panel,
+  .wrapper.sidebar-collapsed .working-panel {
+    margin-left: 96px !important;
+    margin-right: 12px !important;
+    width: auto !important;
+    min-width: 0 !important;
+  }
+
+  /* Footer follows compact sidebar */
+  .wrapper + footer,
+  .wrapper.sidebar-collapsed + footer {
+    margin-left: 96px !important;
+    width: calc(100% - 96px) !important;
+  }
+}
+
+/* =========================================================
+   MANAGE ACCOUNTS DATATABLES
+   ========================================================= */
+
+.manageAccount-section {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.manageAccount-section .all-accounts,
+.manageAccount-section .all-order {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+#admin-table_wrapper,
+#seller-table_wrapper,
+#user-table_wrapper {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+#admin-table,
+#seller-table,
+#user-table {
+  width: 100% !important;
+}
+
+/* Keep DataTables controls neat */
+#admin-table_wrapper .dataTables_filter,
+#seller-table_wrapper .dataTables_filter,
+#user-table_wrapper .dataTables_filter {
+  margin-bottom: 12px;
+}
+
+#admin-table_wrapper .dataTables_filter input,
+#seller-table_wrapper .dataTables_filter input,
+#user-table_wrapper .dataTables_filter input {
+  max-width: 220px;
+}
+
+/* Small screens */
+@media (max-width: 767.98px) {
+  #admin-table_wrapper .dataTables_length,
+  #seller-table_wrapper .dataTables_length,
+  #user-table_wrapper .dataTables_length,
+  #admin-table_wrapper .dataTables_filter,
+  #seller-table_wrapper .dataTables_filter,
+  #user-table_wrapper .dataTables_filter {
+    float: none !important;
+    width: 100%;
+    text-align: left !important;
+  }
+
+  #admin-table_wrapper .dataTables_filter input,
+  #seller-table_wrapper .dataTables_filter input,
+  #user-table_wrapper .dataTables_filter input {
+    width: 100% !important;
+    max-width: none;
+    margin-top: 6px;
+    margin-left: 0 !important;
+  }
+}
+
+/* =========================================================
+   MANAGE ACCOUNTS SUMMARY CARDS
+   ========================================================= */
+.account-summary-row {
+  align-items: stretch;
+}
+
+.account-summary-row > [class*="col-"] {
+  display: flex;
+}
+
+.account-summary-row .card {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  margin: 0 !important;
+}
+
+.account-summary-row .card-body {
+  display: flex;
+  min-height: 150px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 14px;
+}
+
+.account-summary-row .card h4 {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 0 0 8px;
+  text-align: center;
+  white-space: nowrap;
+  word-break: keep-all;
+  overflow-wrap: normal;
+  hyphens: none;
+  font-size: clamp(0.95rem, 1.4vw, 1.2rem);
+  line-height: 1.25;
+}
+
+.account-summary-row .card h4 i {
+  display: block;
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.account-summary-row .card h5 {
+  margin: 0;
+  font-size: 1.35rem;
+  text-align: center;
+}
+
+@media (max-width: 1199.98px) {
+  .account-summary-row .card-body {
+    min-height: 130px;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .account-summary-row .card-body {
+    min-height: 110px;
+  }
+
+  .account-summary-row .card h4 {
+    font-size: 1rem;
+  }
+}

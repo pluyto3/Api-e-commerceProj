@@ -146,6 +146,7 @@ function setupSidebarToggle() {
     if (isMobileScreen()) {
       $(".sidebar").removeClass("collapsed");
       $(".wrapper").removeClass("sidebar-collapsed");
+      setTimeout(recalculateAccountTables, 350);
 
       // Remove old inline display:none caused by previous jQuery .hide()
       $(".text-link").removeAttr("style");
@@ -337,12 +338,102 @@ function setupRegistrationForm() {
 // =======================================
 function initializeDataTable(selector) {
   $(selector).DataTable({
-    responsive: { details: { type: "column", target: "tr" } },
-    scrollX: true,
+    responsive: true,
     autoWidth: false,
-    columnDefs: [{ targets: "_all", className: "text-center" }],
+
+    columnDefs: [
+      {
+        targets: "_all",
+        className: "text-center",
+      },
+
+      // Action
+      {
+        targets: 8,
+        responsivePriority: 1,
+        orderable: false,
+        searchable: false,
+      },
+
+      // Username
+      {
+        targets: 1,
+        responsivePriority: 2,
+      },
+
+      // Status
+      {
+        targets: 6,
+        responsivePriority: 3,
+      },
+
+      // Role
+      {
+        targets: 5,
+        responsivePriority: 4,
+      },
+
+      // ID
+      {
+        targets: 0,
+        responsivePriority: 5,
+      },
+
+      // Fullname
+      {
+        targets: 3,
+        responsivePriority: 10,
+      },
+
+      // Email
+      {
+        targets: 2,
+        responsivePriority: 20,
+      },
+
+      // Phone
+      {
+        targets: 4,
+        responsivePriority: 30,
+      },
+
+      // Image
+      {
+        targets: 7,
+        responsivePriority: 40,
+        orderable: false,
+        searchable: false,
+      },
+    ],
   });
+
   $(`${selector} thead th`).addClass("text-center");
+
+  setTimeout(() => {
+    const table = $(selector).DataTable();
+    table.columns.adjust();
+
+    if (table.responsive) {
+      table.responsive.recalc();
+    }
+  }, 100);
+}
+
+// =======================================
+// RecalculateAccountTables
+// =======================================
+function recalculateAccountTables() {
+  ["#admin-table", "#seller-table", "#user-table"].forEach((selector) => {
+    if ($.fn.DataTable.isDataTable(selector)) {
+      const table = $(selector).DataTable();
+
+      table.columns.adjust();
+
+      if (table.responsive) {
+        table.responsive.recalc();
+      }
+    }
+  });
 }
 
 // =======================================
@@ -714,6 +805,16 @@ $(document).ready(() => {
     showNoAccountDisplayState();
     return;
   }
+
+  let resizeTimer;
+
+  $(window).on("resize.accountTables", function () {
+    clearTimeout(resizeTimer);
+
+    resizeTimer = setTimeout(() => {
+      recalculateAccountTables();
+    }, 150);
+  });
 
   loadProfileImage();
   setupRegistrationForm();

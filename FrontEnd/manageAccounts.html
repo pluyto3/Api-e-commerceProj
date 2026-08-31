@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -14,24 +14,24 @@
     <link rel="stylesheet" href="assets/css/owl.carousel.min.css" />
     <link rel="stylesheet" href="assets/css/owl.theme.default.min.css" />
     <link rel="stylesheet" href="assets/css/jquery.bxslider.min.css" />
-    <link rel="stylesheet" href="assets/css/datatables.min.css"/>
+    <link rel="stylesheet" href="assets/css/datatables.min.css" />
     <link rel="stylesheet" href="assets/css/stylesheet.css" />
     <link rel="stylesheet" href="assets/css/responsive-fixes.css" />
 
     <!-- jQuery -->
-    <script src="assets/js/jquery-3.5.1.min.js"></script> 
+    <script src="assets/js/jquery-3.5.1.min.js"></script>
 
     <!-- DataTables -->
     <script src="assets/js/datatables.min.js"></script>
 
-    <!-- Bootstrap JS + Others --> 
+    <!-- Bootstrap JS + Others -->
     <script src="assets/js/popper.min.js"></script>
     <script src="assets/js/bootstrap.min.js"></script>
     <script src="assets/js/fontawesome.min.js"></script>
     <script src="assets/js/sweetalert2.all.js"></script>
     <script src="assets/js/owl.carousel.min.js"></script>
     <script src="assets/js/jquery.bxslider.min.js"></script>
-    
+
     <!-- jQuery Cookie Plugin -->
     <script src="assets/js/jquery.cookie.min.js"></script>
 
@@ -41,14 +41,12 @@
     <script src="assets/js/config.js"></script>
     <script src="assets/js/firebase-notification.js"></script>
 
-
     <script src="assets/js/notification-bell.js"></script>
     <script src="assets/js/manageAcc.js"></script>
     <script src="assets/js/role-guard.js"></script>
     <script src="assets/js/sidebar-role.js"></script>
     <script src="assets/js/navbar-count.js"></script>
     <script src="assets/js/navbar-role.js"></script>
-
   </head>
   <body onload="load_user()">
     <!--Navbar-->
@@ -262,14 +260,54 @@
       <!-- Sidebar -->
       <section class="sidebar">
         <ul class="nav-bar">
-          <li id="dashboard"><a href="dashboard.html"><i class="fas fa-tachometer-alt"></i> <span class="text-link"> Dashboard</span></a></li>
-          <li id="account"><a href="account.html"><i class="fas fa-id-badge"></i> <span class="text-link"> Profile</span></a></li>
-          <li id="address"><a href="address.html"><i class="fas fa-address-card"></i> <span class="text-link"> Address</span></a></li>
-          <li id="sidebarAccounts"><a href="manageAccounts.html"><i class="fas fa-images"></i> <span class="text-link"> Accounts</span></a></li>
-          <li id="brand"><a href="brand.html"><i class="fas fa-dolly-flatbed"></i> <span class="text-link"> Brand</span></a></li>
-          <li id="category"><a href="category.html"><i class="fas fa-dolly"></i> <span class="text-link"> Category</span></a></li>
-          <li id="product"><a href="product.html"><i class="fas fa-shopping-basket"></i> <span class="text-link"> Products</span></a></li>
-          <li id="orders"><a href="orderDetails.html"><i class="fas fa-truck"></i> <span class="text-link"> Orders</span></a></li>
+          <li id="dashboard">
+            <a href="dashboard.html"
+              ><i class="fas fa-tachometer-alt"></i>
+              <span class="text-link"> Dashboard</span></a
+            >
+          </li>
+          <li id="account">
+            <a href="account.html"
+              ><i class="fas fa-id-badge"></i>
+              <span class="text-link"> Profile</span></a
+            >
+          </li>
+          <li id="address">
+            <a href="address.html"
+              ><i class="fas fa-address-card"></i>
+              <span class="text-link"> Address</span></a
+            >
+          </li>
+          <li id="sidebarAccounts">
+            <a href="manageAccounts.html"
+              ><i class="fas fa-images"></i>
+              <span class="text-link"> Accounts</span></a
+            >
+          </li>
+          <li id="brand">
+            <a href="brand.html"
+              ><i class="fas fa-dolly-flatbed"></i>
+              <span class="text-link"> Brand</span></a
+            >
+          </li>
+          <li id="category">
+            <a href="category.html"
+              ><i class="fas fa-dolly"></i>
+              <span class="text-link"> Category</span></a
+            >
+          </li>
+          <li id="product">
+            <a href="product.html"
+              ><i class="fas fa-shopping-basket"></i>
+              <span class="text-link"> Products</span></a
+            >
+          </li>
+          <li id="orders">
+            <a href="orderDetails.html"
+              ><i class="fas fa-truck"></i>
+              <span class="text-link"> Orders</span></a
+            >
+          </li>
         </ul>
       </section>
 
@@ -284,7 +322,7 @@
             <!-- Dashboard Cards -->
             <div class="row">
               <!-- Display all the Accounts-->
-              <div class="col-md-3 mt-3">
+              <div class="col-12 col-sm-6 col-xl-3 mt-3">
                 <div class="card bg-orange-g text-white">
                   <div class="card-body">
                     <h4 class="fot-weight-light">
@@ -299,7 +337,7 @@
               </div>
 
               <!-- All Brands -->
-              <div class="col-md-3 mt-3">
+              <div class="col-12 col-sm-6 col-xl-3 mt-3">
                 <div class="card bg-green-g text-white">
                   <div class="card-body">
                     <h4 class="fot-weight-light">
@@ -314,7 +352,7 @@
               </div>
 
               <!-- All Users -->
-              <div class="col-md-3 mt-3">
+              <div class="col-12 col-sm-6 col-xl-3 mt-3">
                 <div class="card bg-blue-g text-white">
                   <div class="card-body">
                     <h4 class="fot-weight-light">
@@ -329,7 +367,7 @@
               </div>
 
               <!-- All Orders -->
-              <div class="col-md-3 mt-3">
+              <div class="col-12 col-sm-6 col-xl-3 mt-3">
                 <div class="card bg-grey-g text-white">
                   <div class="card-body">
                     <h4 class="fot-weight-light">
@@ -398,7 +436,9 @@
                             id="usernameError"></small>
                         </div>
                         <div class="form-group">
-                          <label for="email" class="font-weight-bold">Email</label>
+                          <label for="email" class="font-weight-bold"
+                            >Email</label
+                          >
                           <input
                             type="email"
                             class="form-control"
@@ -443,7 +483,9 @@
                             id="passwordError"></small>
                         </div>
                         <div class="form-group">
-                          <label for="password_confirmation" class="font-weight-bold"
+                          <label
+                            for="password_confirmation"
+                            class="font-weight-bold"
                             >Confirm Password</label
                           >
                           <input
@@ -471,13 +513,17 @@
                             required />
                         </div>
                         <div class="form-group">
-                          <label for="role" class="font-weight-bold">Role</label>
+                          <label for="role" class="font-weight-bold"
+                            >Role</label
+                          >
                           <select
                             class="custom-select"
                             id="role"
                             name="role"
                             required>
-                            <option value="" disabled selected>Select role</option>
+                            <option value="" disabled selected>
+                              Select role
+                            </option>
                             <option value="admin">Admin</option>
                             <option value="seller">Seller</option>
                             <option value="user">Customer</option>
@@ -598,13 +644,17 @@
                           </small>
                         </div>
                         <div class="form-group">
-                          <label for="editRole" class="font-weight-bold">Role</label>
+                          <label for="editRole" class="font-weight-bold"
+                            >Role</label
+                          >
                           <select
                             class="custom-select"
                             id="editRole"
                             name="editRole"
                             required>
-                            <option value="" disabled selected>Select role</option>
+                            <option value="" disabled selected>
+                              Select role
+                            </option>
                             <option value="admin">Admin</option>
                             <option value="seller">Seller</option>
                             <option value="user">Customer</option>
@@ -643,7 +693,7 @@
               <hr class="admin-hr" />
               <table
                 id="admin-table"
-                class="table table-striped table-sm text-center table-hover nowrap">
+                class="table table-striped table-sm text-center table-hover">
                 <thead>
                   <tr class="admin-header">
                     <th>ID</th>
@@ -669,7 +719,7 @@
               <hr class="admin-hr" />
               <table
                 id="seller-table"
-                class="table table-striped table-sm text-center table-hover nowrap">
+                class="table table-striped table-sm text-center table-hover">
                 <thead>
                   <tr class="seller-header">
                     <th>ID</th>
@@ -693,7 +743,7 @@
               <hr class="admin-hr" />
               <table
                 id="user-table"
-                class="table table-striped table-sm text-center table-hover nowrap">
+                class="table table-striped table-sm text-center table-hover">
                 <thead>
                   <tr class="user-header">
                     <th>ID</th>
@@ -713,7 +763,6 @@
           </div>
         </div>
       </section>
-
     </div>
 
     <!--Footer-->
@@ -786,16 +835,11 @@
         top: 50%;
         left: 50%;
         padding: 2px;
-      "
-    >
+      ">
       <img
         src="assets/img/demo_wait.gif"
         width="64"
-        height="64"
-      /><br />Loading..
+        height="64" /><br />Loading..
     </div>
-
   </body>
 </html>
-</html>
-
