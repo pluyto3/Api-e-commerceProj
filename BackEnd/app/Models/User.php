@@ -30,6 +30,7 @@ class User extends Authenticatable
         'token',
         'image',
         'verification_token',
+        'email_verified_at',
     ];
 
     protected $primaryKey = 'user_id';
