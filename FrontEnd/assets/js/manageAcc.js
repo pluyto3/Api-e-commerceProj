@@ -306,13 +306,11 @@ function setupRegistrationForm() {
         // Unauthorized admin
         if (xhr.status === 401 || xhr.status === 403) {
           Swal.fire({
-            title: "Unauthorized",
-            text:
-              xhr.responseJSON?.msg ||
-              "Only administrators can create new accounts.",
-            icon: "error",
+            icon: "warning",
+            title: "Action Not Allowed",
+            text: "This account cannot be permanently deleted.",
+            confirmButtonText: "OK",
           });
-
           return;
         }
 
@@ -351,37 +349,61 @@ function initializeDataTable(selector) {
 // APPEND TABLE ROW
 // =======================================
 function appendTableRow(tableId, user) {
-  const displayRole =
-    user.role === "user"
-      ? "Customer"
-      : user.role === "seller"
-        ? "Seller"
-        : user.role === "admin"
-          ? "Admin"
-          : user.role;
+  const isActive =
+    user.is_active === true || user.is_active === 1 || user.is_active === "1";
 
-  const profileImage = user.image
-    ? `
-      <img
-        src="${ip}/FrontEnd/assets/img/user/${user.image}"
-        width="50"
-        height="50"
-        class="rounded-circle"
-        style="object-fit: cover;"
-        alt="${user.username}"
-        onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';"
-      >
-      <i
-        class="fas fa-user-circle"
-        style="font-size: 50px; color: #adb5bd; display: none;"
-      ></i>
-    `
-    : `
-      <i
-        class="fas fa-user-circle"
-        style="font-size: 50px; color: #adb5bd;"
-      ></i>
+  const statusBadge = isActive
+    ? '<span class="badge badge-success">Active</span>'
+    : '<span class="badge badge-secondary">Inactive</span>';
+
+  const imageHtml = user.image
+    ? `<img
+         src="${ip}/FrontEnd/assets/img/user/${user.image}"
+         width="50"
+         height="50"
+         style="object-fit: cover; border-radius: 50%;"
+       />`
+    : `<i class="fas fa-user-circle fa-3x text-secondary"></i>`;
+
+  let accountStatusButton = "";
+  let deleteButton = "";
+
+  // user_id 1 = protected Super Admin
+  if (Number(user.user_id) !== 1) {
+    if (isActive) {
+      accountStatusButton = `
+        <a
+          href="#"
+          data-id="${user.user_id}"
+          data-username="${user.username}"
+          class="text-warning mx-1 deactivateBtn"
+          title="Deactivate Account">
+          <i class="fas fa-user-slash fa-2x"></i>
+        </a>
+      `;
+    } else {
+      accountStatusButton = `
+        <a
+          href="#"
+          data-id="${user.user_id}"
+          data-username="${user.username}"
+          class="text-primary mx-1 reactivateBtn"
+          title="Reactivate Account">
+          <i class="fas fa-user-check fa-2x"></i>
+        </a>
+      `;
+    }
+
+    deleteButton = `
+      <a
+        href="#"
+        data-id="${user.user_id}"
+        class="text-danger mx-1 deleteBtn"
+        title="Delete Account">
+        <i class="fas fa-trash fa-2x"></i>
+      </a>
     `;
+  }
 
   $(`${tableId} tbody`).append(`
     <tr>
@@ -390,24 +412,23 @@ function appendTableRow(tableId, user) {
       <td>${user.email}</td>
       <td>${user.fullname}</td>
       <td>${user.phone_number}</td>
-      <td>${displayRole}</td>
-      <td>
-        ${profileImage}
-      </td>
-      <td>
-        <a href="#" 
-           data-id="${user.user_id}" 
-           class="text-success mx-1 editBtn" 
-           data-toggle="modal" 
-           data-target="#editAccountModal">
+      <td>${user.role}</td>
+      <td>${statusBadge}</td>
+      <td>${imageHtml}</td>
+
+      <td class="text-nowrap">
+        <a
+          href="#"
+          data-id="${user.user_id}"
+          class="text-success mx-1 editBtn"
+          data-toggle="modal"
+          data-target="#editAccountModal"
+          title="Edit Account">
           <i class="fas fa-edit fa-2x"></i>
         </a>
 
-        <a href="#" 
-           data-id="${user.user_id}" 
-           class="text-danger mx-1 deleteBtn">
-          <i class="fas fa-trash fa-2x"></i>
-        </a>
+        ${accountStatusButton}
+        ${deleteButton}
       </td>
     </tr>
   `);
@@ -523,6 +544,108 @@ function setupAccountUpdate() {
 }
 
 // =======================================
+// DeactivateButtons
+// =======================================
+function setupDeactivateButtons() {
+  $(document).on("click", ".deactivateBtn", function (e) {
+    e.preventDefault();
+
+    const userId = $(this).data("id");
+    const username = $(this).data("username");
+
+    Swal.fire({
+      title: "Deactivate Account?",
+      text: `${username} will no longer be able to log in. Their account and records will be preserved.`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, Deactivate",
+      cancelButtonText: "Cancel",
+    }).then((result) => {
+      if (!result.isConfirmed) return;
+
+      $.ajax({
+        url: `${ip}/api/account/${userId}/deactivate`,
+        method: "PUT",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+
+        success: function (res) {
+          Swal.fire({
+            icon: "success",
+            title: "Account Deactivated",
+            text: res.msg,
+          }).then(() => {
+            location.reload();
+          });
+        },
+
+        error: function (xhr) {
+          Swal.fire({
+            icon: "error",
+            title: "Unable to Deactivate",
+            text:
+              xhr.responseJSON?.msg || "The account could not be deactivated.",
+          });
+        },
+      });
+    });
+  });
+}
+
+// =======================================
+// ReactivateButtons
+// =======================================
+function setupReactivateButtons() {
+  $(document).on("click", ".reactivateBtn", function (e) {
+    e.preventDefault();
+
+    const userId = $(this).data("id");
+    const username = $(this).data("username");
+
+    Swal.fire({
+      title: "Reactivate Account?",
+      text: `${username} will be allowed to log in again.`,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Yes, Reactivate",
+      cancelButtonText: "Cancel",
+    }).then((result) => {
+      if (!result.isConfirmed) return;
+
+      $.ajax({
+        url: `${ip}/api/account/${userId}/reactivate`,
+        method: "PUT",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+
+        success: function (res) {
+          Swal.fire({
+            icon: "success",
+            title: "Account Reactivated",
+            text: res.msg,
+          }).then(() => {
+            location.reload();
+          });
+        },
+
+        error: function (xhr) {
+          Swal.fire({
+            icon: "error",
+            title: "Unable to Reactivate",
+            text:
+              xhr.responseJSON?.msg || "The account could not be reactivated.",
+          });
+        },
+      });
+    });
+  });
+}
+
+// =======================================
 // DELETE ACCOUNT
 // =======================================
 function setupDeleteButtons() {
@@ -547,12 +670,33 @@ function setupDeleteButtons() {
             Authorization: `Bearer ${token}`,
             Accept: "application/json",
           },
-          success: (res) => {
-            Swal.fire("Deleted!", res.msg, "success").then(() =>
-              location.reload(),
-            );
+          success: function (res) {
+            Swal.fire({
+              icon: "success",
+              title: "Deleted!",
+              text: res.msg,
+            }).then(() => {
+              location.reload();
+            });
           },
-          error: (xhr) => Swal.fire("Error!", xhr.responseText, "error"),
+          error: function (xhr) {
+            if (xhr.status === 409) {
+              Swal.fire({
+                icon: "warning",
+                title: "Account Cannot Be Deleted",
+                text: "This account is linked to existing records. Please deactivate the account instead to preserve its history.",
+                confirmButtonText: "OK",
+              });
+              return;
+            }
+
+            Swal.fire({
+              icon: "error",
+              title: "Unable to Delete Account",
+              text: "Something went wrong while deleting the account. Please try again.",
+              confirmButtonText: "OK",
+            });
+          },
         });
       }
     });
@@ -575,6 +719,8 @@ $(document).ready(() => {
   setupRegistrationForm();
   setupEditButtons();
   setupAccountUpdate();
+  setupDeactivateButtons();
+  setupReactivateButtons();
   setupDeleteButtons();
 
   // Load all account tables and counts

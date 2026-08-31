@@ -56,6 +56,8 @@ Route::controller(AuthController::class)->group(function () {
   Route::post('/resend-verification', 'resendVerificationEmail') ->middleware('throttle:3,1'); // Resend Verification Email
   Route::post('/admin/create-account', 'adminCreateAccount'); // Admin Create Account
   Route::put('/account/profile', 'updateOwnAccount'); // Update logged-in user's own profile
+  Route::put('/account/{id}/deactivate', 'deactivateAccount'); // Deactivate Api
+  Route::put('/account/{id}/reactivate', 'reactivateAccount'); // Reactivate Api
 });
 
 // Product Routes

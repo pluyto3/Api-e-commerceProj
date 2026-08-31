@@ -31,6 +31,7 @@ class User extends Authenticatable
         'image',
         'verification_token',
         'email_verified_at',
+        'is_active',
     ];
 
     protected $primaryKey = 'user_id';
@@ -51,6 +52,7 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'is_active' => 'boolean',
     ];
 
     public function cartItems()

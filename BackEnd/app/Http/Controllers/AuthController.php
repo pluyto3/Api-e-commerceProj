@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Mail;
 use App\Services\PushNotificationService;
 use App\Models\FcmToken;
+use Illuminate\Support\Facades\DB;
 
 class AuthController extends Controller
 {
@@ -446,9 +447,15 @@ class AuthController extends Controller
         if (!$user) {
             return response()->json(['msg' => 'Username does not exist.'], 400);
         }
-
+        
         if (!Hash::check($request->password, $user->password)) {
             return response()->json(['msg' => 'Wrong password.'], 401);
+        }
+
+        if (!$user->is_active) {
+            return response()->json([
+                'msg' => 'Your account has been deactivated. Please contact the administrator.'
+            ], 403);
         }
 
         if (is_null($user->email_verified_at)) {
@@ -775,11 +782,138 @@ class AuthController extends Controller
     }
 
     /**
+     * Deactivate Account
+     */
+    public function deactivateAccount(Request $request, $id)
+    {
+        $token = $request->bearerToken();
+
+        if (!$token) {
+            return response()->json([
+                'msg' => 'No Token Provided.'
+            ], 401);
+        }
+
+        $admin = User::where('token', $token)->first();
+
+        if (!$admin || $admin->role !== 'admin') {
+            return response()->json([
+                'msg' => 'Unauthorized. Only administrators can deactivate accounts.'
+            ], 403);
+        }
+
+        $account = User::find($id);
+
+        if (!$account) {
+            return response()->json([
+                'msg' => 'Account not found.'
+            ], 404);
+        }
+
+        // Protect Super Admin
+        if ((int) $account->user_id === 1) {
+            return response()->json([
+                'msg' => 'Super Admin cannot be deactivated.'
+            ], 403);
+        }
+
+        // Prevent an admin from deactivating their own current account
+        if ((int) $admin->user_id === (int) $account->user_id) {
+            return response()->json([
+                'msg' => 'You cannot deactivate your own account.'
+            ], 403);
+        }
+
+        if (!$account->is_active) {
+            return response()->json([
+                'msg' => 'This account is already deactivated.'
+            ], 409);
+        }
+
+        $account->is_active = false;
+
+        // Immediately invalidate the user's current session
+        $account->token = '';
+        $account->save();
+
+        // Remove push-notification tokens as well
+        FcmToken::where('user_id', $account->user_id)->delete();
+
+        return response()->json([
+            'msg' => 'Account deactivated successfully.',
+            'user' => [
+                'user_id' => $account->user_id,
+                'username' => $account->username,
+                'role' => $account->role,
+                'is_active' => $account->is_active,
+            ],
+        ], 200);
+    }
+
+    /**
+     * Reactivate Account
+     */
+    public function reactivateAccount(Request $request, $id)
+    {
+        $token = $request->bearerToken();
+
+        if (!$token) {
+            return response()->json([
+                'msg' => 'No Token Provided.'
+            ], 401);
+        }
+
+        $admin = User::where('token', $token)->first();
+
+        if (!$admin || $admin->role !== 'admin') {
+            return response()->json([
+                'msg' => 'Unauthorized. Only administrators can reactivate accounts.'
+            ], 403);
+        }
+
+        $account = User::find($id);
+
+        if (!$account) {
+            return response()->json([
+                'msg' => 'Account not found.'
+            ], 404);
+        }
+
+        if ($account->is_active) {
+            return response()->json([
+                'msg' => 'This account is already active.'
+            ], 409);
+        }
+
+        $account->is_active = true;
+        $account->save();
+
+        return response()->json([
+            'msg' => 'Account reactivated successfully.',
+            'user' => [
+                'user_id' => $account->user_id,
+                'username' => $account->username,
+                'role' => $account->role,
+                'is_active' => $account->is_active,
+            ],
+        ], 200);
+    }
+
+    /**
      * Get all Admin accounts
      */
     public function getAdmins(){
 
-        $admins = User::where('role', 'admin')->get(['user_id', 'username', 'email', 'fullname', 'phone_number', 'role', 'image']);
+        $admins = User::where('role', 'admin')->get([
+            'user_id',
+            'username',
+            'email',
+            'fullname',
+            'phone_number',
+            'role',
+            'image',
+            'is_active',
+        ]);
 
         return response()->json([
             'admins' => $admins
@@ -790,8 +924,16 @@ class AuthController extends Controller
      * Get All Seller Accounts
      */
     public function getSellers(){
-
-        $sellers = User::where('role', 'seller')->get(['user_id', 'username', 'email', 'fullname', 'phone_number', 'role', 'image']);
+        $sellers = User::where('role', 'seller')->get([
+            'user_id',
+            'username',
+            'email',
+            'fullname',
+            'phone_number',
+            'role',
+            'image',
+            'is_active',
+        ]);
 
         return response()->json([
             'sellers' => $sellers
@@ -803,7 +945,16 @@ class AuthController extends Controller
      */
     public function getUsers(){
 
-        $users = User::where('role', 'user')->get(['user_id', 'username', 'email', 'fullname', 'phone_number', 'role', 'image']);
+        $users = User::where('role', 'user')->get([
+            'user_id',
+            'username',
+            'email',
+            'fullname',
+            'phone_number',
+            'role',
+            'image',
+            'is_active',
+        ]);
 
         return response()->json([
             'users' => $users
@@ -815,7 +966,7 @@ class AuthController extends Controller
      */
     public function accountsSummary(){
 
-        $columns = ['user_id', 'username', 'email', 'fullname', 'phone_number', 'role', 'image'];
+        $columns = ['user_id', 'username', 'email', 'fullname', 'phone_number', 'role', 'image', 'is_active',];
         $admins = User::where('role', 'admin')->get($columns);
         $sellers = User::where('role', 'seller')->get($columns);
         $users = User::where('role', 'user')->get($columns);
@@ -1036,53 +1187,142 @@ class AuthController extends Controller
 
 
     /**
-     * Deleting Accounts 
+     * Permanently Delete Account
      */
-    public function deleteAccount(Request $request, $id) {
+    public function deleteAccount(Request $request, $id)
+    {
         $token = $request->bearerToken();
-        if($token) {
 
-            $user = User::where('token', $token)->first();
-
-            if (!$user || $user->role !== 'admin') {
-                return response()->json([
-                    'msg' => 'Not Authorized. Only Admins can Delete Accounts'
-                ], 403);
-
-                }
-
-                // Prevent deleting super admin or the id = 1
-                if ($id == 1) {
-                    return response()->json([
-                        'msg' => 'Super Admin cannot be deleted.'
-                    ], 403);
-                }
-
-                $account = User::find($id);
-
-                if (!$account) {
-                return response()->json(['msg' => 'Account not found.'], 404);
-                }
-
-                // If this is the last admin, block deletion
-                // if ($account->role === 'admin' && User::where('role', 'admin')->count() === 1) {
-                //     return response()->json([
-                //         'msg' => 'At least one admin must remain in the system.'
-                //     ], 403);
-                // }
-
-                $account->delete();
-
-                return response()->json([
-                    'msg' => 'Account deleted successfully.',
-                    'id' => $id,
-                    'status' => 200,
-                ]);
-        } else {    
+        if (!$token) {
             return response()->json([
                 'msg' => 'No Token Provided.'
-            ], 400);
+            ], 401);
         }
+
+        $admin = User::where('token', $token)->first();
+
+        if (!$admin || $admin->role !== 'admin') {
+            return response()->json([
+                'msg' => 'Unauthorized. Only administrators can delete accounts.'
+            ], 403);
+        }
+
+        $account = User::find($id);
+
+        if (!$account) {
+            return response()->json([
+                'msg' => 'Account not found.'
+            ], 404);
+        }
+
+        // Protect Super Admin
+        if ((int) $account->user_id === 1) {
+            return response()->json([
+                'msg' => 'Super Admin cannot be deleted.'
+            ], 403);
+        }
+
+        // Prevent currently logged-in admin from deleting themselves
+        if ((int) $admin->user_id === (int) $account->user_id) {
+            return response()->json([
+                'msg' => 'You cannot delete your own account.'
+            ], 403);
+        }
+
+        /*
+        * -----------------------------------------------------
+        * Check for important records/history.
+        * Accounts with these records must be deactivated
+        * instead of permanently deleted.
+        * -----------------------------------------------------
+        */
+
+        $hasImportantRecords =
+            // Customer/order history
+            DB::table('checkouts')
+                ->where('user_id', $account->user_id)
+                ->exists()
+
+            || DB::table('orders')
+                ->where('user_id', $account->user_id)
+                ->exists()
+
+            // Seller products/order history
+            || DB::table('products')
+                ->where('seller_id', $account->user_id)
+                ->exists()
+
+            || DB::table('checkout_items')
+                ->where('seller_id', $account->user_id)
+                ->exists()
+
+            || DB::table('brands')
+                ->where('seller_id', $account->user_id)
+                ->exists()
+
+            || DB::table('categories')
+                ->where('seller_id', $account->user_id)
+                ->exists()
+
+            || DB::table('product_edit_requests')
+                ->where('seller_id', $account->user_id)
+                ->exists()
+
+            // Admin approval/audit history
+            || DB::table('brands')
+                ->where('approved_by', $account->user_id)
+                ->exists()
+
+            || DB::table('categories')
+                ->where('approved_by', $account->user_id)
+                ->exists()
+
+            || DB::table('products')
+                ->where('approved_by', $account->user_id)
+                ->exists()
+
+            || DB::table('checkouts')
+                ->where('cancelled_by', $account->user_id)
+                ->exists();
+
+        if ($hasImportantRecords) {
+            return response()->json([
+                'msg' => 'This account has existing records and cannot be permanently deleted. Please deactivate the account instead.'
+            ], 409);
+        }
+
+        /*
+        * -----------------------------------------------------
+        * Account has no important history.
+        * Remove temporary/support records first.
+        * -----------------------------------------------------
+        */
+
+        DB::transaction(function () use ($account) {
+
+            DB::table('add_to_cart')
+                ->where('user_id', $account->user_id)
+                ->delete();
+
+            DB::table('locations')
+                ->where('user_id', $account->user_id)
+                ->delete();
+
+            DB::table('fcm_tokens')
+                ->where('user_id', $account->user_id)
+                ->delete();
+
+            DB::table('app_notifications')
+                ->where('user_id', $account->user_id)
+                ->delete();
+
+            $account->delete();
+        });
+
+        return response()->json([
+            'msg' => 'Account permanently deleted successfully.',
+            'id' => $id,
+        ], 200);
     }
 
     /**
