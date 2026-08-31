@@ -435,6 +435,13 @@ function loadAccountsSummary() {
 function setupEditButtons() {
   $(document).on("click", ".editBtn", function (e) {
     e.preventDefault();
+
+    // Clear validation from previously edited account
+    $("#editAccountForm .error-message").text("");
+    $(
+      "#editAccountForm .form-control, #editAccountForm .custom-select",
+    ).removeClass("is-invalid");
+
     const userId = $(this).data("id");
     $("#user_id").val(userId);
 

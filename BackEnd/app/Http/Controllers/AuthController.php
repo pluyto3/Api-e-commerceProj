@@ -591,9 +591,17 @@ class AuthController extends Controller
                     'editRole'     => 'sometimes|string|in:admin,seller,user',
                     'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:102400'
                 ], [
-                    'username.unique' => 'This username is already taken.',
-                    'email.unique'    => 'This email is already registered.',
-                    'role.in'         => 'Role must be either admin, seller, or user.',
+                    'editUsername.unique' =>
+                        'This username is already taken.',
+
+                    'editEmail.unique' =>
+                        'This email is already registered.',
+
+                    'editPhone_number.unique' =>
+                        'This phone number is already registered.',
+
+                    'editRole.in' =>
+                        'Role must be either Admin, Seller, or Customer.',
                 ]);
 
                 $account->username = $request->editUsername;
