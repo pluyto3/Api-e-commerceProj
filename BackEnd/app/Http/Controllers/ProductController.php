@@ -416,17 +416,31 @@ class ProductController extends Controller
                         'msg' => 'Unauthorized. Sellers can only delete their own products.'
                     ], 403);
                 }
-                if (
-                    $user->role === 'seller' &&
-                    strtolower(
-                        $product->approval_status ?? ''
-                    ) === 'approved'
-                ) {
+
+                $approvalStatus = strtolower(
+                    $product->approval_status ?? 'pending'
+                );
+
+                // Never permanently delete a product that already has order history.
+                $hasOrderHistory = DB::table('checkout_items')
+                    ->where('product_id', $product->product_id)
+                    ->exists();
+
+                if ($hasOrderHistory) {
+                    return response()->json([
+                        'msg' =>
+                            'This product has existing order history and cannot be permanently deleted. Deactivate the product instead.'
+                    ], 409);
+                }
+
+                // Approved products should be preserved.
+                if ($approvalStatus === 'approved') {
                     return response()->json([
                         'msg' =>
                             'Approved products cannot be permanently deleted. Deactivate the product instead.'
-                    ], 403);
+                    ], 409);
                 }
+
                 $product->delete();
                 return response()->json([
                     'msg' => 'Product was successfully deleted.'

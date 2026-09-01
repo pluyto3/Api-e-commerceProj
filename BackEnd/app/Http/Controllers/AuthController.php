@@ -30,12 +30,13 @@ class AuthController extends Controller
             'phone_number' =>'required|string|max:13|unique:users,phone_number',
             'password' => 'required|string|min:8|confirmed',
             'fullname' => 'required|string|max:255',
-            'role' => 'required|string|max:50',
+            'role' => 'required|string|in:user,seller',
         ], [
             'username.unique' => 'This username is already taken.',
             'email.unique' => 'This email is already registered.',
             'phone_number.unique' => 'This phone number is already been registered.',
             'password.confirmed' => 'Password confirmation does not match.',
+            'role.in' => 'You may register only as a Customer or Seller.',
         ]);
 
         if ($validator->fails()) {

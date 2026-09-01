@@ -32,10 +32,10 @@ Route::controller(AuthController::class)->group(function () {
   Route::post('/register', 'register'); // Register a new user
   Route::post('/login', 'login'); // Login an existing user 
   Route::post('/logout', 'logout'); // Logout the authenticated user
-  Route::get('/admins', 'getAdmins'); // Get all admins
-  Route::get('/sellers', 'getSellers'); // Get all sellers
-  Route::get('/users', 'getUsers'); // Get all users
-  Route::get('/accountsSummary', 'accountsSummary'); // Get account tables and counts
+  Route::get('/admins', 'getAdmins')->middleware('admin.token'); // Get all admins
+  Route::get('/sellers', 'getSellers')->middleware('admin.token'); // Get all sellers
+  Route::get('/users', 'getUsers')->middleware('admin.token'); // Get all users
+  Route::get('/accountsSummary', 'accountsSummary')->middleware('admin.token'); // Get account tables and counts
   Route::get('/countedAccounts', 'countAccounts'); // Count all users
   Route::get('/countedAdmins', 'countAdmins'); // Count all admins
   Route::get('/countedSellers', 'countSellers'); // Count all sellers
@@ -67,25 +67,13 @@ Route::group(['prefix' => 'products'], function($router) {
         Route::post('/', 'createProduct'); // Create a new product
         Route::get('/{id}', 'getProduct_id'); // Get a specific product
         Route::put('/{id}', 'updateProduct'); // Update a specific product
-        Route::put('/{id}/approve', 'approveProduct'); // Approve a product (admin)
-        Route::put('/{id}/reject', 'rejectProduct'); // Reject a product (admin)
+        Route::put('/{id}/approve', 'approveProduct')->middleware('admin.token'); // Approve a product (admin)
+        Route::put('/{id}/reject', 'rejectProduct')->middleware('admin.token'); // Reject a product (admin)
         Route::delete('/{id}', 'deleteProduct'); // Delete a specific product
         Route::put('/{id}/stock', 'updateStock'); // Update product stock
         Route::put('/{id}/availability', 'updateAvailability'); // Deactivate a specific product
     });
 });
-
-// Order Routes
-// Route::group(['prefix' => 'orders'], function($router) {
-//     Route::controller(OrderController::class)->group(function () {
-//         Route::get('/', 'index'); // Get all orders 
-//         Route::get('/detail/{id}', 'get_order_id'); // Get a specific order by ID
-//         Route::post('/', 'createOrder'); // Create a new Order
-//         Route::get('/items/{id}', 'get_order_items'); // Get order items by ID
-//         Route::get('/user/{id}', 'get_user_orders'); // Get User Orders by ID
-//         Route::post('/status/{id}', 'change_order_status'); // Get User Orders by ID
-//     });
-// });
 
 // Category Routes
 Route::group(['prefix' => 'category'], function($router) {
@@ -175,10 +163,8 @@ Route::group(['prefix' => 'seller'], function($router) {
 Route::controller(FcmTokenController::class)->group(function () {
     Route::post('/fcm-token', 'store');
     Route::delete('/fcm-token', 'destroy');
+    Route::post('/test-push/{userId}', 'sendTestNotification');
 });
-
-// Test Notification Route
-Route::post('/test-push/{userId}', [FcmTokenController::class, 'sendTestNotification']);
 
 // Notification Routes
 Route::group(['prefix' => 'notifications'], function($router) {
