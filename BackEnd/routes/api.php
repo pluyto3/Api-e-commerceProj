@@ -79,15 +79,13 @@ Route::group(['prefix' => 'products'], function($router) {
 Route::group(['prefix' => 'category'], function($router) {
     Route::controller(CategoryController::class)->group(function () {
         Route::get('/', 'index'); // Get all categories
-        Route::post('/', 'createCategory'); // Create a new category
-        Route::put('/{id}/approve', 'approveCategory'); // Approve a category (admin)
-        Route::put('/{id}/reject', 'rejectCategory'); // Reject a category (admin)
+        Route::post('/', 'createCategory')->middleware('admin.token'); // Create a new category Only for Admin
         Route::get('/{id}', 'getCategory_id'); // Get a specific category by ID
-        Route::delete('/{id}', 'deleteCategory'); // Delete a specific category by ID
-        Route::put('/{id}', 'updateCategory'); // Update a specific category
-        Route::post('/{id}', 'updateCategory'); // Update a specific category
-        Route::put('/{id}/deactivate', 'deactivateCategory'); // Deactivate a specific category by ID
-        Route::put('/{id}/reactivate', 'reactivateCategory'); // Reactivate a specific category by ID
+        Route::delete('/{id}', 'deleteCategory')->middleware('admin.token'); // Delete a specific category by ID
+        Route::put('/{id}', 'updateCategory')->middleware('admin.token'); // Update a specific category
+        Route::post('/{id}', 'updateCategory')->middleware('admin.token'); // Update a specific category
+        Route::put('/{id}/deactivate', 'deactivateCategory')->middleware('admin.token'); // Deactivate a specific category by ID
+        Route::put('/{id}/reactivate', 'reactivateCategory')->middleware('admin.token'); // Reactivate a specific category by ID
     });
 });
 
