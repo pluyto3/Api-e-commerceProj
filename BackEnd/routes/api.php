@@ -94,14 +94,14 @@ Route::group(['prefix' => 'brands'], function($router) {
     Route::controller(BrandsController::class)->group(function () {
         Route::get('/', 'index'); // Get all brands
         Route::post('/', 'createBrands'); // Create a new brand
-        Route::put('/{id}/approve', 'approveBrand'); // Approve a brand (admin)
-        Route::put('/{id}/reject', 'rejectBrand'); // Reject a brand (admin)
+        Route::put('/{id}/approve', 'approveBrand')->middleware('admin.token'); // Approve a brand (admin)
+        Route::put('/{id}/reject', 'rejectBrand')->middleware('admin.token'); // Reject a brand (admin)
         Route::get('/{id}', 'getBrands_id'); // Get a specific brand by ID
         Route::put('/{id}', 'updateBrands'); // Update a specific brand by ID
         Route::post('/{id}', 'updateBrands'); // Update a specific brand by ID
         Route::delete('/{id}', 'deleteBrands'); // Delete a specific brand by ID
-        Route::put('/{id}/deactivate', 'deactivateBrand'); // Deactivate a specific brand by ID
-        Route::put('/{id}/reactivate', 'reactivateBrand'); // Reactivate a specific brand by ID
+        Route::put('/{id}/deactivate', 'deactivateBrand')->middleware('admin.token'); // Deactivate a specific brand by ID
+        Route::put('/{id}/reactivate', 'reactivateBrand')->middleware('admin.token'); // Reactivate a specific brand by ID
     });
 });
 
