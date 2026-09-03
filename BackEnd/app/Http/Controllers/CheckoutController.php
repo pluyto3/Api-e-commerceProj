@@ -11,6 +11,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use App\Services\PushNotificationService;
 
@@ -73,6 +74,47 @@ class CheckoutController extends Controller
             if ((int) $product->seller_id === (int) $user->user_id) {
                 throw ValidationException::withMessages([
                     'item_ids' => "You cannot check out your own product: {$product->product_name}.",
+                ]);
+            }
+
+            /*
+            * Seller must still exist and be active.
+            */
+            if (
+                !$product->seller ||
+                !$product->seller->is_active
+            ) {
+                throw ValidationException::withMessages([
+                    'item_ids' =>
+                        "{$product->product_name} is unavailable because the Seller account is inactive."
+                ]);
+            }
+
+            /*
+            * Brand must still be approved and active.
+            */
+            if (
+                !$product->brand ||
+                strtolower($product->brand->status ?? '') !== 'approved' ||
+                !$product->brand->is_active
+            ) {
+                throw ValidationException::withMessages([
+                    'item_ids' =>
+                        "{$product->product_name} is unavailable because its Brand is inactive or unavailable."
+                ]);
+            }
+
+            /*
+            * Category must still be approved and active.
+            */
+            if (
+                !$product->category ||
+                strtolower($product->category->status ?? '') !== 'approved' ||
+                !$product->category->is_active
+            ) {
+                throw ValidationException::withMessages([
+                    'item_ids' =>
+                        "{$product->product_name} is unavailable because its Category is inactive or unavailable."
                 ]);
             }
 
@@ -333,6 +375,36 @@ class CheckoutController extends Controller
     }
 
     /**
+     * Send push notification safely, logging any failures.
+     */
+    private function sendPushSafely(
+        int $userId,
+        string $title,
+        string $message,
+        string $link,
+        string $type,
+        $relatedId = null
+    ): void {
+        try {
+            app(PushNotificationService::class)->sendToUser(
+                $userId,
+                $title,
+                $message,
+                $link,
+                $type,
+                $relatedId
+            );
+        } catch (\Throwable $e) {
+            Log::warning('Checkout push notification failed.', [
+                'user_id' => $userId,
+                'type' => $type,
+                'related_id' => $relatedId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
      * Create checkout, order items, and stock deduction atomically.
      */
     public function createCheckout(Request $request) {
@@ -347,6 +419,13 @@ class CheckoutController extends Controller
         if (!$user->is_active) {
             return response()->json([
                 'msg' => 'Your account has been deactivated.'
+            ], 403);
+        }
+
+        // Only buyer accounts may place orders.
+        if ($user->role !== 'user') {
+            return response()->json([
+                'msg' => 'Only customer accounts can place orders.'
             ], 403);
         }
 
@@ -391,7 +470,12 @@ class CheckoutController extends Controller
             }
 
             $productIds = $cartItems->pluck('product_id')->unique()->values();
-            $products = Product::whereIn('product_id', $productIds)
+            $products = Product::with([
+                    'seller',
+                    'brand',
+                    'category'
+                ])
+                ->whereIn('product_id', $productIds)
                 ->lockForUpdate()
                 ->get()
                 ->keyBy('product_id');
@@ -517,7 +601,7 @@ class CheckoutController extends Controller
         $formatted = $this->formatOrder($checkout);
 
         foreach ($stockAlerts as $alert) {
-            app(PushNotificationService::class)->sendToUser(
+            $this->sendPushSafely(
                 $alert['seller_id'],
                 $alert['title'],
                 $alert['message'],
@@ -536,7 +620,7 @@ class CheckoutController extends Controller
             ->values();
 
         foreach ($sellerIds as $sellerId) {
-            app(PushNotificationService::class)->sendToUser(
+            $this->sendPushSafely(
                 $sellerId,
                 'New Order Received',
                 'You received a new order #' . $orderId . '.',
@@ -561,13 +645,22 @@ class CheckoutController extends Controller
     {
         $user = $this->getAuthenticatedUser($request);
 
+        // User must be authenticated.
         if (!$user) {
             return response()->json(['msg' => 'Invalid Token.'], 401);
         }
 
+        // User must be active.
         if (!$user->is_active) {
             return response()->json([
                 'msg' => 'Your account has been deactivated.'
+            ], 403);
+        }
+
+        // Only customer accounts may access buyer order history.
+        if ($user->role !== 'user') {
+            return response()->json([
+                'msg' => 'Only customer accounts can access this order history.'
             ], 403);
         }
 
@@ -597,6 +690,13 @@ class CheckoutController extends Controller
         if (!$user->is_active) {
             return response()->json([
                 'msg' => 'Your account has been deactivated.'
+            ], 403);
+        }
+
+        // Only customer accounts may access buyer order details.
+        if ($user->role !== 'user') {
+            return response()->json([
+                'msg' => 'Only customer accounts can access buyer order details.'
             ], 403);
         }
 
@@ -672,11 +772,22 @@ class CheckoutController extends Controller
         $paymentStatus = $incomingPayment
             ? $this->normalizePaymentStatus($incomingPayment)
             : null;
+        
+        if (
+            $paymentStatus &&
+            !in_array(
+                $paymentStatus,
+                self::PAYMENT_STATUSES,
+                true
+            )
+        ) {
+            return response()->json([
+                'msg' => 'Invalid payment status value.'
+            ], 422);
+        }
 
         /*
-        * Cancellation will use a separate flow because
-        * partial seller cancellation affects stock,
-        * totals and payment/refund handling.
+        * Payment cancellation must use the order cancellation workflow.
         */
         if ($shippingStatus === 'cancelled') {
             return response()->json([
@@ -1132,26 +1243,25 @@ class CheckoutController extends Controller
                 $sellerOrder->seller?->username
                     ?? 'Seller';
 
-            app(PushNotificationService::class)
-                ->sendToUser(
-                    $buyerUserId,
-                    'Order Status Updated',
-                    $sellerName .
-                        ' updated items in order #' .
-                        $orderId .
-                        ' to ' .
-                        ucfirst(
-                            str_replace(
-                                '_',
-                                ' ',
-                                $newSellerShippingStatus
-                            )
-                        ) .
-                        '.',
-                    'orderDetails.html',
-                    'order_status',
-                    $orderId
-                );
+            $this->sendPushSafely(
+                $buyerUserId,
+                'Order Status Updated',
+                $sellerName .
+                    ' updated items in order #' .
+                    $orderId .
+                    ' to ' .
+                    ucfirst(
+                        str_replace(
+                            '_',
+                            ' ',
+                            $newSellerShippingStatus
+                        )
+                    ) .
+                    '.',
+                'orderDetails.html',
+                'order_status',
+                $orderId
+            );
         }
 
         if ($trackingChanged) {
@@ -1160,18 +1270,17 @@ class CheckoutController extends Controller
                 $sellerOrder->seller?->username
                     ?? 'Seller';
 
-            app(PushNotificationService::class)
-                ->sendToUser(
-                    $buyerUserId,
-                    'Tracking Number Updated',
-                    $sellerName .
-                        ' added tracking information for order #' .
-                        $orderId .
-                        '.',
-                    'orderDetails.html',
-                    'tracking_update',
-                    $orderId
-                );
+            $this->sendPushSafely(
+                $buyerUserId,
+                'Tracking Number Updated',
+                $sellerName .
+                    ' added tracking information for order #' .
+                    $orderId .
+                    '.',
+                'orderDetails.html',
+                'tracking_update',
+                $orderId
+            );
         }
 
         if ($paymentChanged) {
@@ -1198,8 +1307,7 @@ class CheckoutController extends Controller
                         ) .
                         '.';
 
-            app(PushNotificationService::class)
-                ->sendToUser(
+                $this->sendPushSafely(
                     $buyerUserId,
                     $title,
                     $message,
@@ -1294,6 +1402,13 @@ class CheckoutController extends Controller
         if (!$user->is_active) {
             return response()->json([
                 'msg' => 'Your account has been deactivated.'
+            ], 403);
+        }
+
+        // Only customers and administrators may cancel orders.
+        if (!in_array($user->role, ['user', 'admin'], true)) {
+            return response()->json([
+                'msg' => 'Only customers or administrators can cancel orders.'
             ], 403);
         }
 
@@ -1551,15 +1666,14 @@ class CheckoutController extends Controller
                     : 'A buyer cancelled order #' .
                         $checkout->checkout_id . '.';
 
-            app(PushNotificationService::class)
-                ->sendToUser(
-                    $sellerId,
-                    'Order Cancelled',
-                    $message,
-                    'orderDetails.html',
-                    'order_cancelled',
-                    $checkout->checkout_id
-                );
+            $this->sendPushSafely(
+                $sellerId,
+                'Order Cancelled',
+                $message,
+                'orderDetails.html',
+                'order_cancelled',
+                $checkout->checkout_id
+            );
         }
 
         /*
@@ -1568,17 +1682,16 @@ class CheckoutController extends Controller
         */
         if ($user->role === 'admin') {
 
-            app(PushNotificationService::class)
-                ->sendToUser(
-                    $checkout->user_id,
-                    'Order Cancelled',
-                    'Your order #' .
-                        $checkout->checkout_id .
-                        ' was cancelled by Admin.',
-                    'orderDetails.html',
-                    'order_cancelled',
-                    $checkout->checkout_id
-                );
+            $this->sendPushSafely(
+                $checkout->user_id,
+                'Order Cancelled',
+                'Your order #' .
+                    $checkout->checkout_id .
+                    ' was cancelled by Admin.',
+                'orderDetails.html',
+                'order_cancelled',
+                $checkout->checkout_id
+            );
         }
 
         return response()->json([
@@ -1663,41 +1776,79 @@ class CheckoutController extends Controller
     {
         $user = $this->getAuthenticatedUser($request);
 
-        // User must be authenticated.
-        if (!$user || !in_array($user->role, ['admin', 'seller'], true)) {
-            return response()->json(['msg' => 'Unauthorized'], 403);
+        if (
+            !$user ||
+            !in_array($user->role, ['admin', 'seller'], true)
+        ) {
+            return response()->json([
+                'msg' => 'Unauthorized'
+            ], 403);
         }
 
-        // User must be active.
         if (!$user->is_active) {
             return response()->json([
                 'msg' => 'Your account has been deactivated.'
             ], 403);
         }
 
-        $query = Checkout::query();
+        /*
+        * Seller:
+        * Count this Seller's own fulfillment records.
+        */
+       if ($user->role === 'seller') {
 
-        if ($user->role === 'seller') {
-            $query->whereHas('items', function ($q) use ($user) {
-                $q->where('seller_id', $user->user_id);
-            });
-        }
-
-        $orders = $query->selectRaw('YEAR(created_at) as year, MONTH(created_at) as month, COUNT(*) as total')
+        $orders = CheckoutSellerOrder::where(
+                'checkout_seller_orders.seller_id',
+                $user->user_id
+            )
+            ->join(
+                'checkouts',
+                'checkouts.checkout_id',
+                '=',
+                'checkout_seller_orders.checkout_id'
+            )
+            ->selectRaw(
+                'YEAR(checkouts.created_at) as year,
+                MONTH(checkouts.created_at) as month,
+                COUNT(*) as total'
+            )
             ->groupBy('year', 'month')
             ->orderBy('year')
             ->orderBy('month')
             ->get();
 
+        } else {
+
+            /*
+            * Admin:
+            * Count overall checkouts.
+            */
+            $orders = Checkout::selectRaw(
+                    'YEAR(created_at) as year,
+                    MONTH(created_at) as month,
+                    COUNT(*) as total'
+                )
+                ->groupBy('year', 'month')
+                ->orderBy('year')
+                ->orderBy('month')
+                ->get();
+        }
+
         $labels = [];
         $data = [];
 
         foreach ($orders as $order) {
-            $labels[] = Carbon::create($order->year, $order->month)->format('M Y');
+            $labels[] = Carbon::create(
+                $order->year,
+                $order->month
+            )->format('M Y');
+
             $data[] = $order->total;
         }
 
-        return response()->json(compact('labels', 'data'));
+        return response()->json(
+            compact('labels', 'data')
+        );
     }
 
     /**
@@ -1707,33 +1858,58 @@ class CheckoutController extends Controller
     {
         $user = $this->getAuthenticatedUser($request);
 
-        // User must be authenticated and have the appropriate role.
-        if (!$user || !in_array($user->role, ['admin', 'seller'], true)) {
-            return response()->json(['msg' => 'Unauthorized'], 403);
+        if (
+            !$user ||
+            !in_array($user->role, ['admin', 'seller'], true)
+        ) {
+            return response()->json([
+                'msg' => 'Unauthorized'
+            ], 403);
         }
 
-        // User must be active.
         if (!$user->is_active) {
             return response()->json([
                 'msg' => 'Your account has been deactivated.'
             ], 403);
         }
 
-        $query = Checkout::query();
-
+        /*
+        * Seller dashboard:
+        * Count the Seller's own fulfillment statuses.
+        */
         if ($user->role === 'seller') {
-            $query->whereHas('items', function ($q) use ($user) {
-                $q->where('seller_id', $user->user_id);
-            });
+
+            $orders = CheckoutSellerOrder::where(
+                    'seller_id',
+                    $user->user_id
+                )
+                ->selectRaw(
+                    'shipping_status as status_label, COUNT(*) as total'
+                )
+                ->groupBy('shipping_status')
+                ->get();
+
+        } else {
+
+            /*
+            * Admin dashboard:
+            * Count overall checkout statuses.
+            */
+            $orders = Checkout::selectRaw(
+                    'COALESCE(shipping_status, status) as status_label, COUNT(*) as total'
+                )
+                ->groupBy('status_label')
+                ->get();
         }
 
-        $orders = $query->selectRaw('COALESCE(shipping_status, status) as status_label, COUNT(*) as total')
-            ->groupBy('status_label')
-            ->get();
-
         return response()->json([
-            'labels' => $orders->pluck('status_label')->values(),
-            'data' => $orders->pluck('total')->values(),
+            'labels' => $orders
+                ->pluck('status_label')
+                ->values(),
+
+            'data' => $orders
+                ->pluck('total')
+                ->values(),
         ]);
     }
 }
