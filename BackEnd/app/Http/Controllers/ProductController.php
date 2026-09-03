@@ -126,15 +126,14 @@ class ProductController extends Controller
             || ($user->role === 'seller' && (int) $product->seller_id === (int) $user->user_id);
     }
 
-    private function sellerOwnsCatalogRecord(string $table, string $primaryKey, int $id, User $user): bool
-    {
-        if ($user->role === 'admin') {
-            return true;
-        }
-
+    // Check if a global catalog record (category or brand) is approved and active.
+    private function catalogRecordIsUsable(
+        string $table,
+        string $primaryKey,
+        int $id
+    ): bool {
         return DB::table($table)
             ->where($primaryKey, $id)
-            ->where('seller_id', $user->user_id)
 
             ->when(
                 $this->hasColumn($table, 'status'),
@@ -280,6 +279,15 @@ class ProductController extends Controller
         if($token){
             $user = User::where('token', $token)->first();
             if($user){
+                
+                // Check if the user is active before allowing product creation
+                if (!$user->is_active) {
+                    return response()->json([
+                        'msg' => 'Your account has been deactivated.'
+                    ], 403);
+                }
+
+                // Only allow admins and sellers to create products
                 if (!in_array($user->role, ['admin', 'seller'], true)) {
                     return response()->json(['msg' => 'Unauthorized.'], 403);
                 }
@@ -296,12 +304,20 @@ class ProductController extends Controller
                 ]);
 
                 if (
-                    !$this->sellerOwnsCatalogRecord('categories', 'category_id', (int) $request->category_id, $user) ||
-                    !$this->sellerOwnsCatalogRecord('brands', 'brand_id', (int) $request->brand_id, $user)
+                    !$this->catalogRecordIsUsable(
+                        'categories',
+                        'category_id',
+                        (int) $request->category_id
+                    ) ||
+                    !$this->catalogRecordIsUsable(
+                        'brands',
+                        'brand_id',
+                        (int) $request->brand_id
+                    )
                 ) {
                     return response()->json([
-                        'msg' => 'You can only use approved categories and brands that belong to your seller account.',
-                    ], 403);
+                        'msg' => 'You can only use approved and active categories and brands.',
+                    ], 422);
                 }
 
                 $product = new Product();
@@ -353,7 +369,7 @@ class ProductController extends Controller
                 
                 return response()->json([
                     'msg' => 'New Product was successfully saved.',
-                    'category' => $product
+                    'product' => $product
 
                 ], 201);
             }
@@ -441,6 +457,17 @@ class ProductController extends Controller
                     ], 409);
                 }
 
+                // Delete the product image from storage if it exists.
+                if ($product->image) {
+                    $imagePath = public_path(
+                        'FrontEnd/assets/img/product/' . $product->image
+                    );
+
+                    if (File::exists($imagePath)) {
+                        File::delete($imagePath);
+                    }
+                }
+
                 $product->delete();
                 return response()->json([
                     'msg' => 'Product was successfully deleted.'
@@ -475,6 +502,13 @@ class ProductController extends Controller
         if($token){
             $user = User::where('token', $token)->first();
             if($user){
+
+                // Check if the user is active before allowing product update
+                if (!$user->is_active) {
+                    return response()->json([
+                        'msg' => 'Your account has been deactivated.'
+                    ], 403);
+                }
                 $product = Product::find($id);
                 if (!$product) {
                     return response()->json(['msg' => 'Product not found.'], 404);
@@ -507,12 +541,20 @@ class ProductController extends Controller
                 ]);
 
                 if (
-                    !$this->sellerOwnsCatalogRecord('categories', 'category_id', (int) $request->edit_category_id, $user) ||
-                    !$this->sellerOwnsCatalogRecord('brands', 'brand_id', (int) $request->edit_brand_id, $user)
+                    !$this->catalogRecordIsUsable(
+                        'categories',
+                        'category_id',
+                        (int) $request->edit_category_id
+                    ) ||
+                    !$this->catalogRecordIsUsable(
+                        'brands',
+                        'brand_id',
+                        (int) $request->edit_brand_id
+                    )
                 ) {
                     return response()->json([
-                        'msg' => 'You can only use approved categories and brands that belong to your seller account.',
-                    ], 403);
+                        'msg' => 'You can only use approved and active categories and brands.',
+                    ], 422);
                 }
 
                 $product->category_id = $request->edit_category_id;
@@ -525,6 +567,8 @@ class ProductController extends Controller
                     (int) $request->edit_stock_quantity,
                     $request->input('edit_status', $product->status)
                 );
+
+                $oldImage = $product->image;
 
                 if ($request->hasFile('image')) {
                     $image = $request->file('image');
@@ -558,6 +602,21 @@ class ProductController extends Controller
                 }
 
                 $product->save();
+
+                // Remove replaced image.
+                if (
+                    $request->hasFile('image') &&
+                    $oldImage &&
+                    $oldImage !== $product->image
+                ) {
+                    $oldImagePath = public_path(
+                        'FrontEnd/assets/img/product/' . $oldImage
+                    );
+
+                    if (File::exists($oldImagePath)) {
+                        File::delete($oldImagePath);
+                    }
+                }
 
                 if ($user->role === 'seller') {
 
