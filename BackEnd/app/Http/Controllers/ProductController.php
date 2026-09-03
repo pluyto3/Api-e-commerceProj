@@ -421,12 +421,20 @@ class ProductController extends Controller
         if($token){
             $user = User::where('token', $token)->first();
             if($user){
+
+                if (!$user->is_active) {
+                    return response()->json([
+                        'msg' => 'Your account has been deactivated.'
+                    ], 403);
+                }
+
                 $product = Product::find($id);
                 if (!$product) {
                     return response()->json([
                         'msg' => 'Product not found.'
                     ], 404);
                 }
+
                 if (!$this->authorizeProductOwner($user, $product)) {
                     return response()->json([
                         'msg' => 'Unauthorized. Sellers can only delete their own products.'
@@ -857,6 +865,13 @@ class ProductController extends Controller
             ], 401);
         }
 
+        // User must be active.
+        if (!$user->is_active) {
+            return response()->json([
+                'msg' => 'Your account has been deactivated.'
+            ], 403);
+        }
+
         // Only sellers can activate/deactivate products.
         if ($user->role !== 'seller') {
             return response()->json([
@@ -936,6 +951,12 @@ class ProductController extends Controller
             return response()->json([
                 'msg' => 'Unauthorized.'
             ], 401);
+        }
+
+        if (!$user->is_active) {
+            return response()->json([
+                'msg' => 'Your account has been deactivated.'
+            ], 403);
         }
 
         if ($user->role !== 'seller') {
