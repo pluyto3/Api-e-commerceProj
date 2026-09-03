@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\addToCart;
+use App\Models\CheckoutSellerOrder;
 use App\Models\Checkout;
 use App\Models\CheckoutItem;
 use App\Models\Product;
@@ -112,6 +113,89 @@ class CheckoutController extends Controller
         $product->save();
     }
 
+    private function restoreSellerOrderStock(
+    Checkout $checkout,
+    int $sellerId
+    ): void {
+        $items = $checkout->items()
+            ->where('seller_id', $sellerId)
+            ->get();
+
+        $productIds = $items
+            ->pluck('product_id')
+            ->unique()
+            ->values();
+
+        if ($productIds->isEmpty()) {
+            return;
+        }
+
+        $products = Product::whereIn('product_id', $productIds)
+            ->lockForUpdate()
+            ->get()
+            ->keyBy('product_id');
+
+        foreach ($items as $item) {
+            $product = $products->get($item->product_id);
+
+            if (!$product) {
+                continue;
+            }
+
+            $product->stock_quantity =
+                (int) $product->stock_quantity +
+                (int) $item->quantity;
+
+            if (
+                $product->status === 'out_of_stock' &&
+                $product->stock_quantity > 0
+            ) {
+                $product->status = 'active';
+            }
+
+            $product->save();
+        }
+    }
+
+    private function syncCheckoutShippingFromSellerOrders(
+    Checkout $checkout
+    ): void {
+        $statuses = CheckoutSellerOrder::where(
+                'checkout_id',
+                $checkout->checkout_id
+            )
+            ->pluck('shipping_status')
+            ->map(fn ($status) =>
+                $this->normalizeShippingStatus($status)
+            );
+
+        if ($statuses->isEmpty()) {
+            return;
+        }
+
+        if ($statuses->every(fn ($status) => $status === 'cancelled')) {
+            $overallStatus = 'cancelled';
+        } else {
+
+            $activeStatuses = $statuses
+                ->reject(fn ($status) => $status === 'cancelled')
+                ->values();
+
+            if ($activeStatuses->contains('pending')) {
+                $overallStatus = 'pending';
+            } elseif ($activeStatuses->contains('packed')) {
+                $overallStatus = 'packed';
+            } elseif ($activeStatuses->contains('shipped')) {
+                $overallStatus = 'shipped';
+            } else {
+                $overallStatus = 'delivered';
+            }
+        }
+
+        $checkout->shipping_status = $overallStatus;
+        $checkout->status = $overallStatus;
+    }
+
     private function restoreCheckoutStock(Checkout $checkout): void
     {
         $items = $checkout->items()->get();
@@ -161,6 +245,8 @@ class CheckoutController extends Controller
     {
         $items = $order->items ?? collect();
 
+        $sellerOrders = $order->sellerOrders ?? collect();
+
         $sellerNames = $items
             ->map(function ($item) {
                 return $item->seller?->username
@@ -189,6 +275,34 @@ class CheckoutController extends Controller
             'status' => $shippingStatus,
             'total_amount' => $order->total_amount,
             'tracking_number' => $order->tracking_number,
+            'seller_orders' => $sellerOrders->map(function ($sellerOrder) {
+                return [
+                    'checkout_seller_order_id' =>
+                        $sellerOrder->checkout_seller_order_id,
+
+                    'seller_id' =>
+                        $sellerOrder->seller_id,
+
+                    'seller_name' =>
+                        $sellerOrder->seller?->username,
+
+                    'shipping_status' =>
+                        $sellerOrder->shipping_status,
+
+                    'tracking_number' =>
+                        $sellerOrder->tracking_number,
+
+                    'seller_subtotal' =>
+                        $sellerOrder->seller_subtotal,
+
+                    'cancelled_at' =>
+                        $sellerOrder->cancelled_at,
+
+                    'cancellation_reason' =>
+                        $sellerOrder->cancellation_reason,
+                ];
+            })
+            ->values(),
             'created_date' => $order->created_at ? Carbon::parse($order->created_at)->toDateString() : null,
             'created_at' => $order->created_at ? Carbon::parse($order->created_at)->format('M d, Y') : null,
             'updated_at' => $order->updated_at,
@@ -224,8 +338,16 @@ class CheckoutController extends Controller
     public function createCheckout(Request $request) {
         $user = $this->getAuthenticatedUser($request);
 
+        // User must be authenticated.
         if (!$user) {
             return response()->json(['msg' => 'Invalid or missing token.'], 401);
+        }
+
+        // User must be active.
+        if (!$user->is_active) {
+            return response()->json([
+                'msg' => 'Your account has been deactivated.'
+            ], 403);
         }
 
         $validated = $request->validate([
@@ -361,6 +483,29 @@ class CheckoutController extends Controller
                 }
             }
 
+            // Create One Fulfillment record per seller 
+            $sellerOrderTotals = CheckoutItem::where(
+                    'checkout_id',
+                    $checkout->checkout_id
+                )
+                ->whereNotNull('seller_id')
+                ->select(
+                    'seller_id',
+                    DB::raw('SUM(subtotal) as seller_subtotal')
+                )
+                ->groupBy('seller_id')
+                ->get();
+
+            foreach ($sellerOrderTotals as $sellerOrderTotal) {
+                CheckoutSellerOrder::create([
+                    'checkout_id' => $checkout->checkout_id,
+                    'seller_id' => $sellerOrderTotal->seller_id,
+                    'shipping_status' => 'pending',
+                    'tracking_number' => null,
+                    'seller_subtotal' => $sellerOrderTotal->seller_subtotal,
+                ]);
+            }
+
             addToCart::where('user_id', $user->user_id)
                 ->whereIn('addTocart_id', $selectedIds)
                 ->delete();
@@ -368,7 +513,7 @@ class CheckoutController extends Controller
             return $checkout;
         });
 
-        $checkout->load(['user', 'items.product.brand', 'items.product.seller', 'items.seller']);
+        $checkout->load(['user', 'items.product.brand', 'items.product.seller', 'items.seller', 'sellerOrders.seller']);
         $formatted = $this->formatOrder($checkout);
 
         foreach ($stockAlerts as $alert) {
@@ -420,7 +565,13 @@ class CheckoutController extends Controller
             return response()->json(['msg' => 'Invalid Token.'], 401);
         }
 
-        $orders = Checkout::with(['user', 'items.product.brand', 'items.product.seller', 'items.seller'])
+        if (!$user->is_active) {
+            return response()->json([
+                'msg' => 'Your account has been deactivated.'
+            ], 403);
+        }
+
+        $orders = Checkout::with(['user', 'items.product.brand', 'items.product.seller', 'items.seller', 'sellerOrders.seller'])
             ->where('user_id', $user->user_id)
             ->orderBy('checkout_id', 'DESC')
             ->get();
@@ -437,11 +588,19 @@ class CheckoutController extends Controller
     {
         $user = $this->getAuthenticatedUser(request());
 
+        // User must be authenticated.
         if (!$user) {
             return response()->json(['message' => 'Invalid Token'], 401);
         }
 
-        $order = Checkout::with(['user', 'items.product.brand', 'items.product.seller', 'items.seller'])
+        // User must be active.
+        if (!$user->is_active) {
+            return response()->json([
+                'msg' => 'Your account has been deactivated.'
+            ], 403);
+        }
+
+        $order = Checkout::with(['user', 'items.product.brand', 'items.product.seller', 'items.seller', 'sellerOrders.seller'])
             ->where('checkout_id', $checkout_id)
             ->where('user_id', $user->user_id)
             ->first();
@@ -458,278 +617,222 @@ class CheckoutController extends Controller
         ], 200);
     }
 
-/**
- * Update shipping/payment status for admin or seller.
- */
-public function updateStatus(Request $request, $checkout_id)
-{
-    $user = $this->getAuthenticatedUser($request);
-
-    if (!$user) {
-        return response()->json(['msg' => 'Invalid Token.'], 401);
-    }
-
-    if (!in_array($user->role, ['admin', 'seller'], true)) {
-        return response()->json(['msg' => 'Unauthorized'], 403);
-    }
-
-    $incomingShipping = $request->input('shipping_status', $request->input('status'));
-    $incomingPayment = $request->input('payment_status');
-    $incomingTracking = trim((string) $request->input('tracking_number', ''));
-
-    if (!$incomingShipping && !$incomingPayment && $incomingTracking === '') {
-        return response()->json([
-            'msg' => 'Please provide a shipping status, payment status, or tracking number.',
-        ], 422);
-    }
-
-    $shippingStatus = $incomingShipping ? $this->normalizeShippingStatus($incomingShipping) : null;
-    $paymentStatus = $incomingPayment ? $this->normalizePaymentStatus($incomingPayment) : null;
-
-    if ($shippingStatus && !in_array($shippingStatus, self::SHIPPING_STATUSES, true)) {
-        return response()->json(['msg' => 'Invalid shipping status value.'], 422);
-    }
-
-    if ($paymentStatus && !in_array($paymentStatus, self::PAYMENT_STATUSES, true)) {
-        return response()->json(['msg' => 'Invalid payment status value.'], 422);
-    }
-
-    if ($incomingTracking !== '' && strlen($incomingTracking) > 100) {
-        return response()->json(['msg' => 'Tracking number may not be greater than 100 characters.'], 422);
-    }
-
-    $checkoutForAuth = Checkout::find($checkout_id);
-
-    if (!$checkoutForAuth) {
-        return response()->json(['msg' => 'Checkout not found.'], 404);
-    }
-
-    if ($user->role === 'seller' && !$this->canSellerAccessCheckout($checkoutForAuth, $user)) {
-        return response()->json(['msg' => 'Unauthorized'], 403);
-    }
-
-    if ($user->role === 'seller' && $paymentStatus) {
-        return response()->json(['msg' => 'Sellers can update shipping status only.'], 403);
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Save old values before updating
-    |--------------------------------------------------------------------------
-    | These will be used later so Laravel only sends notifications when
-    | the value actually changed.
-    */
-    $oldShippingStatus = $this->normalizeShippingStatus(
-        $checkoutForAuth->shipping_status ?: $checkoutForAuth->status
-    );
-
-    $oldPaymentStatus = $this->normalizePaymentStatus($checkoutForAuth->payment_status);
-
-    $oldTrackingNumber = trim((string) $checkoutForAuth->tracking_number);
-
-    $checkout = DB::transaction(function () use (
-        $request,
-        $checkout_id,
-        $user,
-        $shippingStatus,
-        $paymentStatus,
-        $incomingTracking
-    ) {
-        $checkout = Checkout::where('checkout_id', $checkout_id)
-            ->lockForUpdate()
-            ->first();
-
-        if (!$checkout) {
-            return null;
-        }
-
-        $currentShipping = $this->normalizeShippingStatus(
-            $checkout->shipping_status ?: $checkout->status
-        );
-
-        if ($currentShipping === 'cancelled' && $shippingStatus !== 'cancelled') {
-            throw ValidationException::withMessages([
-                'shipping_status' => 'Cancelled orders cannot be moved back to active shipping statuses.',
-            ]);
-        }
-
-        if (
-            $currentShipping === 'delivered' &&
-            (($shippingStatus && $shippingStatus !== 'delivered') || $paymentStatus || $incomingTracking !== '')
-        ) {
-            throw ValidationException::withMessages([
-                'shipping_status' => 'Delivered orders are final and cannot be changed.',
-            ]);
-        }
-
-        if ($shippingStatus) {
-            $checkout->shipping_status = $shippingStatus;
-
-            if ($shippingStatus === 'shipped' && empty($checkout->tracking_number)) {
-                $checkout->tracking_number = $this->generateTrackingNumber($checkout->checkout_id);
-            }
-
-            if (
-                $shippingStatus === 'delivered' &&
-                $checkout->payment_method === 'cod' &&
-                $checkout->payment_status === 'pending'
-            ) {
-                $checkout->payment_status = 'paid';
-            }
-
-            if ($shippingStatus === 'cancelled') {
-                if (!$checkout->stock_restored_at) {
-                    $this->restoreCheckoutStock($checkout);
-                    $checkout->stock_restored_at = now();
-                }
-
-                $checkout->cancelled_at = now();
-                $checkout->cancelled_by = $user->user_id;
-                $checkout->cancellation_reason = $request->input('reason', $checkout->cancellation_reason);
-
-                if ($checkout->payment_status !== 'paid') {
-                    $checkout->payment_status = 'cancelled';
-                }
-            }
-        }
-
-        if ($incomingTracking !== '') {
-            $trackingAllowedStatus = $shippingStatus ?: $currentShipping;
-
-            if (!in_array($trackingAllowedStatus, ['packed', 'shipped'], true)) {
-                throw ValidationException::withMessages([
-                    'tracking_number' => 'Tracking number can only be updated when the order is packed or shipped.',
-                ]);
-            }
-
-            $checkout->tracking_number = $incomingTracking;
-        }
-
-        if ($paymentStatus) {
-            $checkout->payment_status = $paymentStatus;
-        }
-
-        $this->syncLegacyStatus($checkout);
-        $checkout->save();
-
-        return $checkout;
-    });
-
-    if (!$checkout) {
-        return response()->json(['msg' => 'Checkout not found.'], 404);
-    }
-
-    $checkout->load(['user', 'items.product.brand', 'items.product.seller', 'items.seller']);
-
-    $buyerUserId = $checkout->user_id;
-    $orderId = $checkout->checkout_id;
-
-    /*
-    |--------------------------------------------------------------------------
-    | Get new values after update
-    |--------------------------------------------------------------------------
-    */
-    $newShippingStatus = $this->normalizeShippingStatus(
-        $checkout->shipping_status ?: $checkout->status
-    );
-
-    $newPaymentStatus = $this->normalizePaymentStatus($checkout->payment_status);
-
-    $newTrackingNumber = trim((string) $checkout->tracking_number);
-
-    $shippingChanged = $shippingStatus && $oldShippingStatus !== $newShippingStatus;
-    $paymentChanged = $paymentStatus && $oldPaymentStatus !== $newPaymentStatus;
-    $trackingChanged = $incomingTracking !== '' && $oldTrackingNumber !== $newTrackingNumber;
-
-    /*
-    |--------------------------------------------------------------------------
-    | Shipping status notification
-    |--------------------------------------------------------------------------
-    */
-    if ($shippingChanged) {
-        $title = $newShippingStatus === 'cancelled'
-            ? 'Order Cancelled'
-            : 'Order Status Updated';
-
-        $message = $newShippingStatus === 'cancelled'
-            ? 'Your order #' . $orderId . ' has been cancelled.'
-            : 'Your order #' . $orderId . ' is now ' . ucfirst(str_replace('_', ' ', $newShippingStatus)) . '.';
-
-        app(PushNotificationService::class)->sendToUser(
-            $buyerUserId,
-            $title,
-            $message,
-            'orderDetails.html',
-            $newShippingStatus === 'cancelled' ? 'order_cancelled' : 'order_status',
-            $orderId
-        );
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Payment status notification
-    |--------------------------------------------------------------------------
-    */
-    if ($paymentChanged) {
-        $title = $newPaymentStatus === 'failed'
-            ? 'Payment Failed'
-            : 'Payment Update';
-
-        $message = $newPaymentStatus === 'failed'
-            ? 'Your payment for order #' . $orderId . ' was not successful.'
-            : 'Your payment for order #' . $orderId . ' is now ' . ucfirst(str_replace('_', ' ', $newPaymentStatus)) . '.';
-
-        app(PushNotificationService::class)->sendToUser(
-            $buyerUserId,
-            $title,
-            $message,
-            'orderDetails.html',
-            'payment_status',
-            $orderId
-        );
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Tracking number notification
-    |--------------------------------------------------------------------------
-    */
-    if ($trackingChanged) {
-        app(PushNotificationService::class)->sendToUser(
-            $buyerUserId,
-            'Tracking Number Updated',
-            'Tracking number was added for your order #' . $orderId . '.',
-            'orderDetails.html',
-            'tracking_update',
-            $orderId
-        );
-    }
-
-    return response()->json([
-        'msg' => 'Order status updated successfully.',
-        'checkout' => $this->formatOrder($checkout),
-    ], 200);
-}
-
-    private function generateTrackingNumber($checkout_id): string
-    {
-        return 'TRK-' . now()->format('Ymd') . '-' . str_pad($checkout_id, 6, '0', STR_PAD_LEFT);
-    }
-
     /**
-     * Buyer cancel order.
+     * Update seller fulfillment status/tracking
+     * or overall checkout payment status.
      */
-    public function cancelOrder(Request $request, $checkout_id)
+    public function updateStatus(Request $request, $checkout_id)
     {
         $user = $this->getAuthenticatedUser($request);
 
         if (!$user) {
-            return response()->json(['msg' => 'Invalid Token.'], 401);
+            return response()->json([
+                'msg' => 'Invalid Token.'
+            ], 401);
         }
 
-        $checkout = DB::transaction(function () use ($request, $checkout_id, $user) {
-            $checkout = Checkout::where('checkout_id', $checkout_id)
-                ->where('user_id', $user->user_id)
+        if (!$user->is_active) {
+            return response()->json([
+                'msg' => 'Your account has been deactivated.'
+            ], 403);
+        }
+
+        if (!in_array($user->role, ['admin', 'seller'], true)) {
+            return response()->json([
+                'msg' => 'Unauthorized.'
+            ], 403);
+        }
+
+        $incomingShipping = $request->input(
+            'shipping_status',
+            $request->input('status')
+        );
+
+        $incomingPayment = $request->input('payment_status');
+
+        $incomingTracking = trim(
+            (string) $request->input('tracking_number', '')
+        );
+
+        if (
+            !$incomingShipping &&
+            !$incomingPayment &&
+            $incomingTracking === ''
+        ) {
+            return response()->json([
+                'msg' =>
+                    'Please provide a shipping status, payment status, or tracking number.'
+            ], 422);
+        }
+
+        $shippingStatus = $incomingShipping
+            ? $this->normalizeShippingStatus($incomingShipping)
+            : null;
+
+        $paymentStatus = $incomingPayment
+            ? $this->normalizePaymentStatus($incomingPayment)
+            : null;
+
+        /*
+        * Cancellation will use a separate flow because
+        * partial seller cancellation affects stock,
+        * totals and payment/refund handling.
+        */
+        if ($shippingStatus === 'cancelled') {
+            return response()->json([
+                'msg' =>
+                    'Order cancellation must use the cancellation workflow.'
+            ], 422);
+        }
+
+        if (
+            $shippingStatus &&
+            !in_array(
+                $shippingStatus,
+                ['pending', 'packed', 'shipped', 'delivered'],
+                true
+            )
+        ) {
+            return response()->json([
+                'msg' => 'Invalid shipping status value.'
+            ], 422);
+        }
+
+        if (
+            $paymentStatus &&
+            !in_array(
+                $paymentStatus,
+                self::PAYMENT_STATUSES,
+                true
+            )
+        ) {
+            return response()->json([
+                'msg' => 'Invalid payment status value.'
+            ], 422);
+        }
+
+        if (
+            $incomingTracking !== '' &&
+            strlen($incomingTracking) > 100
+        ) {
+            return response()->json([
+                'msg' =>
+                    'Tracking number may not be greater than 100 characters.'
+            ], 422);
+        }
+
+        /*
+        * Seller cannot modify the checkout-wide payment status.
+        */
+        if (
+            $user->role === 'seller' &&
+            $paymentStatus
+        ) {
+            return response()->json([
+                'msg' =>
+                    'Sellers can update shipping status and tracking only.'
+            ], 403);
+        }
+
+        $checkoutForAuth = Checkout::find($checkout_id);
+
+        if (!$checkoutForAuth) {
+            return response()->json([
+                'msg' => 'Checkout not found.'
+            ], 404);
+        }
+
+        /*
+        * Shipping/tracking belongs to a specific seller fulfillment.
+        */
+        $requiresSellerOrder =
+            $shippingStatus !== null ||
+            $incomingTracking !== '';
+
+        $targetSellerId = null;
+        $sellerOrderForAuth = null;
+
+        if ($requiresSellerOrder) {
+
+            /*
+            * Seller automatically targets their own portion.
+            */
+            if ($user->role === 'seller') {
+                $targetSellerId = (int) $user->user_id;
+            }
+
+            /*
+            * Admin must explicitly choose which seller
+            * fulfillment is being updated.
+            */
+            if ($user->role === 'admin') {
+
+                if (!$request->filled('seller_id')) {
+                    return response()->json([
+                        'msg' =>
+                            'seller_id is required when an admin updates shipping or tracking.'
+                    ], 422);
+                }
+
+                if (!is_numeric($request->input('seller_id'))) {
+                    return response()->json([
+                        'msg' => 'Invalid seller_id.'
+                    ], 422);
+                }
+
+                $targetSellerId =
+                    (int) $request->input('seller_id');
+            }
+
+            $sellerOrderForAuth =
+                CheckoutSellerOrder::where(
+                    'checkout_id',
+                    $checkout_id
+                )
+                ->where(
+                    'seller_id',
+                    $targetSellerId
+                )
+                ->first();
+
+            if (!$sellerOrderForAuth) {
+                return response()->json([
+                    'msg' =>
+                        'Seller fulfillment record not found for this checkout.'
+                ], 404);
+            }
+        }
+
+        $oldPaymentStatus =
+            $this->normalizePaymentStatus(
+                $checkoutForAuth->payment_status
+            );
+
+        $oldSellerShippingStatus =
+            $sellerOrderForAuth
+                ? $this->normalizeShippingStatus(
+                    $sellerOrderForAuth->shipping_status
+                )
+                : null;
+
+        $oldSellerTrackingNumber =
+            $sellerOrderForAuth
+                ? trim(
+                    (string) $sellerOrderForAuth->tracking_number
+                )
+                : '';
+
+        $result = DB::transaction(function () use (
+            $checkout_id,
+            $targetSellerId,
+            $shippingStatus,
+            $paymentStatus,
+            $incomingTracking
+        ) {
+            $checkout = Checkout::where(
+                    'checkout_id',
+                    $checkout_id
+                )
                 ->lockForUpdate()
                 ->first();
 
@@ -737,62 +840,745 @@ public function updateStatus(Request $request, $checkout_id)
                 return null;
             }
 
-            $shippingStatus = $this->normalizeShippingStatus($checkout->shipping_status ?: $checkout->status);
+            /*
+            * A completely cancelled checkout cannot
+            * return to fulfillment.
+            */
+            $overallCurrentStatus =
+                $this->normalizeShippingStatus(
+                    $checkout->shipping_status
+                        ?: $checkout->status
+                );
 
-            if ($shippingStatus !== 'pending') {
+            if (
+                $overallCurrentStatus === 'cancelled' &&
+                ($shippingStatus || $incomingTracking !== '')
+            ) {
                 throw ValidationException::withMessages([
-                    'status' => 'Only pending orders can be cancelled.',
+                    'shipping_status' =>
+                        'Cancelled orders cannot be moved back to active shipping statuses.'
                 ]);
             }
 
-            if ($checkout->payment_status === 'paid') {
+            $sellerOrder = null;
+
+            if ($targetSellerId !== null) {
+
+                $sellerOrder =
+                    CheckoutSellerOrder::where(
+                        'checkout_id',
+                        $checkout_id
+                    )
+                    ->where(
+                        'seller_id',
+                        $targetSellerId
+                    )
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$sellerOrder) {
+                    throw ValidationException::withMessages([
+                        'seller_id' =>
+                            'Seller fulfillment record was not found.'
+                    ]);
+                }
+
+                $currentSellerStatus =
+                    $this->normalizeShippingStatus(
+                        $sellerOrder->shipping_status
+                    );
+                $statusRank = [
+                    'pending' => 0,
+                    'packed' => 1,
+                    'shipped' => 2,
+                    'delivered' => 3,
+                ];
+
+                if (
+                    $shippingStatus &&
+                    isset(
+                        $statusRank[$currentSellerStatus],
+                        $statusRank[$shippingStatus]
+                    ) &&
+                    $statusRank[$shippingStatus] <
+                        $statusRank[$currentSellerStatus]
+                ) {
+                    throw ValidationException::withMessages([
+                        'shipping_status' =>
+                            'Shipping status cannot move backwards.'
+                    ]);
+                }
+                /*
+                * Cancelled seller portions are final.
+                */
+                if ($currentSellerStatus === 'cancelled') {
+                    throw ValidationException::withMessages([
+                        'shipping_status' =>
+                            'Cancelled seller fulfillments cannot be changed.'
+                    ]);
+                }
+
+                /*
+                * Delivered seller portions are final.
+                */
+                if (
+                    $currentSellerStatus === 'delivered' &&
+                    (
+                        (
+                            $shippingStatus &&
+                            $shippingStatus !== 'delivered'
+                        ) ||
+                        $incomingTracking !== ''
+                    )
+                ) {
+                    throw ValidationException::withMessages([
+                        'shipping_status' =>
+                            'Delivered seller fulfillments are final and cannot be changed.'
+                    ]);
+                }
+
+                if ($shippingStatus) {
+                    $sellerOrder->shipping_status =
+                        $shippingStatus;
+
+                    /*
+                    * Automatically create a tracking number
+                    * when this seller ships their portion.
+                    */
+                    if (
+                        $shippingStatus === 'shipped' &&
+                        empty($sellerOrder->tracking_number)
+                    ) {
+                        $sellerOrder->tracking_number =
+                            $this->generateTrackingNumber(
+                                $checkout_id,
+                                $targetSellerId
+                            );
+                    }
+                }
+
+                if ($incomingTracking !== '') {
+
+                    $trackingAllowedStatus =
+                        $shippingStatus
+                            ?: $currentSellerStatus;
+
+                    if (
+                        !in_array(
+                            $trackingAllowedStatus,
+                            ['packed', 'shipped'],
+                            true
+                        )
+                    ) {
+                        throw ValidationException::withMessages([
+                            'tracking_number' =>
+                                'Tracking number can only be updated when the seller order is packed or shipped.'
+                        ]);
+                    }
+
+                    $sellerOrder->tracking_number =
+                        $incomingTracking;
+                }
+
+                $sellerOrder->save();
+
+                /*
+                * Recalculate the checkout-wide summary status.
+                */
+                $this->syncCheckoutShippingFromSellerOrders(
+                    $checkout
+                );
+
+                /*
+                * COD becomes paid only after every active
+                * seller fulfillment is delivered.
+                */
+                if (
+                    $checkout->shipping_status === 'delivered' &&
+                    strtolower(
+                        (string) $checkout->payment_method
+                    ) === 'cod' &&
+                    $checkout->payment_status === 'pending'
+                ) {
+                    $checkout->payment_status = 'paid';
+                }
+
+                /*
+                * Keep legacy checkout tracking compatible
+                * for single-seller orders.
+                */
+                $sellerOrderCount =
+                    CheckoutSellerOrder::where(
+                        'checkout_id',
+                        $checkout_id
+                    )->count();
+
+                if ($sellerOrderCount === 1) {
+                    $checkout->tracking_number =
+                        $sellerOrder->tracking_number;
+                }
+            }
+
+            /*
+            * Payment remains checkout-wide and Admin-only.
+            */
+            if ($paymentStatus) {
+                $checkout->payment_status =
+                    $paymentStatus;
+            }
+
+            $this->syncLegacyStatus($checkout);
+
+            $checkout->save();
+
+            return [
+                'checkout' => $checkout,
+                'seller_order' => $sellerOrder,
+            ];
+        });
+
+        if (!$result) {
+            return response()->json([
+                'msg' => 'Checkout not found.'
+            ], 404);
+        }
+
+        $checkout = $result['checkout'];
+
+        $sellerOrder = $result['seller_order'];
+
+        if ($user->role === 'seller') {
+            $checkout->load([
+                'user',
+
+                'items' => function ($itemsQuery) use ($user) {
+                    $itemsQuery
+                        ->where('seller_id', $user->user_id)
+                        ->with([
+                            'product.brand',
+                            'product.category',
+                            'product.seller',
+                            'seller'
+                        ]);
+                },
+
+                'sellerOrders' => function ($sellerOrderQuery) use ($user) {
+                    $sellerOrderQuery
+                        ->where('seller_id', $user->user_id)
+                        ->with('seller');
+                },
+            ]);
+        } else {
+            $checkout->load([
+                'user',
+                'items.product.brand',
+                'items.product.category',
+                'items.product.seller',
+                'items.seller',
+                'sellerOrders.seller'
+            ]);
+        }
+
+        if ($sellerOrder) {
+            $sellerOrder->load('seller');
+        }
+
+        $newPaymentStatus =
+            $this->normalizePaymentStatus(
+                $checkout->payment_status
+            );
+
+        $newSellerShippingStatus =
+            $sellerOrder
+                ? $this->normalizeShippingStatus(
+                    $sellerOrder->shipping_status
+                )
+                : null;
+
+        $newSellerTrackingNumber =
+            $sellerOrder
+                ? trim(
+                    (string) $sellerOrder->tracking_number
+                )
+                : '';
+
+        $shippingChanged =
+            $sellerOrder &&
+            $shippingStatus &&
+            $oldSellerShippingStatus !==
+                $newSellerShippingStatus;
+
+        $trackingChanged =
+            $sellerOrder &&
+            $oldSellerTrackingNumber !==
+                $newSellerTrackingNumber;
+
+        $paymentChanged =
+            $paymentStatus &&
+            $oldPaymentStatus !==
+                $newPaymentStatus;
+
+        $buyerUserId = $checkout->user_id;
+
+        $orderId = $checkout->checkout_id;
+
+        /*
+        * Notify buyer about this specific seller's
+        * fulfillment progress.
+        */
+        if ($shippingChanged) {
+
+            $sellerName =
+                $sellerOrder->seller?->username
+                    ?? 'Seller';
+
+            app(PushNotificationService::class)
+                ->sendToUser(
+                    $buyerUserId,
+                    'Order Status Updated',
+                    $sellerName .
+                        ' updated items in order #' .
+                        $orderId .
+                        ' to ' .
+                        ucfirst(
+                            str_replace(
+                                '_',
+                                ' ',
+                                $newSellerShippingStatus
+                            )
+                        ) .
+                        '.',
+                    'orderDetails.html',
+                    'order_status',
+                    $orderId
+                );
+        }
+
+        if ($trackingChanged) {
+
+            $sellerName =
+                $sellerOrder->seller?->username
+                    ?? 'Seller';
+
+            app(PushNotificationService::class)
+                ->sendToUser(
+                    $buyerUserId,
+                    'Tracking Number Updated',
+                    $sellerName .
+                        ' added tracking information for order #' .
+                        $orderId .
+                        '.',
+                    'orderDetails.html',
+                    'tracking_update',
+                    $orderId
+                );
+        }
+
+        if ($paymentChanged) {
+
+            $title =
+                $newPaymentStatus === 'failed'
+                    ? 'Payment Failed'
+                    : 'Payment Update';
+
+            $message =
+                $newPaymentStatus === 'failed'
+                    ? 'Your payment for order #' .
+                        $orderId .
+                        ' was not successful.'
+                    : 'Your payment for order #' .
+                        $orderId .
+                        ' is now ' .
+                        ucfirst(
+                            str_replace(
+                                '_',
+                                ' ',
+                                $newPaymentStatus
+                            )
+                        ) .
+                        '.';
+
+            app(PushNotificationService::class)
+                ->sendToUser(
+                    $buyerUserId,
+                    $title,
+                    $message,
+                    'orderDetails.html',
+                    'payment_status',
+                    $orderId
+                );
+        }
+
+        return response()->json([
+            'msg' =>
+                'Order status updated successfully.',
+
+            'checkout' =>
+                $this->formatOrder($checkout),
+
+            'seller_order' =>
+                $sellerOrder
+                    ? [
+                        'checkout_seller_order_id' =>
+                            $sellerOrder
+                                ->checkout_seller_order_id,
+
+                        'checkout_id' =>
+                            $sellerOrder->checkout_id,
+
+                        'seller_id' =>
+                            $sellerOrder->seller_id,
+
+                        'seller_name' =>
+                            $sellerOrder
+                                ->seller?->username,
+
+                        'shipping_status' =>
+                            $sellerOrder
+                                ->shipping_status,
+
+                        'tracking_number' =>
+                            $sellerOrder
+                                ->tracking_number,
+
+                        'seller_subtotal' =>
+                            $sellerOrder
+                                ->seller_subtotal,
+                    ]
+                    : null,
+        ], 200);
+    }
+
+    private function generateTrackingNumber(
+        $checkout_id,
+        $seller_id = null
+    ): string {
+        $tracking =
+            'TRK-' .
+            now()->format('Ymd') .
+            '-' .
+            str_pad(
+                $checkout_id,
+                6,
+                '0',
+                STR_PAD_LEFT
+            );
+
+        if ($seller_id !== null) {
+            $tracking .=
+                '-S' .
+                str_pad(
+                    $seller_id,
+                    6,
+                    '0',
+                    STR_PAD_LEFT
+                );
+        }
+
+        return $tracking;
+    }
+
+    /**
+     * Buyer cancel entire order.
+     */
+    public function cancelOrder(Request $request, $checkout_id)
+    {
+        $user = $this->getAuthenticatedUser($request);
+
+        if (!$user) {
+            return response()->json([
+                'msg' => 'Invalid Token.'
+            ], 401);
+        }
+
+        if (!$user->is_active) {
+            return response()->json([
+                'msg' => 'Your account has been deactivated.'
+            ], 403);
+        }
+
+        $checkout = DB::transaction(function () use (
+            $request,
+            $checkout_id,
+            $user
+        ) {
+            /*
+            * Admin may access any checkout.
+            * Other users may access only their own checkout.
+            */
+            $checkoutQuery = Checkout::where(
+                    'checkout_id',
+                    $checkout_id
+                )
+                ->lockForUpdate();
+
+            if ($user->role !== 'admin') {
+                $checkoutQuery->where(
+                    'user_id',
+                    $user->user_id
+                );
+            }
+
+            $checkout = $checkoutQuery->first();
+
+            if (!$checkout) {
+                return null;
+            }
+
+            $isAdmin = $user->role === 'admin';
+
+            $currentOverallStatus =
+                $this->normalizeShippingStatus(
+                    $checkout->shipping_status
+                        ?: $checkout->status
+                );
+
+            /*
+            * Prevent repeated cancellation attempts.
+            */
+            if ($currentOverallStatus === 'cancelled') {
                 throw ValidationException::withMessages([
-                    'payment_status' => 'Paid orders need admin assistance before cancellation.',
+                    'status' => 'This order is already cancelled.'
                 ]);
             }
 
+            /*
+            * Lock all seller fulfillment records.
+            */
+            $sellerOrders = CheckoutSellerOrder::where(
+                    'checkout_id',
+                    $checkout->checkout_id
+                )
+                ->lockForUpdate()
+                ->get();
+
+            if ($sellerOrders->isNotEmpty()) {
+
+                if ($isAdmin) {
+                    /*
+                    * Admin may cancel pending/packed orders,
+                    * but not once anything has shipped
+                    * or been delivered.
+                    */
+                    $hasStartedShipping =
+                        $sellerOrders->contains(
+                            function ($sellerOrder) {
+                                $status =
+                                    $this->normalizeShippingStatus(
+                                        $sellerOrder->shipping_status
+                                    );
+
+                                return in_array(
+                                    $status,
+                                    ['shipped', 'delivered'],
+                                    true
+                                );
+                            }
+                        );
+
+                    if ($hasStartedShipping) {
+                        throw ValidationException::withMessages([
+                            'status' =>
+                                'This order cannot be cancelled because one or more seller shipments have already been shipped or delivered.'
+                        ]);
+                    }
+
+                } else {
+                    /*
+                    * Buyer may cancel only while every
+                    * seller portion is still pending.
+                    */
+                    $sellerAlreadyProcessing =
+                        $sellerOrders->contains(
+                            fn ($sellerOrder) =>
+                                $this->normalizeShippingStatus(
+                                    $sellerOrder->shipping_status
+                                ) !== 'pending'
+                        );
+
+                    if ($sellerAlreadyProcessing) {
+                        throw ValidationException::withMessages([
+                            'status' =>
+                                'This order can no longer be cancelled because a seller has already started processing it.'
+                        ]);
+                    }
+                }
+
+            } else {
+                /*
+                * Legacy checkout fallback.
+                */
+                if ($isAdmin) {
+
+                    if (
+                        in_array(
+                            $currentOverallStatus,
+                            ['shipped', 'delivered'],
+                            true
+                        )
+                    ) {
+                        throw ValidationException::withMessages([
+                            'status' =>
+                                'This order cannot be cancelled because it has already been shipped or delivered.'
+                        ]);
+                    }
+
+                } else {
+
+                    if ($currentOverallStatus !== 'pending') {
+                        throw ValidationException::withMessages([
+                            'status' =>
+                                'Only pending orders can be cancelled.'
+                        ]);
+                    }
+                }
+            }
+
+            /*
+            * Paid orders require a refund workflow.
+            */
+            if (
+                $this->normalizePaymentStatus(
+                    $checkout->payment_status
+                ) === 'paid'
+            ) {
+                throw ValidationException::withMessages([
+                    'payment_status' =>
+                        'Paid orders cannot be cancelled directly. A refund process is required.'
+                ]);
+            }
+
+            /*
+            * Restore all checkout stock only once.
+            */
             if (!$checkout->stock_restored_at) {
+
                 $this->restoreCheckoutStock($checkout);
+
                 $checkout->stock_restored_at = now();
             }
 
-            $checkout->shipping_status = 'cancelled';
-            $checkout->status = 'cancelled';
-            $checkout->payment_status = 'cancelled';
-            $checkout->cancelled_at = now();
-            $checkout->cancelled_by = $user->user_id;
-            $checkout->cancellation_reason = $request->input('reason', 'Cancelled by buyer.');
+            $defaultReason = $isAdmin
+                ? 'Cancelled by admin.'
+                : 'Cancelled by buyer.';
+
+            $reason = trim(
+                (string) $request->input(
+                    'reason',
+                    $defaultReason
+                )
+            );
+
+            if ($reason === '') {
+                $reason = $defaultReason;
+            }
+
+            /*
+            * Cancel every seller fulfillment record.
+            */
+            foreach ($sellerOrders as $sellerOrder) {
+
+                $sellerOrder->shipping_status =
+                    'cancelled';
+
+                $sellerOrder->cancelled_at =
+                    now();
+
+                $sellerOrder->cancelled_by =
+                    $user->user_id;
+
+                $sellerOrder->cancellation_reason =
+                    $reason;
+
+                $sellerOrder->save();
+            }
+
+            /*
+            * Cancel main checkout.
+            */
+            $checkout->shipping_status =
+                'cancelled';
+
+            $checkout->status =
+                'cancelled';
+
+            $checkout->payment_status =
+                'cancelled';
+
+            $checkout->cancelled_at =
+                now();
+
+            $checkout->cancelled_by =
+                $user->user_id;
+
+            $checkout->cancellation_reason =
+                $reason;
+
             $checkout->save();
 
             return $checkout;
         });
 
         if (!$checkout) {
-            return response()->json(['msg' => 'Checkout not found.'], 404);
+            return response()->json([
+                'msg' => 'Checkout not found.'
+            ], 404);
         }
 
-        $checkout->load(['user', 'items.product.brand', 'items.product.seller', 'items.seller']);
+        $checkout->load([
+            'user',
+            'items.product.brand',
+            'items.product.seller',
+            'items.seller',
+            'sellerOrders.seller'
+        ]);
 
-        $sellerIds = $checkout->items
+        $sellerIds = $checkout->sellerOrders
             ->pluck('seller_id')
             ->filter()
             ->unique()
             ->values();
 
-            \Log::info('Cancel order notification seller IDs:', [
-                'checkout_id' => $checkout->checkout_id,
-                'seller_ids' => $sellerIds->toArray(),
-            ]);
-
+        /*
+        * Notify all sellers.
+        */
         foreach ($sellerIds as $sellerId) {
-            app(PushNotificationService::class)->sendToUser(
-                $sellerId,
-                'Order Cancelled',
-                'A buyer cancelled order #' . $checkout->checkout_id . '.',
-                'orderDetails.html',
-                'order_cancelled',
-                $checkout->checkout_id
-            );
+
+            $message =
+                $user->role === 'admin'
+                    ? 'Admin cancelled order #' .
+                        $checkout->checkout_id . '.'
+                    : 'A buyer cancelled order #' .
+                        $checkout->checkout_id . '.';
+
+            app(PushNotificationService::class)
+                ->sendToUser(
+                    $sellerId,
+                    'Order Cancelled',
+                    $message,
+                    'orderDetails.html',
+                    'order_cancelled',
+                    $checkout->checkout_id
+                );
+        }
+
+        /*
+        * If Admin cancelled the order,
+        * notify the buyer too.
+        */
+        if ($user->role === 'admin') {
+
+            app(PushNotificationService::class)
+                ->sendToUser(
+                    $checkout->user_id,
+                    'Order Cancelled',
+                    'Your order #' .
+                        $checkout->checkout_id .
+                        ' was cancelled by Admin.',
+                    'orderDetails.html',
+                    'order_cancelled',
+                    $checkout->checkout_id
+                );
         }
 
         return response()->json([
@@ -808,10 +1594,19 @@ public function updateStatus(Request $request, $checkout_id)
     {
         $user = $this->getAuthenticatedUser($request);
 
+        // User must be authenticated.
         if (!$user) {
             return response()->json(['msg' => 'Invalid Token.'], 401);
         }
 
+        // User must be active.
+        if (!$user->is_active) {
+            return response()->json([
+                'msg' => 'Your account has been deactivated.'
+            ], 403);
+        }
+
+        // User must be admin or seller.
         if (!in_array($user->role, ['admin', 'seller'], true)) {
             return response()->json(['msg' => 'Unauthorized'], 403);
         }
@@ -821,16 +1616,36 @@ public function updateStatus(Request $request, $checkout_id)
             ->orderBy('created_at', 'DESC');
 
         if ($user->role === 'seller') {
-            $ordersQuery->whereHas('items', function ($itemsQuery) use ($user) {
-                $itemsQuery->where('seller_id', $user->user_id);
-            })->with([
-                'items' => function ($itemsQuery) use ($user) {
-                    $itemsQuery->where('seller_id', $user->user_id)
-                        ->with(['product.brand', 'product.category', 'product.seller', 'seller']);
-                },
-            ]);
+            $ordersQuery
+                ->whereHas('items', function ($itemsQuery) use ($user) {
+                    $itemsQuery->where('seller_id', $user->user_id);
+                })
+                ->with([
+                    'items' => function ($itemsQuery) use ($user) {
+                        $itemsQuery
+                            ->where('seller_id', $user->user_id)
+                            ->with([
+                                'product.brand',
+                                'product.category',
+                                'product.seller',
+                                'seller'
+                            ]);
+                    },
+
+                    'sellerOrders' => function ($sellerOrderQuery) use ($user) {
+                        $sellerOrderQuery
+                            ->where('seller_id', $user->user_id)
+                            ->with('seller');
+                    },
+                ]);
         } else {
-            $ordersQuery->with(['items.product.brand', 'items.product.category', 'items.product.seller', 'items.seller']);
+            $ordersQuery->with([
+                'items.product.brand',
+                'items.product.category',
+                'items.product.seller',
+                'items.seller',
+                'sellerOrders.seller'
+            ]);
         }
 
         $orders = $ordersQuery->get();
@@ -848,8 +1663,16 @@ public function updateStatus(Request $request, $checkout_id)
     {
         $user = $this->getAuthenticatedUser($request);
 
+        // User must be authenticated.
         if (!$user || !in_array($user->role, ['admin', 'seller'], true)) {
             return response()->json(['msg' => 'Unauthorized'], 403);
+        }
+
+        // User must be active.
+        if (!$user->is_active) {
+            return response()->json([
+                'msg' => 'Your account has been deactivated.'
+            ], 403);
         }
 
         $query = Checkout::query();
@@ -884,8 +1707,16 @@ public function updateStatus(Request $request, $checkout_id)
     {
         $user = $this->getAuthenticatedUser($request);
 
+        // User must be authenticated and have the appropriate role.
         if (!$user || !in_array($user->role, ['admin', 'seller'], true)) {
             return response()->json(['msg' => 'Unauthorized'], 403);
+        }
+
+        // User must be active.
+        if (!$user->is_active) {
+            return response()->json([
+                'msg' => 'Your account has been deactivated.'
+            ], 403);
         }
 
         $query = Checkout::query();

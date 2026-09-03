@@ -44,6 +44,15 @@ class Checkout extends Model
         return $this->hasMany(CheckoutItem::class, 'checkout_id', 'checkout_id');
     }
 
+    public function sellerOrders()
+    {
+        return $this->hasMany(
+            CheckoutSellerOrder::class,
+            'checkout_id',
+            'checkout_id'
+        );
+    }
+
     public function location()
     {
         return $this->belongsTo(Location::class, 'location_id');
