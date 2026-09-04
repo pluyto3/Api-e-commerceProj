@@ -926,9 +926,20 @@ function loadSupplementaryDashboardData() {
       method: "GET",
       headers,
       success: function (response) {
-        dashboardState.totalSellers = normalizeNumber(
-          response?.totalSellers || response?.total_sellers,
-        );
+        const sellerCount =
+          typeof response === "number" || typeof response === "string"
+            ? response
+            : (response?.totalSellers ??
+              response?.total_sellers ??
+              response?.countedSellers ??
+              response?.counted_sellers ??
+              response?.sellers ??
+              response?.seller_count ??
+              response?.count ??
+              response?.total ??
+              0);
+
+        dashboardState.totalSellers = normalizeNumber(sellerCount);
         $dashboard.find("#countedSellers").text(dashboardState.totalSellers);
       },
       error: function (xhr) {
@@ -950,9 +961,7 @@ function loadSupplementaryDashboardData() {
 
       if (role === "admin") {
         const pendingApprovalCount = products.filter(
-          (product) =>
-            normalizeStatus(product?.approval_status || "pending") ===
-            "pending",
+          (product) => normalizeStatus(product?.approval_status) === "pending",
         ).length;
 
         dashboardState.counts = {
@@ -1128,6 +1137,42 @@ function setupSidebarToggle() {
 }
 
 // =======================================
+// SET DASHBOARD CARDS LOADING STATE
+// =======================================
+function setDashboardCardsLoading() {
+  const $dashboard = getDashboardRoot();
+
+  const loadingIds = [
+    "#countedUsers",
+    "#countedSellers",
+    "#countedProducts",
+    "#countedPendingApproval",
+    "#countedOrders",
+    "#countedPendingOrders",
+    "#countedCompletedOrders",
+    "#countedCancelled",
+    "#countedAdminLowStock",
+    "#countedCategory",
+    "#countedBrand",
+
+    "#countedMyProducts",
+    "#countedApprovedProducts",
+    "#countedMyOrders",
+    "#countedSellerPendingOrders",
+    "#countedSellerCompletedOrders",
+    "#countedSellerCancelledOrders",
+    "#countedSellerLowStock",
+  ];
+
+  loadingIds.forEach((selector) => {
+    const $cardValue = $dashboard.find(selector);
+    if ($cardValue.length) {
+      $cardValue.text("...");
+    }
+  });
+}
+
+// =======================================
 // COUNT DASHBOARD STATS (ROLE BASED)
 // =======================================
 function loadCounts() {
@@ -1137,11 +1182,25 @@ function loadCounts() {
 
   const $dashboard = getDashboardRoot();
 
+  setDashboardCardsLoading();
+
   $.ajax({
     url: `${ip}/api/counts`,
     method: "GET",
     headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
     success: function (res) {
+      const totalOrders = normalizeNumber(res.total_orders || res.totalOrders);
+      const completedOrders = normalizeNumber(
+        res.completed_orders || res.completedOrders,
+      );
+      const cancelledOrders = normalizeNumber(
+        res.cancelled_orders || res.cancelledOrders,
+      );
+      const activeOrders = normalizeNumber(
+        res.active_orders ??
+          res.activeOrders ??
+          Math.max(totalOrders - completedOrders - cancelledOrders, 0),
+      );
       dashboardState.counts = {
         users: normalizeNumber(res.users),
         total_products: normalizeNumber(
@@ -1150,16 +1209,13 @@ function loadCounts() {
         my_products: normalizeNumber(res.my_products),
         approved_products: normalizeNumber(res.approved_products),
         pending_approval: normalizeNumber(res.pending_approval),
-        total_orders: normalizeNumber(res.total_orders || res.totalOrders),
+        total_orders: totalOrders,
+        active_orders: activeOrders,
         pending_orders: normalizeNumber(
           res.pending_orders || res.pendingOrders,
         ),
-        completed_orders: normalizeNumber(
-          res.completed_orders || res.completedOrders,
-        ),
-        cancelled_orders: normalizeNumber(
-          res.cancelled_orders || res.cancelledOrders,
-        ),
+        completed_orders: completedOrders,
+        cancelled_orders: cancelledOrders,
         low_stock_products: normalizeNumber(res.low_stock_products),
       };
 
@@ -1180,7 +1236,7 @@ function loadCounts() {
           .text(dashboardState.counts.total_orders);
         $dashboard
           .find("#countedSellerPendingOrders")
-          .text(dashboardState.counts.pending_orders);
+          .text(dashboardState.counts.active_orders);
         $dashboard
           .find("#countedSellerCompletedOrders")
           .text(dashboardState.counts.completed_orders);
@@ -1205,7 +1261,7 @@ function loadCounts() {
         .text(dashboardState.counts.total_orders);
       $dashboard
         .find("#countedPendingOrders")
-        .text(dashboardState.counts.pending_orders);
+        .text(dashboardState.counts.active_orders);
       $dashboard
         .find("#countedCompletedOrders")
         .text(dashboardState.counts.completed_orders);
