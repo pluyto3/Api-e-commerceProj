@@ -1030,3 +1030,34 @@ body.modal-open .navbar.sticky-top {
     font-size: 1rem;
   }
 }
+
+/* Make order timeline labels readable inside the order details modal */
+.order-details-modal .order-status-timeline {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  overflow-x: auto;
+  padding: 16px 10px 8px;
+}
+
+.order-details-modal .order-status-timeline-step {
+  flex: 1;
+  min-width: 110px;
+  text-align: center;
+  position: relative;
+}
+
+.order-details-modal .order-status-timeline-label {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+  max-width: none;
+  width: auto;
+}
