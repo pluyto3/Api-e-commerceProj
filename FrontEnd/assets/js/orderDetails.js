@@ -1108,10 +1108,7 @@ function renderUserOrders() {
       const date = formatDate(order.created_at || order.updated_at);
 
       const tracking =
-        sellerOrder?.tracking_number ||
-        sellerOrder?.tracking_no ||
-        getOrderTrackingNumber(order) ||
-        "Not available";
+        getSellerTrackingNumber(order, sellerOrder) || "Not available";
 
       const courier =
         sellerOrder?.courier ||
@@ -1373,7 +1370,7 @@ function escapeHtmlAttribute(value) {
 // Order Seller Order Retrieval Logic
 // =======================================
 function getSellerOrderForGroup(order = {}, groupSellerId = "") {
-  const sellerOrders = Array.isArray(order.seller_orders)
+  const sellerOrders = Array.isArray(order?.seller_orders)
     ? order.seller_orders
     : [];
 
@@ -1382,6 +1379,33 @@ function getSellerOrderForGroup(order = {}, groupSellerId = "") {
       return String(sellerOrder.seller_id) === String(groupSellerId);
     }) || null
   );
+}
+
+function getSellerTrackingNumber(order = {}, sellerOrder = null) {
+  const sellerTracking =
+    sellerOrder?.tracking_number ||
+    sellerOrder?.tracking_no ||
+    sellerOrder?.trackingCode ||
+    sellerOrder?.tracking_code ||
+    sellerOrder?.tracking?.number ||
+    sellerOrder?.tracking?.tracking_number ||
+    "";
+
+  if (sellerTracking) {
+    return sellerTracking;
+  }
+
+  const sellerOrders = Array.isArray(order?.seller_orders)
+    ? order.seller_orders
+    : [];
+
+  // If this is a multi-seller order, do not use parent tracking
+  // because it may belong to a different seller.
+  if (sellerOrders.length > 1) {
+    return "";
+  }
+
+  return getOrderTrackingNumber(order);
 }
 
 // =======================================
@@ -1641,7 +1665,12 @@ function openStatusModal(orderId, currentStatus, sellerId = "") {
   const order = (globalOrders || []).find(
     (item) => String(item.checkout_id) === String(orderId),
   );
-  const status = getMainOrderStatus(currentStatus || order?.shipping_status);
+  const sellerOrder = getSellerOrderForGroup(order, sellerId);
+
+  const status = getMainOrderStatus(
+    currentStatus || sellerOrder?.shipping_status || order?.shipping_status,
+  );
+
   const finalStatus = isFinalOrderStatus(status);
 
   const statusFlow = {
@@ -1668,7 +1697,7 @@ function openStatusModal(orderId, currentStatus, sellerId = "") {
   }
 
   $("#newPaymentStatus").val("");
-  $("#trackingNumberInput").val(order?.tracking_number || "");
+  $("#trackingNumberInput").val(getSellerTrackingNumber(order, sellerOrder));
   $("#statusFinalMessage").text("");
   $("#saveStatusUpdate").prop("disabled", finalStatus);
   $("#newOrderStatus").prop("disabled", finalStatus);
@@ -1717,8 +1746,15 @@ function submitOrderStatusUpdate() {
     (order) => String(order.checkout_id) === String(orderId),
   );
 
+  const sellerId = $("#updateStatusModal").data("sellerId");
+  const existingSellerOrder = getSellerOrderForGroup(existingOrder, sellerId);
+
   if (
-    isFinalOrderStatus(existingOrder?.shipping_status || existingOrder?.status)
+    isFinalOrderStatus(
+      existingSellerOrder?.shipping_status ||
+        existingOrder?.shipping_status ||
+        existingOrder?.status,
+    )
   ) {
     Swal.fire(
       "Locked",
@@ -1731,8 +1767,6 @@ function submitOrderStatusUpdate() {
   const payload = {
     shipping_status: getMainOrderStatus(newStatus),
   };
-
-  const sellerId = $("#updateStatusModal").data("sellerId");
 
   if (role === "admin" && sellerId) {
     payload.seller_id = sellerId;
@@ -1843,7 +1877,7 @@ function loadOrderDetails(
         sellerOrder?.shipping_status ||
         order.shipping_status ||
         order.status,
-      trackingNumber: sellerOrder?.tracking_number || "",
+      trackingNumber: getSellerTrackingNumber(order, sellerOrder),
     });
 
     $("#orderDetailsModal").modal("show");
@@ -1881,7 +1915,7 @@ function loadOrderDetails(
           sellerOrder?.shipping_status ||
           order.shipping_status ||
           order.status,
-        trackingNumber: sellerOrder?.tracking_number || "",
+        trackingNumber: getSellerTrackingNumber(order, sellerOrder),
       });
 
       $("#orderDetailsModal").modal("show");
