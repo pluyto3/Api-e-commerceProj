@@ -1186,6 +1186,52 @@ function fetchBuyerOrders() {
 }
 
 // =======================================
+// Order Seller Identification Logic
+// =======================================
+function getSellerIdForGroup(order = {}, group = {}) {
+  const firstItem = group.items?.[0] || {};
+
+  const directSellerId =
+    firstItem.seller_id ||
+    firstItem.seller?.user_id ||
+    firstItem.seller?.id ||
+    firstItem.product?.seller_id ||
+    firstItem.product?.seller?.user_id ||
+    firstItem.product?.seller?.id ||
+    "";
+
+  if (directSellerId) {
+    return String(directSellerId);
+  }
+
+  const groupSellerName = String(group.seller || "").trim();
+  const sellerOrders = Array.isArray(order.seller_orders)
+    ? order.seller_orders
+    : [];
+
+  const matchedSellerOrder = sellerOrders.find((sellerOrder) => {
+    return (
+      namesMatch(sellerOrder.seller_name, groupSellerName) ||
+      namesMatch(sellerOrder.seller?.username, groupSellerName) ||
+      namesMatch(sellerOrder.username, groupSellerName)
+    );
+  });
+
+  return matchedSellerOrder?.seller_id
+    ? String(matchedSellerOrder.seller_id)
+    : "";
+}
+
+function escapeHtmlAttribute(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+// =======================================
 // Render Orders Based on Status
 // =======================================
 function renderOrders(filter = "All") {
@@ -1198,7 +1244,6 @@ function renderOrders(filter = "All") {
   const selectedDate = ($("#adminDateFilter").val() || "").trim();
   $tbody.empty();
 
-  // Status Mapping
   const filterKey = normalizeStatus(filter || "all");
   const filteredOrders = (globalOrders || []).filter((o) => {
     const dateMatches =
@@ -1209,6 +1254,7 @@ function renderOrders(filter = "All") {
     }
 
     const statusKey = getMainOrderStatus(o.shipping_status || o.status);
+
     switch (filterKey) {
       case "unpaid":
       case "pending":
@@ -1235,7 +1281,7 @@ function renderOrders(filter = "All") {
 
       case "all":
       default:
-        return true; // "All"
+        return true;
     }
   });
 
@@ -1243,7 +1289,6 @@ function renderOrders(filter = "All") {
     $table.DataTable().clear().destroy();
   }
 
-  // No orders
   if (filteredOrders.length === 0) {
     $tbody.html(
       `<tr><td colspan="8" class="text-center text-muted py-4">No orders found.</td></tr>`,
@@ -1255,7 +1300,6 @@ function renderOrders(filter = "All") {
 
   filteredOrders.forEach((order) => {
     const statusKey = getMainOrderStatus(order.shipping_status || order.status);
-    const statusLabel = formatStatusLabel(statusKey);
     const orderId = order.checkout_id || order.order_id || "N/A";
     const customer = isAdminView()
       ? order.user?.username ||
@@ -1263,6 +1307,7 @@ function renderOrders(filter = "All") {
         order.customer_name ||
         (order.user_id ? `User #${order.user_id}` : "N/A")
       : usr || "N/A";
+
     const fallbackTotal = Number(order.total_amount || order.total || 0);
     const fallbackQuantity = getOrderQuantityFallback(order);
     const date = formatDate(order.created_at || order.updated_at);
@@ -1271,52 +1316,69 @@ function renderOrders(filter = "All") {
       order.shipping_status || order.status || "",
     ).replace(/'/g, "\\'");
 
-    const actionButtons = [];
-    actionButtons.push(`
-      <button class="btn btn-info btn-sm "
-        data-toggle="modal"
-        data-target="#orderDetailsModal"
-        data-id="${orderId}">
-        <i class="fas fa-eye"></i> View
-      </button>
-    `);
-
-    if (canUpdateStatus && !isFinalOrderStatus(statusKey)) {
-      actionButtons.push(`
-        <button class="btn btn-warning btn-sm "
-          data-toggle="modal"
-          data-target="#updateStatusModal"
-          onclick="openStatusModal(${orderId}, '${safeStatus}')">
-          <i class="fas fa-edit"></i> Update Status
-        </button>
-      `);
-    } else if (canUpdateStatus) {
-      actionButtons.push(`
-        <button class="btn btn-secondary btn-sm" disabled>
-          <i class="fas fa-lock"></i> Final
-        </button>
-      `);
-    } else {
-      if (canCancelOrder(statusKey)) {
-        actionButtons.push(`
-          <button class="btn btn-outline-danger btn-sm btn-cancel"
-            data-id="${orderId}">
-            Cancel
-          </button>
-        `);
-      } else {
-        actionButtons.push(
-          `<button class="btn btn-secondary btn-sm" disabled>Cancel</button>`,
-        );
-      }
-    }
-
     const sellerGroups = groupItemsBySeller(order);
 
     sellerGroups.forEach((group) => {
       const seller = group.seller || "N/A";
+      const groupSellerId = getSellerIdForGroup(order, group);
+      const sellerOrder = Array.isArray(order.seller_orders)
+        ? order.seller_orders.find((sellerOrder) => {
+            return String(sellerOrder.seller_id) === String(groupSellerId);
+          })
+        : null;
+
+      const groupStatusKey = getMainOrderStatus(
+        sellerOrder?.shipping_status || order.shipping_status || order.status,
+      );
+
+      const safeGroupStatus = String(groupStatusKey).replace(/'/g, "\\'");
+      const safeSellerName = escapeHtmlAttribute(seller);
+
+      const actionButtons = [];
+
+      actionButtons.push(`
+        <button class="btn btn-info btn-sm"
+          data-toggle="modal"
+          data-target="#orderDetailsModal"
+          data-id="${orderId}">
+          <i class="fas fa-eye"></i> View
+        </button>
+      `);
+
+      if (canUpdateStatus && !isFinalOrderStatus(groupStatusKey)) {
+        actionButtons.push(`
+          <button class="btn btn-warning btn-sm btn-update-status"
+            data-order-id="${orderId}"
+            data-current-status="${safeGroupStatus}"
+            data-seller-id="${groupSellerId}"
+            data-seller-name="${safeSellerName}">
+            <i class="fas fa-edit"></i> Update Status
+          </button>
+        `);
+      } else if (canUpdateStatus) {
+        actionButtons.push(`
+          <button class="btn btn-secondary btn-sm" disabled>
+            <i class="fas fa-lock"></i> Final
+          </button>
+        `);
+      } else {
+        if (canCancelOrder(statusKey)) {
+          actionButtons.push(`
+            <button class="btn btn-outline-danger btn-sm btn-cancel"
+              data-id="${orderId}">
+              Cancel
+            </button>
+          `);
+        } else {
+          actionButtons.push(
+            `<button class="btn btn-secondary btn-sm" disabled>Cancel</button>`,
+          );
+        }
+      }
+
       const groupTotal = sumItemsTotal(group.items);
       const groupQuantity = sumItemsQuantity(group.items);
+
       const totalValue =
         group.items.length === 0
           ? fallbackTotal
@@ -1325,6 +1387,7 @@ function renderOrders(filter = "All") {
             : sellerGroups.length === 1
               ? fallbackTotal
               : groupTotal;
+
       const quantityValue =
         group.items.length === 0
           ? fallbackQuantity
@@ -1345,7 +1408,7 @@ function renderOrders(filter = "All") {
           <td>${quantity}</td>
           <td>&#8369;${total}</td>
           <td>
-            ${renderStatusBadge(statusKey)}
+            ${renderStatusBadge(groupStatusKey)}
             <br>
             ${renderPaymentBadge(order.payment_status || "pending")}
           </td>
@@ -1367,19 +1430,41 @@ function renderOrders(filter = "All") {
     });
   }
 }
-
 // =======================================
 // Update Status Modal Logic
 // =======================================
-function openStatusModal(orderId, currentStatus) {
+function openStatusModal(orderId, currentStatus, sellerId = "") {
   $("#statusOrderId").val(orderId);
+  $("#updateStatusModal").data("sellerId", sellerId);
   const order = (globalOrders || []).find(
     (item) => String(item.checkout_id) === String(orderId),
   );
   const status = getMainOrderStatus(order?.shipping_status || currentStatus);
   const finalStatus = isFinalOrderStatus(status);
 
-  $("#newOrderStatus").val(status);
+  const statusFlow = {
+    pending: ["packed"],
+    packed: ["shipped"],
+    shipped: ["delivered"],
+  };
+
+  const allowedNextStatuses = statusFlow[status] || [];
+  const $statusSelect = $("#newOrderStatus");
+
+  $statusSelect.empty();
+
+  if (allowedNextStatuses.length > 0) {
+    allowedNextStatuses.forEach(function (nextStatus) {
+      $statusSelect.append(
+        `<option value="${nextStatus}">${formatStatusLabel(nextStatus)}</option>`,
+      );
+    });
+  } else {
+    $statusSelect.append(
+      `<option value="${status}">${formatStatusLabel(status)}</option>`,
+    );
+  }
+
   $("#newPaymentStatus").val("");
   $("#trackingNumberInput").val(order?.tracking_number || "");
   $("#statusFinalMessage").text("");
@@ -1403,6 +1488,8 @@ function openStatusModal(orderId, currentStatus) {
   const canEditTracking = !finalStatus && canEditTrackingForStatus(status);
   $("#trackingNumberGroup").toggle(canEditTracking);
   $("#trackingNumberInput").prop("disabled", !canEditTracking);
+
+  $("#updateStatusModal").modal("show");
 }
 
 // =======================================
@@ -1443,6 +1530,12 @@ function submitOrderStatusUpdate() {
     shipping_status: getMainOrderStatus(newStatus),
   };
 
+  const sellerId = $("#updateStatusModal").data("sellerId");
+
+  if (role === "admin" && sellerId) {
+    payload.seller_id = sellerId;
+  }
+
   if (role === "admin" && newPaymentStatus) {
     payload.payment_status = newPaymentStatus;
   }
@@ -1450,6 +1543,8 @@ function submitOrderStatusUpdate() {
   if (trackingNumber && canEditTrackingForStatus(payload.shipping_status)) {
     payload.tracking_number = trackingNumber;
   }
+
+  console.log("Status update payload:", payload);
 
   $.ajax({
     url: `${ip}/api/checkout/orders/${orderId}/status`,
@@ -1648,23 +1743,6 @@ $(document).ready(function () {
     .ajaxStart(() => $("#wait").show())
     .ajaxComplete(() => $("#wait").hide());
 
-  // --- Sidebar Toggle ---
-  // $(".menu-btn").on("click", function () {
-  //   $(".sidebar").addClass("collapsed");
-  //   $(".wrapper").addClass("sidebar-collapsed");
-  //   $(".text-link").hide();
-  //   $(".close-btn").show();
-  //   $(".menu-btn").hide();
-  // });
-
-  // $(".close-btn").on("click", function () {
-  //   $(".sidebar").removeClass("collapsed");
-  //   $(".wrapper").removeClass("sidebar-collapsed");
-  //   $(".text-link").show();
-  //   $(".close-btn").hide();
-  //   $(".menu-btn").show();
-  // });
-
   // -------------------------------
   // Load Navbar Profile Image
   // -------------------------------
@@ -1808,6 +1886,72 @@ $(document).ready(function () {
         cancelOrder(orderId);
       }
     });
+  });
+
+  // -------------------------------
+  // Update Status Button Logic
+  // -------------------------------
+  $(document).on("click", ".btn-update-status", function (e) {
+    e.preventDefault();
+
+    const orderId = $(this).attr("data-order-id");
+    const currentStatus = $(this).attr("data-current-status");
+    let sellerId = $(this).attr("data-seller-id") || "";
+    const sellerName = $(this).attr("data-seller-name") || "";
+
+    $("#updateStatusModal .modal-title").text(
+      `Update Order #${orderId} - ${sellerName || "Seller"}`,
+    );
+
+    console.log("Opening status modal:", {
+      orderId,
+      currentStatus,
+      sellerId,
+      sellerName,
+    });
+
+    if (role === "admin" && !sellerId && sellerName && sellerName !== "N/A") {
+      $.ajax({
+        url: `${ip}/api/getAccount_username/${encodeURIComponent(sellerName)}`,
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
+        success: function (response) {
+          sellerId = response?.user_id || response?.id || "";
+
+          console.log("Resolved seller:", {
+            sellerName,
+            sellerId,
+            response,
+          });
+
+          if (!sellerId) {
+            Swal.fire(
+              "Error",
+              `Seller ID could not be found for ${sellerName}.`,
+              "error",
+            );
+            return;
+          }
+
+          openStatusModal(orderId, currentStatus, sellerId);
+        },
+        error: function (xhr) {
+          console.error("Failed to resolve seller:", xhr);
+          Swal.fire(
+            "Error",
+            `Could not resolve seller ID for ${sellerName}.`,
+            "error",
+          );
+        },
+      });
+
+      return;
+    }
+
+    openStatusModal(orderId, currentStatus, sellerId);
   });
 
   // -------------------------------
