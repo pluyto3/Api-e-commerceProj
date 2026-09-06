@@ -799,13 +799,26 @@ function getOrderSellerNames(order) {
   return [];
 }
 
-function populateOrderDetails(order, itemsOverride) {
+// =======================================
+// Order Details Rendering
+// =======================================
+function populateOrderDetails(order, itemsOverride, viewOptions = {}) {
   const items = getOrderItems(order, itemsOverride);
   const orderId = order.checkout_id || order.order_id || "N/A";
+
   const shippingStatus = getMainOrderStatus(
-    order.shipping_status || order.status,
+    viewOptions.shippingStatus || order.shipping_status || order.status,
   );
+
   const paymentStatus = order.payment_status || "pending";
+
+  const titleSuffix = viewOptions.sellerName
+    ? ` - ${viewOptions.sellerName}`
+    : "";
+
+  $("#orderDetailsModal .modal-title").html(
+    `Order #<span id="summaryOrderId"></span>${titleSuffix}`,
+  );
 
   $("#summaryOrderId").text(orderId);
   $("#summaryStatus").html(renderStatusBadge(shippingStatus));
@@ -823,6 +836,7 @@ function populateOrderDetails(order, itemsOverride) {
   const email = order.email || user.email || "N/A";
   const phone = order.phone_number || user.phone_number || "N/A";
   const address = formatAddress(order, user);
+
   $("#summaryCustomer").text(customerName);
   $("#summaryContact").html(`
     <div>${email}</div>
@@ -830,16 +844,21 @@ function populateOrderDetails(order, itemsOverride) {
   `);
   $("#summaryAddress").text(address);
 
-  if (order.tracking_number) {
-    $("#tracking").removeClass("is-empty").text(order.tracking_number);
+  const trackingNumber =
+    viewOptions.trackingNumber || getOrderTrackingNumber(order);
+
+  if (trackingNumber) {
+    $("#tracking").removeClass("is-empty").text(trackingNumber);
   } else {
     $("#tracking").addClass("is-empty").text("Not yet assigned");
   }
 
   let rows = "";
   let computedTotal = 0;
+
   items.forEach((item) => {
     computedTotal += Number(item.subtotal || item.quantity * item.price || 0);
+
     rows += `
       <tr>
         <td>
@@ -1222,6 +1241,9 @@ function getSellerIdForGroup(order = {}, group = {}) {
     : "";
 }
 
+// =======================================
+// HTML Escaping Logic
+// =======================================
 function escapeHtmlAttribute(value) {
   return String(value || "")
     .replace(/&/g, "&amp;")
@@ -1229,6 +1251,99 @@ function escapeHtmlAttribute(value) {
     .replace(/'/g, "&#39;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
+}
+
+// =======================================
+// Order Seller Order Retrieval Logic
+// =======================================
+function getSellerOrderForGroup(order = {}, groupSellerId = "") {
+  const sellerOrders = Array.isArray(order.seller_orders)
+    ? order.seller_orders
+    : [];
+
+  return (
+    sellerOrders.find((sellerOrder) => {
+      return String(sellerOrder.seller_id) === String(groupSellerId);
+    }) || null
+  );
+}
+
+// =======================================
+// Order Status Filtering Logic
+// =======================================
+function doesStatusMatchFilter(status, filterKey = "all") {
+  const statusKey = getMainOrderStatus(status);
+  const key = normalizeStatus(filterKey || "all");
+
+  switch (key) {
+    case "unpaid":
+    case "pending":
+    case "pending_payment":
+      return statusKey === "pending";
+
+    case "to_ship":
+    case "processing":
+    case "packed":
+      return statusKey === "packed";
+
+    case "shipped":
+      return statusKey === "shipped";
+
+    case "completed":
+    case "delivered":
+    case "to_review":
+      return statusKey === "delivered";
+
+    case "cancelled":
+      return statusKey === "cancelled";
+
+    case "all":
+    default:
+      return true;
+  }
+}
+
+// =======================================
+// Order Item Filtering Logic
+// =======================================
+function getItemsForSellerGroup(order = {}, sellerId = "", sellerName = "") {
+  const items = getVisibleOrderItems(order);
+
+  if (!sellerId && !sellerName) {
+    return items;
+  }
+
+  return items.filter((item) => {
+    const sellerIdCandidates = [
+      item.seller_id,
+      item.seller?.user_id,
+      item.seller?.id,
+      item.product?.seller_id,
+      item.product?.seller?.user_id,
+      item.product?.seller?.id,
+    ];
+
+    const sellerNameCandidates = [
+      item.seller_username,
+      item.seller_name,
+      item.seller?.username,
+      item.product?.seller_username,
+      item.product?.seller?.username,
+    ];
+
+    const idMatches =
+      sellerId &&
+      sellerIdCandidates.some((candidate) => valuesMatch(candidate, sellerId));
+
+    const nameMatches =
+      sellerName &&
+      sellerName !== "N/A" &&
+      sellerNameCandidates.some((candidate) =>
+        namesMatch(candidate, sellerName),
+      );
+
+    return idMatches || nameMatches;
+  });
 }
 
 // =======================================
@@ -1242,64 +1357,29 @@ function renderOrders(filter = "All") {
   const $table = $("#ordersTable");
   const $tbody = $("#buyerOrders");
   const selectedDate = ($("#adminDateFilter").val() || "").trim();
-  $tbody.empty();
-
   const filterKey = normalizeStatus(filter || "all");
-  const filteredOrders = (globalOrders || []).filter((o) => {
-    const dateMatches =
-      !selectedDate || getOrderDateFilterValue(o) === selectedDate;
 
-    if (!dateMatches) {
-      return false;
-    }
-
-    const statusKey = getMainOrderStatus(o.shipping_status || o.status);
-
-    switch (filterKey) {
-      case "unpaid":
-      case "pending":
-      case "pending_payment":
-        return statusKey === "pending";
-
-      case "to_ship":
-      case "processing":
-      case "packed":
-        return statusKey === "packed";
-
-      case "shipped":
-        return statusKey === "shipped";
-
-      case "completed":
-      case "delivered":
-        return statusKey === "delivered";
-
-      case "to_review":
-        return statusKey === "delivered";
-
-      case "cancelled":
-        return statusKey === "cancelled";
-
-      case "all":
-      default:
-        return true;
-    }
-  });
+  $tbody.empty();
 
   if ($.fn.DataTable && $.fn.DataTable.isDataTable($table)) {
     $table.DataTable().clear().destroy();
   }
 
-  if (filteredOrders.length === 0) {
-    $tbody.html(
-      `<tr><td colspan="8" class="text-center text-muted py-4">No orders found.</td></tr>`,
-    );
-    return;
-  }
-
+  let renderedRowCount = 0;
   const canUpdateStatus = role === "admin" || isSellerSalesView();
 
-  filteredOrders.forEach((order) => {
-    const statusKey = getMainOrderStatus(order.shipping_status || order.status);
+  (globalOrders || []).forEach((order) => {
+    const dateMatches =
+      !selectedDate || getOrderDateFilterValue(order) === selectedDate;
+
+    if (!dateMatches) {
+      return;
+    }
+
+    const parentStatusKey = getMainOrderStatus(
+      order.shipping_status || order.status,
+    );
+
     const orderId = order.checkout_id || order.order_id || "N/A";
     const customer = isAdminView()
       ? order.user?.username ||
@@ -1312,24 +1392,20 @@ function renderOrders(filter = "All") {
     const fallbackQuantity = getOrderQuantityFallback(order);
     const date = formatDate(order.created_at || order.updated_at);
 
-    const safeStatus = String(
-      order.shipping_status || order.status || "",
-    ).replace(/'/g, "\\'");
-
     const sellerGroups = groupItemsBySeller(order);
 
     sellerGroups.forEach((group) => {
       const seller = group.seller || "N/A";
       const groupSellerId = getSellerIdForGroup(order, group);
-      const sellerOrder = Array.isArray(order.seller_orders)
-        ? order.seller_orders.find((sellerOrder) => {
-            return String(sellerOrder.seller_id) === String(groupSellerId);
-          })
-        : null;
+      const sellerOrder = getSellerOrderForGroup(order, groupSellerId);
 
       const groupStatusKey = getMainOrderStatus(
         sellerOrder?.shipping_status || order.shipping_status || order.status,
       );
+
+      if (!doesStatusMatchFilter(groupStatusKey, filterKey)) {
+        return;
+      }
 
       const safeGroupStatus = String(groupStatusKey).replace(/'/g, "\\'");
       const safeSellerName = escapeHtmlAttribute(seller);
@@ -1337,10 +1413,11 @@ function renderOrders(filter = "All") {
       const actionButtons = [];
 
       actionButtons.push(`
-        <button class="btn btn-info btn-sm"
-          data-toggle="modal"
-          data-target="#orderDetailsModal"
-          data-id="${orderId}">
+        <button class="btn btn-info btn-sm btn-view-order"
+          data-order-id="${orderId}"
+          data-seller-id="${groupSellerId}"
+          data-seller-name="${safeSellerName}"
+          data-current-status="${safeGroupStatus}">
           <i class="fas fa-eye"></i> View
         </button>
       `);
@@ -1362,7 +1439,7 @@ function renderOrders(filter = "All") {
           </button>
         `);
       } else {
-        if (canCancelOrder(statusKey)) {
+        if (canCancelOrder(parentStatusKey)) {
           actionButtons.push(`
             <button class="btn btn-outline-danger btn-sm btn-cancel"
               data-id="${orderId}">
@@ -1418,8 +1495,16 @@ function renderOrders(filter = "All") {
       `;
 
       $tbody.append(row);
+      renderedRowCount++;
     });
   });
+
+  if (renderedRowCount === 0) {
+    $tbody.html(
+      `<tr><td colspan="8" class="text-center text-muted py-4">No orders found.</td></tr>`,
+    );
+    return;
+  }
 
   if ($.fn.DataTable) {
     ordersTable = $table.DataTable({
@@ -1430,6 +1515,7 @@ function renderOrders(filter = "All") {
     });
   }
 }
+
 // =======================================
 // Update Status Modal Logic
 // =======================================
@@ -1439,7 +1525,7 @@ function openStatusModal(orderId, currentStatus, sellerId = "") {
   const order = (globalOrders || []).find(
     (item) => String(item.checkout_id) === String(orderId),
   );
-  const status = getMainOrderStatus(order?.shipping_status || currentStatus);
+  const status = getMainOrderStatus(currentStatus || order?.shipping_status);
   const finalStatus = isFinalOrderStatus(status);
 
   const statusFlow = {
@@ -1615,16 +1701,36 @@ function submitOrderStatusUpdate() {
 // =======================================
 // Order Details Modal Logic
 // =======================================
-function loadOrderDetails(orderId) {
+function loadOrderDetails(
+  orderId,
+  sellerId = "",
+  sellerName = "",
+  sellerStatus = "",
+) {
   if (isAdminView()) {
     const order = (globalOrders || []).find(
       (o) => String(o.checkout_id) === String(orderId),
     );
+
     if (!order) {
       Swal.fire("Error", "Unable to load order details.", "error");
       return;
     }
-    populateOrderDetails(order);
+
+    const sellerOrder = getSellerOrderForGroup(order, sellerId);
+    const sellerItems = getItemsForSellerGroup(order, sellerId, sellerName);
+
+    populateOrderDetails(order, sellerItems, {
+      sellerName,
+      shippingStatus:
+        sellerStatus ||
+        sellerOrder?.shipping_status ||
+        order.shipping_status ||
+        order.status,
+      trackingNumber: sellerOrder?.tracking_number || "",
+    });
+
+    $("#orderDetailsModal").modal("show");
     return;
   }
 
@@ -1639,7 +1745,9 @@ function loadOrderDetails(orderId) {
       console.log("Order Details:", res);
       const order = res.order || {};
       const items = res.items || order.items || [];
+
       populateOrderDetails(order, items);
+      $("#orderDetailsModal").modal("show");
     },
     error: function (xhr) {
       console.error(xhr);
@@ -1957,10 +2065,20 @@ $(document).ready(function () {
   // -------------------------------
   // View Order Details Modal Logic
   // -------------------------------
-  $(document).on("click", "[data-target='#orderDetailsModal']", function () {
-    const orderId = $(this).data("id");
-    loadOrderDetails(orderId);
-  });
+  $(document).on(
+    "click",
+    ".btn-view-order, [data-target='#orderDetailsModal']",
+    function (e) {
+      e.preventDefault();
+
+      const orderId = $(this).attr("data-order-id") || $(this).data("id");
+      const sellerId = $(this).attr("data-seller-id") || "";
+      const sellerName = $(this).attr("data-seller-name") || "";
+      const currentStatus = $(this).attr("data-current-status") || "";
+
+      loadOrderDetails(orderId, sellerId, sellerName, currentStatus);
+    },
+  );
 
   /* -----------------------------
      LOGOUT HANDLER
