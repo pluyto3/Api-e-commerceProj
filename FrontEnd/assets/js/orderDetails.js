@@ -812,13 +812,11 @@ function populateOrderDetails(order, itemsOverride, viewOptions = {}) {
 
   const paymentStatus = order.payment_status || "pending";
 
-  const titleSuffix = viewOptions.sellerName
-    ? ` - ${viewOptions.sellerName}`
-    : "";
+  const modalTitle = viewOptions.sellerName
+    ? `Items from ${viewOptions.sellerName}`
+    : `Order Details`;
 
-  $("#orderDetailsModal .modal-title").html(
-    `Order #<span id="summaryOrderId"></span>${titleSuffix}`,
-  );
+  $("#orderDetailsModal .modal-title").text(modalTitle);
 
   $("#summaryOrderId").text(orderId);
   $("#summaryStatus").html(renderStatusBadge(shippingStatus));
@@ -1011,6 +1009,9 @@ function populateUserSellerFilter() {
   }
 }
 
+// =======================================
+// Render User Orders
+// =======================================
 function renderUserOrders() {
   const $container = $("#userOrderListCards");
   $container.empty();
@@ -1027,135 +1028,250 @@ function renderUserOrders() {
   const searchTerm = ($("#userOrderSearch").val() || "").trim().toLowerCase();
   const activeStatus = getActiveUserStatusFilter();
 
-  const filteredOrders = (globalOrders || []).filter((order) => {
-    const sellerNames = getOrderSellerNames(order);
+  let renderedCardCount = 0;
+
+  (globalOrders || []).forEach((order) => {
+    const orderId = order.checkout_id || order.order_id || "N/A";
     const dateValue = getOrderDateFilterValue(order);
-    const searchHaystack = getUserOrderSearchText(order);
 
-    const statusMatches = matchesUserStatusFilter(order, activeStatus);
-    const urlFilterMatches = matchesUserUrlFilter(order);
-    const sellerMatches =
-      !selectedSeller || sellerNames.includes(selectedSeller);
-    const dateMatches = !selectedDate || dateValue === selectedDate;
-    const searchMatches = !searchTerm || searchHaystack.includes(searchTerm);
+    if (selectedDate && dateValue !== selectedDate) {
+      return;
+    }
 
-    return (
-      statusMatches &&
-      urlFilterMatches &&
-      sellerMatches &&
-      dateMatches &&
-      searchMatches
+    const sellerGroups = groupItemsBySeller(order);
+
+    const allSellerGroupsPending = sellerGroups.every((group) => {
+      const groupSellerId = getSellerIdForGroup(order, group);
+      const sellerOrder = getSellerOrderForGroup(order, groupSellerId);
+
+      const groupStatusKey = getMainOrderStatus(
+        sellerOrder?.shipping_status || order.shipping_status || order.status,
+      );
+
+      return groupStatusKey === "pending";
+    });
+
+    const parentStatusKey = getMainOrderStatus(
+      order.shipping_status || order.status,
     );
+
+    sellerGroups.forEach((group, index) => {
+      const seller = group.seller || "N/A";
+
+      if (selectedSeller && seller !== selectedSeller) {
+        return;
+      }
+
+      const groupSellerId = getSellerIdForGroup(order, group);
+      const sellerOrder = getSellerOrderForGroup(order, groupSellerId);
+
+      const groupStatusKey = getMainOrderStatus(
+        sellerOrder?.shipping_status || order.shipping_status || order.status,
+      );
+
+      if (!doesStatusMatchFilter(groupStatusKey, activeStatus)) {
+        return;
+      }
+
+      const sellerItems =
+        group.items && group.items.length > 0
+          ? group.items
+          : getItemsForSellerGroup(order, groupSellerId, seller);
+
+      const items = getOrderItems(order, sellerItems);
+
+      const groupTotal = sumItemsTotal(sellerItems);
+      const sellerOrderTotal = Number(
+        sellerOrder?.subtotal ||
+          sellerOrder?.total ||
+          sellerOrder?.total_amount ||
+          0,
+      );
+
+      const totalValue =
+        groupTotal > 0
+          ? groupTotal
+          : sellerOrderTotal > 0
+            ? sellerOrderTotal
+            : sellerGroups.length === 1
+              ? getUserOrderTotal(order)
+              : 0;
+
+      const total = formatCurrency(totalValue);
+
+      const statusLabel = formatStatusLabel(groupStatusKey).toLowerCase();
+      const statusDisplayLabel = formatStatusText(groupStatusKey);
+      const paymentDisplayLabel = formatStatusText(
+        order.payment_status || "pending",
+      );
+
+      const date = formatDate(order.created_at || order.updated_at);
+
+      const tracking =
+        sellerOrder?.tracking_number ||
+        sellerOrder?.tracking_no ||
+        getOrderTrackingNumber(order) ||
+        "Not available";
+
+      const courier =
+        sellerOrder?.courier ||
+        sellerOrder?.courier_name ||
+        getOrderCourier(order) ||
+        "Not available";
+
+      const shippingDate =
+        sellerOrder?.delivery_date ||
+        sellerOrder?.delivered_at ||
+        sellerOrder?.shipping_date ||
+        sellerOrder?.shipped_at ||
+        getOrderShippingDate(order);
+
+      const deliveryDate = shippingDate
+        ? formatDate(shippingDate)
+        : "Not available";
+
+      const headerTitle =
+        items.length > 0
+          ? `${items[0].productName}${items.length > 1 ? ` +${items.length - 1} more` : ""}`
+          : `Order #${orderId}`;
+
+      const headerImage =
+        items.length > 0
+          ? resolveImageSrc(items[0].image)
+          : "assets/img/back.jpg";
+
+      const statusClass = getUserStatusBadgeClass(groupStatusKey);
+      const safeSellerName = escapeHtmlAttribute(seller);
+      const safeStatus = String(groupStatusKey).replace(/'/g, "\\'");
+      const collapseId = `collapseOrder${orderId}_${String(groupSellerId || index).replace(/\W/g, "_")}`;
+
+      const searchHaystack = [
+        orderId,
+        `order #${orderId}`,
+        seller,
+        groupStatusKey,
+        statusDisplayLabel,
+        order.payment_status || "",
+        paymentDisplayLabel,
+        tracking,
+        courier,
+        date,
+        total,
+        items.map((item) => item.productName).join(" "),
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      if (searchTerm && !searchHaystack.includes(searchTerm)) {
+        return;
+      }
+
+      const hasSellerTracking =
+        tracking && tracking !== "Not available" && tracking.trim() !== "";
+
+      const urlFilterMatches =
+        activeUserUrlFilter === "payment"
+          ? hasPaymentUpdate(order)
+          : activeUserUrlFilter === "tracking"
+            ? hasSellerTracking
+            : true;
+
+      if (!urlFilterMatches) {
+        return;
+      }
+
+      const itemsHtml = items
+        .map(
+          (item) => `
+        <div class="order-item-row d-flex justify-content-between align-items-center">
+          <div class="order-item-name text-dark">${item.productName} (x${item.quantity})</div>
+          <div class="order-item-price">₱${formatCurrency(item.subtotal)}</div>
+        </div>
+      `,
+        )
+        .join("");
+
+      $container.append(`
+        <div class="order-card mb-3">
+          <div class="order-header d-flex align-items-start"
+               data-toggle="collapse"
+               data-target="#${collapseId}"
+               style="cursor: pointer;">
+            <div class="order-header-product d-flex align-items-center">
+              <img
+                src="${headerImage}"
+                alt="${headerTitle}"
+                class="order-header-thumb"
+                onerror="this.onerror=null;this.src='assets/img/back.jpg';" />
+              <div class="order-header-meta d-flex flex-column">
+                <span class="order-card-title">${headerTitle}</span>
+                <small class="order-card-seller text-muted">
+                  Sold by ${seller}
+                </small>
+              </div>
+            </div>
+
+            <div class="order-header-summary text-center">
+              <div class="order-card-total">₱${total}</div>
+              <span class="status-badge ${statusClass}">${statusLabel}</span>
+            </div>
+
+            <div class="order-header-icon">
+              <i class="fas fa-chevron-down order-chevron" aria-hidden="true"></i>
+            </div>
+          </div>
+
+          <div class="collapse" id="${collapseId}">
+            <div class="order-body">
+              <div class="order-body-divider"></div>
+              <div class="order-items-list">${itemsHtml}</div>
+
+              <div class="order-card-footer d-flex flex-column flex-md-row justify-content-between align-items-start">
+                <div class="small text-muted order-card-meta mb-3 mb-md-0">
+                  <div>Order ID: #${orderId}</div>
+                  <div>Seller: ${seller}</div>
+                  <div>Date: ${date}</div>
+                  <div>Payment Status: ${paymentDisplayLabel}</div>
+                  <div>Tracking Number: ${tracking}</div>
+                  <div>Courier: ${courier}</div>
+                  <div>Order Status: ${statusDisplayLabel}</div>
+                  <div>Delivery/Shipping Date: ${deliveryDate}</div>
+                </div>
+
+                <div class="d-flex">
+                  <button
+                    class="btn btn-dark btn-sm rounded px-3 mr-2 btn-view-order"
+                    data-order-id="${orderId}"
+                    data-seller-id="${groupSellerId}"
+                    data-seller-name="${safeSellerName}"
+                    data-current-status="${safeStatus}">
+                    View Details
+                  </button>
+
+                  ${
+                    canCancelOrder(parentStatusKey) && allSellerGroupsPending
+                      ? `
+                    <button class="btn btn-danger btn-sm rounded px-3 btn-cancel" data-id="${orderId}">
+                      Cancel Order
+                    </button>`
+                      : ""
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `);
+
+      renderedCardCount++;
+    });
   });
 
-  if (filteredOrders.length === 0) {
+  if (renderedCardCount === 0) {
     $container.html(
       `<div class="text-center text-muted py-5">No matching orders found.</div>`,
     );
-    return;
   }
-
-  filteredOrders.forEach((order) => {
-    const orderId = order.checkout_id || order.order_id || "N/A";
-    const seller = getOrderSellerDisplayName(order);
-    const total = formatCurrency(getUserOrderTotal(order));
-    const statusKey = getMainOrderStatus(order.shipping_status || order.status);
-    const statusLabel = formatStatusLabel(statusKey).toLowerCase();
-    const statusDisplayLabel = formatStatusText(statusKey);
-    const paymentDisplayLabel = formatStatusText(
-      order.payment_status || "pending",
-    );
-    const date = formatDate(order.created_at || order.updated_at);
-    const tracking = getOrderTrackingNumber(order) || "Not available";
-    const courier = getOrderCourier(order) || "Not available";
-    const shippingDate = getOrderShippingDate(order);
-    const deliveryDate = shippingDate
-      ? formatDate(shippingDate)
-      : "Not available";
-    const items = getOrderItems(order);
-    const headerTitle =
-      items.length > 0
-        ? `${items[0].productName}${items.length > 1 ? ` +${items.length - 1} more` : ""}`
-        : `Order #${orderId}`;
-    const headerImage =
-      items.length > 0
-        ? resolveImageSrc(items[0].image)
-        : "assets/img/back.jpg";
-
-    const statusClass = getUserStatusBadgeClass(statusLabel);
-    const collapseId = `collapseOrder${orderId}`;
-
-    let itemsHtml = items
-      .map(
-        (item) => `
-      <div class="order-item-row d-flex justify-content-between align-items-center">
-        <div class="order-item-name text-dark">${item.productName} (x${item.quantity})</div>
-        <div class="order-item-price">₱${formatCurrency(item.subtotal)}</div>
-      </div>
-    `,
-      )
-      .join("");
-
-    $container.append(`
-      <div class="order-card mb-3">
-        <div class="order-header d-flex align-items-start" 
-             data-toggle="collapse" 
-             data-target="#${collapseId}" 
-             style="cursor: pointer;">
-          <div class="order-header-product d-flex align-items-center">
-            <img
-              src="${headerImage}"
-              alt="${headerTitle}"
-              class="order-header-thumb"
-              onerror="this.onerror=null;this.src='assets/img/back.jpg';" />
-            <div class="order-header-meta d-flex flex-column">
-              <span class="order-card-title">${headerTitle}</span>
-              <small class="order-card-seller text-muted">${seller}</small>
-            </div>
-          </div>
-
-          <div class="order-header-summary text-center">
-            <div class="order-card-total">₱${total}</div>
-              <span class="status-badge ${statusClass}">${statusLabel}</span>
-          </div>
-
-          <div class="order-header-icon">
-            <i class="fas fa-chevron-down order-chevron" aria-hidden="true"></i>
-          </div>
-        </div>
-
-        <div class="collapse" id="${collapseId}">
-          <div class="order-body">
-            <div class="order-body-divider"></div>
-            <div class="order-items-list">${itemsHtml}</div>
-            <div class="order-card-footer d-flex flex-column flex-md-row justify-content-between align-items-start">
-              <div class="small text-muted order-card-meta mb-3 mb-md-0">
-                <div>Date: ${date}</div>
-                <div>Payment Status: ${paymentDisplayLabel}</div>
-                <div>Tracking Number: ${tracking}</div>
-                <div>Courier: ${courier}</div>
-                <div>Order Status: ${statusDisplayLabel}</div>
-                <div>Delivery/Shipping Date: ${deliveryDate}</div>
-              </div>
-              <div class="d-flex">
-                <button class="btn btn-dark btn-sm rounded px-3 mr-2" data-toggle="modal" data-target="#orderDetailsModal" data-id="${orderId}">
-                  View Details
-                </button>
-                ${
-                  canCancelOrder(statusKey)
-                    ? `
-                  <button class="btn btn-danger btn-sm rounded px-3 btn-cancel" data-id="${orderId}">
-                    Cancel
-                  </button>`
-                    : ""
-                }
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    `);
-  });
 }
 
 // =======================================
@@ -1743,10 +1859,31 @@ function loadOrderDetails(
     },
     success: function (res) {
       console.log("Order Details:", res);
+
       const order = res.order || {};
       const items = res.items || order.items || [];
 
-      populateOrderDetails(order, items);
+      if (!Array.isArray(order.items) || order.items.length === 0) {
+        order.items = items;
+      }
+
+      const sellerOrder = getSellerOrderForGroup(order, sellerId);
+
+      const sellerItems =
+        sellerId || sellerName
+          ? getItemsForSellerGroup(order, sellerId, sellerName)
+          : items;
+
+      populateOrderDetails(order, sellerItems, {
+        sellerName,
+        shippingStatus:
+          sellerStatus ||
+          sellerOrder?.shipping_status ||
+          order.shipping_status ||
+          order.status,
+        trackingNumber: sellerOrder?.tracking_number || "",
+      });
+
       $("#orderDetailsModal").modal("show");
     },
     error: function (xhr) {
