@@ -405,6 +405,21 @@ class CheckoutController extends Controller
     }
 
     /**
+    * Build a link to the order details page with optional query parameters.
+    */
+    private function buildOrderDetailsLink(array $params = []): string
+    {
+        $params = array_filter(
+            $params,
+            fn ($value) => $value !== null && $value !== ''
+        );
+
+        $query = http_build_query($params);
+
+        return 'orderDetails.html' . ($query ? '?' . $query : '');
+    }
+
+    /**
      * Create checkout, order items, and stock deduction atomically.
      */
     public function createCheckout(Request $request) {
@@ -624,7 +639,13 @@ class CheckoutController extends Controller
                 $sellerId,
                 'New Order Received',
                 'You received a new order #' . $orderId . '.',
-                'orderDetails.html?status=pending',
+                $this->buildOrderDetailsLink([
+                    'status' => 'pending',
+                    'order_id' => $orderId,
+                    'seller_id' => $sellerId,
+                    'open' => 'details',
+                    'view' => 'sales',
+                ]),
                 'new_order',
                 $orderId
             );
@@ -1258,7 +1279,12 @@ class CheckoutController extends Controller
                         )
                     ) .
                     '.',
-                'orderDetails.html?status=' . $newSellerShippingStatus,
+                $this->buildOrderDetailsLink([
+                    'status' => $newSellerShippingStatus,
+                    'order_id' => $orderId,
+                    'seller_id' => $sellerOrder->seller_id,
+                    'open' => 'details',
+                ]),
                 'order_status',
                 $orderId
             );
@@ -1277,7 +1303,12 @@ class CheckoutController extends Controller
                     ' added tracking information for order #' .
                     $orderId .
                     '.',
-                'orderDetails.html?filter=tracking',
+                $this->buildOrderDetailsLink([
+                    'filter' => 'tracking',
+                    'order_id' => $orderId,
+                    'seller_id' => $sellerOrder->seller_id,
+                    'open' => 'details',
+                ]),
                 'tracking_update',
                 $orderId
             );
@@ -1311,7 +1342,11 @@ class CheckoutController extends Controller
                     $buyerUserId,
                     $title,
                     $message,
-                    'orderDetails.html?filter=payment',
+                    $this->buildOrderDetailsLink([
+                        'filter' => 'payment',
+                        'order_id' => $orderId,
+                        'open' => 'details',
+                    ]),
                     'payment_status',
                     $orderId
                 );
@@ -1670,7 +1705,13 @@ class CheckoutController extends Controller
                 $sellerId,
                 'Order Cancelled',
                 $message,
-                'orderDetails.html?status=cancelled',
+                $this->buildOrderDetailsLink([
+                    'status' => 'cancelled',
+                    'order_id' => $checkout->checkout_id,
+                    'seller_id' => $sellerId,
+                    'open' => 'details',
+                    'view' => 'sales',
+                ]),
                 'order_cancelled',
                 $checkout->checkout_id
             );
@@ -1688,7 +1729,11 @@ class CheckoutController extends Controller
                 'Your order #' .
                     $checkout->checkout_id .
                     ' was cancelled by Admin.',
-                'orderDetails.html?status=cancelled',
+                $this->buildOrderDetailsLink([
+                    'status' => 'cancelled',
+                    'order_id' => $checkout->checkout_id,
+                    'open' => 'details',
+                ]),
                 'order_cancelled',
                 $checkout->checkout_id
             );

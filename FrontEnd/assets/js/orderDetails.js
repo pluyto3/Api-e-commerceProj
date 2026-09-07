@@ -19,6 +19,7 @@ let currentUserProfile = null;
 let currentUserId = null;
 let currentSellerOrderView = "sales";
 let activeUserUrlFilter = "";
+let autoOpenedOrderDetailsFromUrl = false;
 
 // =======================================
 // User Session Handling
@@ -174,6 +175,7 @@ function initializeUserOrderUrlFilters() {
   const params = getOrderDetailsUrlParams();
   const requestedStatus = normalizeStatus(params.get("status"));
   const requestedFilter = normalizeStatus(params.get("filter"));
+  const requestedView = normalizeStatus(params.get("view"));
   const validStatuses = [
     "all",
     "pending",
@@ -199,7 +201,9 @@ function initializeUserOrderUrlFilters() {
     );
   }
 
-  if (role === "seller" && (activeUserUrlFilter || requestedStatus)) {
+  if (role === "seller" && ["sales", "purchases"].includes(requestedView)) {
+    currentSellerOrderView = requestedView;
+  } else if (role === "seller" && (activeUserUrlFilter || requestedStatus)) {
     currentSellerOrderView = "purchases";
   }
 }
@@ -1272,6 +1276,59 @@ function renderUserOrders() {
 }
 
 // =======================================
+// Auto-Open Order Details from URL Logic
+// =======================================
+function autoOpenOrderDetailsFromUrl() {
+  if (autoOpenedOrderDetailsFromUrl) return;
+
+  const params = getOrderDetailsUrlParams();
+  const openMode = normalizeStatus(params.get("open"));
+  const shouldOpen = ["details", "modal", "true", "1"].includes(openMode);
+
+  const orderId =
+    params.get("order_id") ||
+    params.get("checkout_id") ||
+    params.get("id") ||
+    "";
+
+  if (!shouldOpen || !orderId) return;
+
+  const sellerId = params.get("seller_id") || "";
+  const sellerStatus = params.get("status") || "";
+
+  const order = (globalOrders || []).find((item) => {
+    return String(item.checkout_id || item.order_id) === String(orderId);
+  });
+
+  if (!order) return;
+
+  let sellerName = params.get("seller_name") || "";
+
+  if (sellerId && !sellerName) {
+    const sellerOrder = getSellerOrderForGroup(order, sellerId);
+
+    sellerName =
+      sellerOrder?.seller_name || sellerOrder?.seller?.username || "";
+
+    if (!sellerName) {
+      const sellerItems = getItemsForSellerGroup(order, sellerId, "");
+
+      sellerName = getItemSellerName(sellerItems[0] || {}, order);
+
+      if (sellerName === "N/A") {
+        sellerName = "";
+      }
+    }
+  }
+
+  autoOpenedOrderDetailsFromUrl = true;
+
+  setTimeout(() => {
+    loadOrderDetails(orderId, sellerId, sellerName, sellerStatus);
+  }, 300);
+}
+
+// =======================================
 // Order Management Logic
 // =======================================
 function fetchBuyerOrders() {
@@ -1297,9 +1354,11 @@ function fetchBuyerOrders() {
 
       if (managementView) {
         renderOrders($("#statusFilter").val() || "all");
+        autoOpenOrderDetailsFromUrl();
       } else if (isUserView()) {
         populateUserSellerFilter();
         renderUserOrders();
+        autoOpenOrderDetailsFromUrl();
       }
     },
     error: function (err) {
