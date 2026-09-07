@@ -624,7 +624,7 @@ class CheckoutController extends Controller
                 $sellerId,
                 'New Order Received',
                 'You received a new order #' . $orderId . '.',
-                'orderDetails.html',
+                'orderDetails.html?status=pending',
                 'new_order',
                 $orderId
             );
@@ -1258,7 +1258,7 @@ class CheckoutController extends Controller
                         )
                     ) .
                     '.',
-                'orderDetails.html',
+                'orderDetails.html?status=' . $newSellerShippingStatus,
                 'order_status',
                 $orderId
             );
@@ -1277,7 +1277,7 @@ class CheckoutController extends Controller
                     ' added tracking information for order #' .
                     $orderId .
                     '.',
-                'orderDetails.html',
+                'orderDetails.html?filter=tracking',
                 'tracking_update',
                 $orderId
             );
@@ -1311,7 +1311,7 @@ class CheckoutController extends Controller
                     $buyerUserId,
                     $title,
                     $message,
-                    'orderDetails.html',
+                    'orderDetails.html?filter=payment',
                     'payment_status',
                     $orderId
                 );
@@ -1670,7 +1670,7 @@ class CheckoutController extends Controller
                 $sellerId,
                 'Order Cancelled',
                 $message,
-                'orderDetails.html',
+                'orderDetails.html?status=cancelled',
                 'order_cancelled',
                 $checkout->checkout_id
             );
@@ -1688,7 +1688,7 @@ class CheckoutController extends Controller
                 'Your order #' .
                     $checkout->checkout_id .
                     ' was cancelled by Admin.',
-                'orderDetails.html',
+                'orderDetails.html?status=cancelled',
                 'order_cancelled',
                 $checkout->checkout_id
             );
@@ -1913,3 +1913,4 @@ class CheckoutController extends Controller
         ]);
     }
 }
+
