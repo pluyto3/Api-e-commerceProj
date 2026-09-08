@@ -1061,3 +1061,253 @@ body.modal-open .navbar.sticky-top {
   max-width: none;
   width: auto;
 }
+
+/* =======================================
+   Manage Accounts - Cleaner Responsive UI
+======================================= */
+
+.manageAccount-section {
+  padding-bottom: 40px;
+}
+
+.working-panel > .container-fluid {
+  max-width: 1400px;
+}
+
+.working-panel h1.display-4 {
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  margin-bottom: 8px;
+}
+
+/* Summary cards */
+.manageAccount-section .card {
+  border: 1px solid #e8edf5;
+  border-radius: 18px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+}
+
+.manageAccount-section .card-body {
+  padding: 20px;
+  text-align: center;
+}
+
+.manageAccount-section .card h4 {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.manageAccount-section .card h5 {
+  font-size: 24px;
+  font-weight: 800;
+  margin-bottom: 0;
+}
+
+/* Softer card colors */
+.manageAccount-section .bg-orange-g,
+.manageAccount-section .bg-green-g,
+.manageAccount-section .bg-blue-g,
+.manageAccount-section .bg-grey-g {
+  background: #ffffff !important;
+  color: #0f172a !important;
+}
+
+.manageAccount-section .bg-orange-g {
+  border-left: 5px solid #f97316;
+}
+
+.manageAccount-section .bg-green-g {
+  border-left: 5px solid #22c55e;
+}
+
+.manageAccount-section .bg-blue-g {
+  border-left: 5px solid #2563eb;
+}
+
+.manageAccount-section .bg-grey-g {
+  border-left: 5px solid #64748b;
+}
+
+.manageAccount-section .card .admin-hr {
+  display: none;
+}
+
+/* Add button */
+.add-acc {
+  margin-top: 28px !important;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.add_acc {
+  border-radius: 999px;
+  padding: 10px 18px;
+  font-weight: 700;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.2);
+}
+
+/* Table sections */
+.all-accounts,
+.all-order {
+  background: #ffffff;
+  border: 1px solid #e8edf5;
+  border-radius: 18px;
+  padding: 20px;
+  margin-top: 28px !important;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+}
+
+.all-accounts h2,
+.all-order h2 {
+  font-size: 22px;
+  font-weight: 800;
+  margin-bottom: 14px;
+  color: #0f172a;
+}
+
+.all-accounts .admin-hr,
+.all-order .admin-hr {
+  display: none;
+}
+
+/* DataTables cleaner style */
+.manageAccount-section .dataTables_wrapper {
+  width: 100%;
+}
+
+.manageAccount-section .dataTables_length,
+.manageAccount-section .dataTables_filter {
+  margin-bottom: 14px;
+}
+
+.manageAccount-section .dataTables_filter input,
+.manageAccount-section .dataTables_length select {
+  border: 1px solid #d8e0ec;
+  border-radius: 10px;
+  padding: 7px 10px;
+  outline: none;
+}
+
+.manageAccount-section table.dataTable {
+  border-collapse: separate !important;
+  border-spacing: 0;
+  width: 100% !important;
+}
+
+.manageAccount-section table thead th {
+  background: #f8fafc;
+  color: #0f172a;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  border-bottom: 1px solid #e8edf5 !important;
+  padding: 14px 10px;
+}
+
+.manageAccount-section table tbody td {
+  vertical-align: middle !important;
+  padding: 14px 10px;
+  color: #334155;
+  font-size: 14px;
+}
+
+.manageAccount-section table tbody tr {
+  background: #ffffff;
+}
+
+.manageAccount-section table tbody tr:hover {
+  background: #f8fafc;
+}
+
+/* Account image */
+.manageAccount-section table img {
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* Action icons cleaner */
+.manageAccount-section td.text-nowrap {
+  white-space: nowrap;
+}
+
+.manageAccount-section td.text-nowrap a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  margin: 0 2px !important;
+  border-radius: 10px;
+  background: #f8fafc;
+  text-decoration: none;
+  transition: 0.15s ease;
+}
+
+.manageAccount-section td.text-nowrap a:hover {
+  background: #eaf0f8;
+  transform: translateY(-1px);
+}
+
+.manageAccount-section td.text-nowrap a i.fa-2x {
+  font-size: 16px;
+}
+
+/* Status badge */
+.manageAccount-section .badge {
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+/* Mobile */
+@media (max-width: 767.98px) {
+  .working-panel > .container-fluid {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .working-panel h1.display-4 {
+    font-size: 26px;
+  }
+
+  .add-acc {
+    justify-content: stretch;
+  }
+
+  .add_acc {
+    width: 100%;
+  }
+
+  .all-accounts,
+  .all-order {
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .all-accounts h2,
+  .all-order h2 {
+    font-size: 20px;
+  }
+
+  .manageAccount-section .dataTables_filter,
+  .manageAccount-section .dataTables_length {
+    text-align: left !important;
+  }
+
+  .manageAccount-section .dataTables_filter input {
+    width: 100% !important;
+    margin-left: 0;
+    margin-top: 6px;
+  }
+
+  .manageAccount-section table tbody td {
+    font-size: 13px;
+  }
+}
