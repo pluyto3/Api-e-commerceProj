@@ -75,13 +75,14 @@ function load_user() {
   // Hide account manage if seller or user
   if (role === "seller" || role === "user") {
     $sidebarAccounts.hide();
-    $(".role-choice #role").prop("disabled", true);
-    $(".email-field input").prop("disabled", true);
   } else {
     $sidebarAccounts.show();
-    $(".role-choice #role").prop("disabled", false);
-    $(".email-field input").prop("disabled", false);
   }
+
+  // Email and role are displayed only for reference on the Profile page.
+  // Role/email changes should be done from Manage Accounts.
+  $(".role-choice #role").prop("disabled", true);
+  $(".email-field input").prop("readonly", true);
 
   // Hide specific sidebar menus for regular user
   if (role === "user") {
@@ -774,6 +775,10 @@ $(document).ready(function () {
 
           if (errors.phone_number) {
             $("#phone_numberError").text(errors.phone_number[0]);
+          }
+
+          if (errors.fullname) {
+            $("#fullnameError").text(errors.fullname[0]);
           }
 
           if (errors.password) {

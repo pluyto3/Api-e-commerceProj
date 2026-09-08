@@ -14,6 +14,9 @@ let usr = $.cookie("username");
 let role = $.cookie("role");
 let profileImage = $.cookie("profileImage");
 
+let allAccounts = [];
+let accountRoleFilter = "all";
+
 function hasActiveSession() {
   return Boolean(usr && token);
 }
@@ -128,10 +131,8 @@ function showNoAccountDisplayState() {
   $("#countedSellers").text(emptyText);
   $("#countedUsers").text(emptyText);
 
-  ["#admin-table", "#seller-table", "#user-table"].forEach((tableId) => {
-    clearTable(tableId);
-    renderNoAccountRow(tableId, emptyText);
-  });
+  clearTable("#accounts-table");
+  renderNoAccountRow("#accounts-table", emptyText);
 }
 
 // =======================================
@@ -423,7 +424,7 @@ function initializeDataTable(selector) {
 // RecalculateAccountTables
 // =======================================
 function recalculateAccountTables() {
-  ["#admin-table", "#seller-table", "#user-table"].forEach((selector) => {
+  ["#accounts-table"].forEach((selector) => {
     if ($.fn.DataTable.isDataTable(selector)) {
       const table = $(selector).DataTable();
 
@@ -434,6 +435,27 @@ function recalculateAccountTables() {
       }
     }
   });
+}
+
+// =======================================
+// Format Role Label
+// =======================================
+function formatRoleLabel(roleValue) {
+  const normalizedRole = String(roleValue || "").toLowerCase();
+
+  if (normalizedRole === "user") {
+    return "Customer";
+  }
+
+  if (normalizedRole === "admin") {
+    return "Admin";
+  }
+
+  if (normalizedRole === "seller") {
+    return "Seller";
+  }
+
+  return roleValue || "N/A";
 }
 
 // =======================================
@@ -503,7 +525,7 @@ function appendTableRow(tableId, user) {
       <td>${user.email}</td>
       <td>${user.fullname}</td>
       <td>${user.phone_number}</td>
-      <td>${user.role}</td>
+      <td>${formatRoleLabel(user.role)}</td>
       <td>${statusBadge}</td>
       <td>${imageHtml}</td>
 
@@ -526,18 +548,65 @@ function appendTableRow(tableId, user) {
 }
 
 // =======================================
+// Render Filtered Accounts Table
+// =======================================
+function renderFilteredAccountsTable() {
+  const filteredAccounts =
+    accountRoleFilter === "all"
+      ? allAccounts
+      : allAccounts.filter((account) => {
+          return String(account.role || "").toLowerCase() === accountRoleFilter;
+        });
+
+  console.log("Current filter:", accountRoleFilter);
+  console.log("Filtered accounts:", filteredAccounts);
+
+  renderAccountsTable("#accounts-table", filteredAccounts);
+}
+
+// =======================================
 // LOAD ACCOUNT SUMMARY
 // =======================================
 function loadAccountsSummary() {
   fetchData("accountsSummary", (res) => {
-    $("#countedAccounts").text(res.totalAccounts ?? 0);
-    $("#countedAdmins").text(res.totalAdmins ?? 0);
-    $("#countedSellers").text(res.totalSellers ?? 0);
-    $("#countedUsers").text(res.totalUsers ?? 0);
+    console.log("Accounts summary response:", res);
 
-    renderAccountsTable("#admin-table", res.admins || []);
-    renderAccountsTable("#seller-table", res.sellers || []);
-    renderAccountsTable("#user-table", res.users || []);
+    const admins = Array.isArray(res.admins) ? res.admins : [];
+    const sellers = Array.isArray(res.sellers) ? res.sellers : [];
+    const users = Array.isArray(res.users) ? res.users : [];
+
+    allAccounts = [...admins, ...sellers, ...users];
+
+    console.log("All accounts for table:", allAccounts);
+
+    $("#countedAccounts").text(res.totalAccounts ?? allAccounts.length);
+    $("#countedAdmins").text(res.totalAdmins ?? admins.length);
+    $("#countedSellers").text(res.totalSellers ?? sellers.length);
+    $("#countedUsers").text(res.totalUsers ?? users.length);
+
+    if (allAccounts.length === 0) {
+      renderNoAccountRow("#accounts-table", "No account records found.");
+      return;
+    }
+
+    renderFilteredAccountsTable();
+  });
+}
+
+// =======================================
+// INITIALIZE ON DOCUMENT READY
+// =======================================
+function setupAccountRoleFilters() {
+  $(document).on("click", ".account-role-filter", function () {
+    accountRoleFilter = $(this).data("role") || "all";
+
+    $(".account-role-filter")
+      .removeClass("active btn-dark")
+      .addClass("btn-outline-dark");
+
+    $(this).addClass("active btn-dark").removeClass("btn-outline-dark");
+
+    renderFilteredAccountsTable();
   });
 }
 
@@ -823,6 +892,7 @@ $(document).ready(() => {
   setupDeactivateButtons();
   setupReactivateButtons();
   setupDeleteButtons();
+  setupAccountRoleFilters();
 
   // Load all account tables and counts
   loadAccountsSummary();

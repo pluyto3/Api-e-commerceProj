@@ -414,14 +414,14 @@
                               class="form-control"
                               id="password"
                               name="password"
-                              placeholder="Leave blank to keep current password"
+                              placeholder="New password (optional)"
                               minlength="8" />
                             <div class="input-group-append">
                               <span
                                 class="input-group-text togglePassword"
                                 data-target="#password"
                                 style="cursor: pointer">
-                                <i class="fa fa-eye" id="eyeIcon"></i>
+                                <i class="fa fa-eye"></i>
                               </span>
                             </div>
                           </div>
@@ -444,14 +444,14 @@
                               class="form-control"
                               id="password_confirmation"
                               name="password_confirmation"
-                              placeholder="Confirm new password "
+                              placeholder="Confirm new password"
                               minlength="8" />
                             <div class="input-group-append">
                               <span
                                 class="input-group-text togglePassword"
                                 data-target="#password_confirmation"
                                 style="cursor: pointer">
-                                <i class="fa fa-eye" id="eyeIcon"></i>
+                                <i class="fa fa-eye"></i>
                               </span>
                             </div>
                           </div>
@@ -464,15 +464,18 @@
                       <div class="col-md-6">
                         <div class="form-group">
                           <label for="fullname" class="font-weight-bold"
-                            >Fullname</label
+                            >Full Name</label
                           >
                           <input
                             type="text"
                             class="form-control"
                             id="fullname"
                             name="fullname"
-                            placeholder="Enter fullname "
+                            placeholder="Enter full name"
                             required />
+                          <small
+                            class="text-danger error-message"
+                            id="fullnameError"></small>
                         </div>
                       </div>
                       <!-- Role -->
@@ -542,7 +545,9 @@
                     id="editProfilePic">
                     Upload Profile Picture
                   </button>
-                  <p>Need Help?</p>
+                  <small class="text-muted d-block mt-2">
+                    Use JPG, PNG, or WEBP image.
+                  </small>
                 </form>
               </div>
             </div>
