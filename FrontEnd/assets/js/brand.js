@@ -4,7 +4,7 @@
 // const ip = "https://api.hanzgo.me";
 
 if (!window.APP_CONFIG?.API_BASE_URL) {
-  throw new Error("APP_CONFIG is missing. Load config.js before checkout.js.");
+  throw new Error("APP_CONFIG is missing. Load config.js before brand.js.");
 }
 
 const ip = window.APP_CONFIG.API_BASE_URL;
@@ -16,6 +16,9 @@ let profileImage = null;
 let currentUserId = null;
 let brandsCache = [];
 let sellerLookup = {};
+let activeBrandFilter = "all";
+let brandSearchTerm = "";
+
 const brandImageBaseUrl = `${ip}/FrontEnd/assets/img/brand`;
 
 function getBrandImageUrl(imageName) {
@@ -29,21 +32,31 @@ function normalizeBrandStatus(status) {
 }
 
 function getBrandStatusBadgeClass(status) {
-  if (status === "approved") return;
-  if (status === "rejected") return;
-  if (status === "pending") return;
+  const normalizedStatus = normalizeBrandStatus(status);
+
+  if (normalizedStatus === "approved") return "badge-success";
+  if (normalizedStatus === "rejected") return "badge-danger";
+  if (normalizedStatus === "pending") return "badge-warning";
+
   return "badge-secondary";
 }
 
 function getStatusBadge(status) {
-  const badgeClasses = {
+  const normalizedStatus = normalizeBrandStatus(status);
+
+  const labels = {
     pending: "Pending",
     approved: "Approved",
     rejected: "Rejected",
   };
 
-  const badgeClass = badgeClasses[status] || "badge-secondary";
-  return `<span class="badge ${badgeClass}">${String(status).toUpperCase()}</span>`;
+  const label = labels[normalizedStatus] || normalizedStatus || "N/A";
+
+  return `
+    <span class="badge ${getBrandStatusBadgeClass(normalizedStatus)} brand-status-badge">
+      ${label}
+    </span>
+  `;
 }
 
 function isBrandActive(value) {
@@ -386,6 +399,328 @@ function setupSidebarToggle() {
 }
 
 // =======================================
+// Brand Display Date
+// =======================================
+function getBrandDisplayDate(brand, status) {
+  if (status === "approved") {
+    return formatBrandDate(
+      brand.approved_at || brand.updated_at || brand.created_at,
+    );
+  }
+
+  if (status === "rejected") {
+    return formatBrandDate(brand.updated_at || brand.created_at);
+  }
+
+  return formatBrandDate(
+    brand.created_at || brand.submitted_at || brand.updated_at,
+  );
+}
+
+// =======================================
+// Brand Table Cell Renderers
+// =======================================
+function getBrandDescriptionCell(brand, status) {
+  const description = brand.description || "N/A";
+
+  if (status === "rejected") {
+    const reason = brand.approval_reason || "No reason provided.";
+
+    return `
+      <div>${description}</div>
+      <small class="text-danger font-weight-bold d-block mt-1">
+        Reason: ${reason}
+      </small>
+    `;
+  }
+
+  return description;
+}
+
+// =======================================
+// Brand Availability Cell
+// =======================================
+function getBrandAvailabilityCell(brand, status) {
+  if (status !== "approved") {
+    return `<span class="text-muted">N/A</span>`;
+  }
+
+  return getBrandActivityBadge(brand.is_active);
+}
+
+// =======================================
+// Get Brand Action Buttons
+// =======================================
+function getBrandActionButtons(brand, status) {
+  const brandId = brand.brand_id || brand.id || "";
+  const active = isBrandActive(brand.is_active);
+
+  const targetModal =
+    status === "pending" ? "#brandApprovalModal" : "#brandApprovedDetailsModal";
+
+  let buttons = `
+    <button
+      class="btn btn-sm btn-info view-brand"
+      data-id="${brandId}"
+      data-toggle="modal"
+      data-target="${targetModal}">
+      <i class="fas fa-eye"></i> View
+    </button>
+  `;
+
+  if (role === "seller" && status === "pending") {
+    buttons += `
+      <button class="btn btn-sm btn-primary editBtn" data-id="${brandId}">
+        <i class="fas fa-edit"></i> Edit
+      </button>
+    `;
+  }
+
+  if (role === "seller" && status === "approved") {
+    buttons += `
+      <button class="btn btn-sm btn-warning request-edit-btn" data-id="${brandId}">
+        <i class="fas fa-edit"></i> Request Edit
+      </button>
+    `;
+
+    if (active) {
+      buttons += `
+        <button
+          class="btn btn-sm btn-danger toggle-brand-activity"
+          data-id="${brandId}"
+          data-action="deactivate">
+          <i class="fas fa-ban"></i> Deactivate
+        </button>
+      `;
+    } else {
+      buttons += `
+        <button
+          class="btn btn-sm btn-success toggle-brand-activity"
+          data-id="${brandId}"
+          data-action="reactivate">
+          <i class="fas fa-check-circle"></i> Reactivate
+        </button>
+      `;
+    }
+  }
+
+  if (role === "seller" && status === "rejected") {
+    buttons += `
+      <button class="btn btn-sm btn-warning resubmit-brand-btn" data-id="${brandId}">
+        <i class="fas fa-redo"></i> Edit & Resubmit
+      </button>
+    `;
+  }
+
+  return buttons;
+}
+
+// =======================================
+// Update Brand Summary Cards
+// =======================================
+function updateBrandSummaryCards(brands) {
+  const visibleBrands = filterBrandsForRole(brands);
+
+  const approvedCount = visibleBrands.filter((brand) => {
+    return (
+      normalizeBrandStatus(brand.status || brand.approval_status) === "approved"
+    );
+  }).length;
+
+  const pendingCount = visibleBrands.filter((brand) => {
+    return (
+      normalizeBrandStatus(brand.status || brand.approval_status) === "pending"
+    );
+  }).length;
+
+  const rejectedCount = visibleBrands.filter((brand) => {
+    return (
+      normalizeBrandStatus(brand.status || brand.approval_status) === "rejected"
+    );
+  }).length;
+
+  $("#totalBrandsCount").text(visibleBrands.length);
+  $("#approvedBrandsCount").text(approvedCount);
+  $("#pendingBrandsCount").text(pendingCount);
+  $("#rejectedBrandsCount").text(rejectedCount);
+}
+
+// =======================================
+// Render Brands Table
+// =======================================
+function renderBrandsTable() {
+  const visibleBrands = filterBrandsForRole(brandsCache);
+
+  let filteredBrands =
+    activeBrandFilter === "all"
+      ? visibleBrands
+      : visibleBrands.filter((brand) => {
+          return (
+            normalizeBrandStatus(brand.status || brand.approval_status) ===
+            activeBrandFilter
+          );
+        });
+
+  if (brandSearchTerm) {
+    filteredBrands = filteredBrands.filter((brand) => {
+      const searchableText = [
+        brand.name,
+        brand.description,
+        brand.approval_reason,
+        getBrandSellerDisplayName(brand),
+        normalizeBrandStatus(brand.status || brand.approval_status),
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      return searchableText.includes(brandSearchTerm);
+    });
+  }
+
+  const $cards = $("#brandCards");
+  $cards.empty();
+
+  if (!filteredBrands.length) {
+    $cards.html(`
+      <div class="brand-empty-card">
+        <i class="fas fa-box-open"></i>
+        <h5>No brands found</h5>
+        <p class="mb-0">
+          There are no ${activeBrandFilter === "all" ? "" : activeBrandFilter} brands to display.
+        </p>
+      </div>
+    `);
+    return;
+  }
+
+  filteredBrands.forEach((brand) => {
+    const status = normalizeBrandStatus(brand.status || brand.approval_status);
+    const seller = getBrandSellerDisplayName(brand);
+    const description = brand.description || "No description provided.";
+    const date = getBrandDisplayDate(brand, status);
+    const imageUrl = getBrandImageUrl(brand.image);
+    const statusBadge = getStatusBadge(status);
+    const availabilityBadge = getBrandAvailabilityCell(brand, status);
+    const actionButtons = getBrandActionButtons(brand, status);
+
+    let rejectionReason = "";
+
+    if (status === "rejected") {
+      rejectionReason = `
+        <div class="brand-card-reason">
+          <strong>Reason:</strong>
+          ${brand.approval_reason || "No reason provided."}
+        </div>
+      `;
+    }
+
+    $cards.append(`
+      <div class="brand-card-item">
+        <div class="brand-card-image-wrap">
+          <img
+            src="${imageUrl}"
+            alt="${brand.name || "Brand Image"}"
+            class="brand-card-image"
+            onerror="this.src='assets/img/back.jpg'" />
+        </div>
+
+        <div class="brand-card-content">
+          <div class="brand-card-top">
+            <div>
+              <h4>${brand.name || "N/A"}</h4>
+              <p class="brand-card-seller mb-0">
+                Sold by ${seller}
+              </p>
+            </div>
+
+            <div class="brand-card-badges">
+              ${statusBadge}
+              ${availabilityBadge}
+            </div>
+          </div>
+
+          <p class="brand-card-description">
+            ${description}
+          </p>
+
+          ${rejectionReason}
+
+          <div class="brand-card-meta">
+            <span>
+              <i class="far fa-calendar-alt"></i>
+              ${date}
+            </span>
+            <span>
+              Brand ID: ${brand.brand_id || brand.id || "N/A"}
+            </span>
+          </div>
+
+          <div class="brand-card-actions">
+            ${actionButtons}
+          </div>
+        </div>
+      </div>
+    `);
+  });
+}
+
+// =======================================
+// Load Brands from API
+// =======================================
+function loadBrands() {
+  $.ajax({
+    url: `${ip}/api/brands`,
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    },
+    success: function (res) {
+      const brands = res.data ?? res;
+
+      brandsCache = Array.isArray(brands) ? brands : [];
+      brandsCache.forEach(cacheSeller);
+
+      updateBrandSummaryCards(brandsCache);
+      renderBrandsTable();
+    },
+    error: function (xhr) {
+      console.error("Error fetching brands:", xhr);
+
+      Swal.fire(
+        "Error",
+        getAjaxErrorMessage(xhr, "Failed to load brands"),
+        "error",
+      );
+    },
+  });
+}
+
+// =======================================
+// Brand Status Filters
+// =======================================
+function setupBrandStatusFilters() {
+  $(document).on(
+    "click",
+    ".brand-status-filter, .brand-summary-card",
+    function () {
+      activeBrandFilter =
+        $(this).data("status") || $(this).data("brand-filter") || "all";
+
+      $(".brand-status-filter")
+        .removeClass("active btn-dark")
+        .addClass("btn-outline-dark");
+
+      $(`.brand-status-filter[data-status="${activeBrandFilter}"]`)
+        .addClass("active btn-dark")
+        .removeClass("btn-outline-dark");
+
+      renderBrandsTable();
+    },
+  );
+}
+
+// =======================================
 // Document Ready
 // =======================================
 $(document).ready(function () {
@@ -393,25 +728,8 @@ $(document).ready(function () {
   load_user();
   loadSellerLookup();
   setupSidebarToggle();
-
-  // -------------------------------
-  // Sidebar Toggle
-  // -------------------------------
-  // $(".menu-btn").on("click", function () {
-  //   $(".sidebar").addClass("collapsed");
-  //   $(".wrapper").addClass("sidebar-collapsed");
-  //   $(".text-link").hide();
-  //   $(".close-btn").show();
-  //   $(".menu-btn").hide();
-  // });
-
-  // $(".close-btn").on("click", function () {
-  //   $(".sidebar").removeClass("collapsed");
-  //   $(".wrapper").removeClass("sidebar-collapsed");
-  //   $(".text-link").show();
-  //   $(".close-btn").hide();
-  //   $(".menu-btn").show();
-  // });
+  setupBrandStatusFilters();
+  loadBrands();
 
   // -------------------------------
   // Global AJAX Loading Animation
@@ -1304,7 +1622,7 @@ $(document).ready(function () {
   }
 
   // Fetch cart count on page load for regular users.
-  if (role === "user" && token) {
+  if ((role === "user" || role === "seller") && token) {
     $.ajax({
       url: `${ip}/api/cart`,
       method: "GET",
@@ -1457,5 +1775,12 @@ $(document).ready(function () {
     } else {
       logoutFromServer();
     }
+  });
+
+  $(document).on("input keyup search change", "#brandSearchInput", function () {
+    brandSearchTerm = String($(this).val() || "")
+      .toLowerCase()
+      .trim();
+    renderBrandsTable();
   });
 });
