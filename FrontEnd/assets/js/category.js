@@ -2,7 +2,7 @@
 //let ip = "https://api.hanzgo.me";
 
 if (!window.APP_CONFIG?.API_BASE_URL) {
-  throw new Error("APP_CONFIG is missing. Load config.js before checkout.js.");
+  throw new Error("APP_CONFIG is missing. Load config.js before category.js.");
 }
 
 const ip = window.APP_CONFIG.API_BASE_URL;
@@ -14,35 +14,50 @@ let profileImage = null;
 let categoriesCache = [];
 let categorySellerLookup = {};
 let currentUserId = null;
+let activeCategoryFilter = "all";
+let categorySearchTerm = "";
 const categoryImageBaseUrl = `${ip}/FrontEnd/assets/img/category`;
 
+// Utility function to get the category image URL
 function getCategoryImageUrl(imageName) {
   return imageName
     ? `${categoryImageBaseUrl}/${imageName}`
     : "assets/img/back.jpg";
 }
 
+// Utility function to normalize category status
 function normalizeCategoryStatus(status) {
   return String(status || "pending").toLowerCase();
 }
 
+// Utility function to get the badge class for a category status
 function getCategoryStatusBadgeClass(status) {
-  if (status === "approved") return;
-  if (status === "rejected") return;
-  if (status === "pending") return;
+  const normalizedStatus = normalizeCategoryStatus(status);
+
+  if (normalizedStatus === "approved") return "badge-success";
+  if (normalizedStatus === "rejected") return "badge-danger";
+  if (normalizedStatus === "pending") return "badge-warning";
+
   return "badge-secondary";
 }
 
 // Utility function to get the status badge for a category
 function getStatusBadge(status) {
-  const badgeClasses = {
+  const normalizedStatus = normalizeCategoryStatus(status);
+
+  const labels = {
     pending: "Pending",
     approved: "Approved",
     rejected: "Rejected",
   };
 
-  const badgeClass = badgeClasses[status] || "badge-secondary";
-  return `<span class="badge ${badgeClass}">${String(status).toUpperCase()}</span>`;
+  const label = labels[normalizedStatus] || normalizedStatus || "N/A";
+
+  return `
+    <span class="badge ${getCategoryStatusBadgeClass(normalizedStatus)} category-status-badge">
+      ${label}
+    </span>
+  `;
 }
 
 // Utility functions for category activity
@@ -114,33 +129,14 @@ function getCategorySellerDisplayName(category) {
   );
 }
 
+// Load category-seller lookup data (if needed)
 function loadCategorySellerLookup() {
-  return $.ajax({
-    url: `${ip}/api/sellers`,
-    method: "GET",
-    headers: {
-      Accept: "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    success: function (res) {
-      const sellers = res?.sellers ?? res?.data ?? res;
-      if (!Array.isArray(sellers)) return;
-
-      sellers.forEach((seller) => {
-        if (seller?.user_id && seller?.username) {
-          categorySellerLookup[String(seller.user_id)] = seller.username;
-        }
-      });
-    },
-    error: function (xhr) {
-      console.error(
-        "Failed to load category seller lookup:",
-        xhr?.responseText || xhr,
-      );
-    },
-  });
+  // Categories are admin-managed/global now.
+  // We no longer need to call /api/sellers here.
+  return $.Deferred().resolve().promise();
 }
 
+// Function to populate the category details modal with data
 function populateCategoryDetailsModal(
   category,
   modalSelector = "#categoryApprovedDetailsModal",
@@ -206,14 +202,8 @@ function populateCategoryDetailsModal(
   }
 
   if (modalSelector === "#categoryApprovedDetailsModal") {
-    const canRejectApproved = role === "admin" && status === "approved";
-    $modal
-      .find("#rejectApprovedCategoryBtn")
-      .prop("disabled", !canRejectApproved)
-      .toggle(canRejectApproved);
-    $modal
-      .find("#closeApprovedCategoryBtn")
-      .text(canRejectApproved ? "Cancel" : "Close");
+    $modal.find("#rejectApprovedCategoryBtn").prop("disabled", true).hide();
+    $modal.find("#closeApprovedCategoryBtn").text("Close");
   }
 }
 
@@ -237,7 +227,7 @@ function load_user() {
   const $adminDashboard = $("#adminDashboard");
   const $navbarProfileImage = $("#navbarProfileImage");
   const $defaultProfileIcon = $("#defaultProfileIcon");
-  const $addCategorySection = $(".add_category");
+  const $addCategorySection = $("#addCategorySection");
   const $sidebarAccounts = $("#sidebarAccounts");
 
   if (!usr || !token) {
@@ -285,20 +275,27 @@ function load_user() {
   }
 
   // Show "Category Button" only for sellers
-  if (role === "seller") {
-    $addCategorySection.show();
-    $sidebarAccounts.hide();
-  } else {
-    $addCategorySection.hide();
+  if (role === "admin") {
+    $addCategorySection.removeClass("d-none").show();
     $sidebarAccounts.show();
+  } else {
+    $addCategorySection.addClass("d-none").hide();
+
+    if (role === "seller") {
+      $sidebarAccounts.hide();
+    } else {
+      $sidebarAccounts.show();
+    }
   }
 }
 
+// Function to handle sidebar toggle behavior
 function setupSidebarToggle() {
   function isMobileScreen() {
     return window.matchMedia("(max-width: 991.98px)").matches;
   }
 
+  // Reset sidebar state for mobile screens
   function resetSidebarForMobile() {
     if (isMobileScreen()) {
       $(".sidebar").removeClass("collapsed");
@@ -344,27 +341,217 @@ function setupSidebarToggle() {
     .on("resize.sidebarToggle", resetSidebarForMobile);
 }
 
+// Update the summary cards with the counts of total, active, and inactive categories
+function updateCategorySummaryCards(categories) {
+  const total = categories.length;
+
+  const activeCount = categories.filter((category) => {
+    return isCategoryActive(category.is_active);
+  }).length;
+
+  const inactiveCount = categories.filter((category) => {
+    return !isCategoryActive(category.is_active);
+  }).length;
+
+  $("#totalCategoriesCount").text(total);
+  $("#activeCategoriesCount").text(activeCount);
+  $("#inactiveCategoriesCount").text(inactiveCount);
+}
+
+// Utility function to generate action buttons for a category card
+function getCategoryActionButtons(category) {
+  const categoryId = category.category_id || category.id || "";
+  const active = isCategoryActive(category.is_active);
+
+  let buttons = `
+    <button
+      class="btn btn-sm btn-info view-category"
+      data-id="${categoryId}"
+      data-toggle="modal"
+      data-target="#categoryApprovedDetailsModal">
+      <i class="fas fa-eye"></i> View
+    </button>
+  `;
+
+  if (role === "admin") {
+    buttons += `
+      <button class="btn btn-sm btn-primary editBtn" data-id="${categoryId}">
+        <i class="fas fa-edit"></i> Edit
+      </button>
+    `;
+
+    if (active) {
+      buttons += `
+        <button
+          class="btn btn-sm btn-danger toggle-category-activity"
+          data-id="${categoryId}"
+          data-action="deactivate">
+          <i class="fas fa-ban"></i> Deactivate
+        </button>
+      `;
+    } else {
+      buttons += `
+        <button
+          class="btn btn-sm btn-success toggle-category-activity"
+          data-id="${categoryId}"
+          data-action="reactivate">
+          <i class="fas fa-check-circle"></i> Reactivate
+        </button>
+      `;
+    }
+
+    buttons += `
+      <button class="btn btn-sm btn-outline-danger deleteBtn" data-id="${categoryId}">
+        <i class="fas fa-trash"></i> Delete
+      </button>
+    `;
+  }
+
+  return buttons;
+}
+
+// Function to render category cards based on filters and search term
+function renderCategoryCards() {
+  let filteredCategories = categoriesCache;
+
+  if (activeCategoryFilter === "active") {
+    filteredCategories = filteredCategories.filter((category) =>
+      isCategoryActive(category.is_active),
+    );
+  }
+
+  if (activeCategoryFilter === "inactive") {
+    filteredCategories = filteredCategories.filter(
+      (category) => !isCategoryActive(category.is_active),
+    );
+  }
+
+  if (categorySearchTerm) {
+    filteredCategories = filteredCategories.filter((category) => {
+      const searchableText = [
+        category.name,
+        category.description,
+        getCategorySellerDisplayName(category),
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      return searchableText.includes(categorySearchTerm);
+    });
+  }
+
+  const $cards = $("#categoryCards");
+  $cards.empty();
+
+  if (!filteredCategories.length) {
+    $cards.html(`
+      <div class="category-empty-card">
+        <i class="fas fa-box-open"></i>
+        <h5>No categories found</h5>
+        <p class="mb-0">There are no categories to display.</p>
+      </div>
+    `);
+    return;
+  }
+
+  filteredCategories.forEach((category) => {
+    const categoryId = category.category_id || category.id || "N/A";
+    const description = category.description || "No description provided.";
+    const imageUrl = getCategoryImageUrl(category.image);
+    const status = normalizeCategoryStatus(
+      category.status || category.approval_status,
+    );
+    const statusBadge = getStatusBadge(status);
+    const activityBadge = getCategoryActivityBadge(category.is_active);
+    const date = formatCategoryDate(
+      category.approved_at || category.updated_at || category.created_at,
+    );
+    const actionButtons = getCategoryActionButtons(category);
+
+    $cards.append(`
+      <div class="category-card-item">
+        <div class="category-card-image-wrap">
+          <img
+            src="${imageUrl}"
+            alt="${category.name || "Category Image"}"
+            class="category-card-image"
+            onerror="this.src='assets/img/back.jpg'" />
+        </div>
+
+        <div class="category-card-content">
+          <div class="category-card-top">
+            <div>
+              <h4>${category.name || "N/A"}</h4>
+              <p class="category-card-seller mb-0">
+                ${category.seller_id ? "Submitted by " + getCategorySellerDisplayName(category) : "Admin-created category"}
+              </p>
+            </div>
+
+            <div class="category-card-badges">
+              ${statusBadge}
+              ${activityBadge}
+            </div>
+          </div>
+
+          <p class="category-card-description">
+            ${description}
+          </p>
+
+          <div class="category-card-meta">
+            <span>
+              <i class="far fa-calendar-alt"></i>
+              ${date}
+            </span>
+            <span>Category ID: ${categoryId}</span>
+          </div>
+
+          <div class="category-card-actions">
+            ${actionButtons}
+          </div>
+        </div>
+      </div>
+    `);
+  });
+}
+
+// Setup event listeners for category status filters and search input
+function setupCategoryStatusFilters() {
+  $(document).on(
+    "click",
+    ".category-status-filter, .category-summary-card",
+    function () {
+      activeCategoryFilter =
+        $(this).data("status") || $(this).data("category-filter") || "all";
+
+      $(".category-status-filter")
+        .removeClass("active btn-dark")
+        .addClass("btn-outline-dark");
+
+      $(`.category-status-filter[data-status="${activeCategoryFilter}"]`)
+        .addClass("active btn-dark")
+        .removeClass("btn-outline-dark");
+
+      renderCategoryCards();
+    },
+  );
+
+  $(document).on(
+    "input keyup search change",
+    "#categorySearchInput",
+    function () {
+      categorySearchTerm = String($(this).val() || "")
+        .toLowerCase()
+        .trim();
+
+      renderCategoryCards();
+    },
+  );
+}
+
 $(document).ready(function () {
   load_user(); //  initialize session
-
-  // Sidebar Toggle
-  setupSidebarToggle();
-
-  // $(".menu-btn").click(function () {
-  //   $(".sidebar").addClass("collapsed");
-  //   $(".wrapper").addClass("sidebar-collapsed");
-  //   $(".text-link").hide();
-  //   $(".close-btn").show();
-  //   $(".menu-btn").hide();
-  // });
-
-  // $(".close-btn").click(function () {
-  //   $(".sidebar").removeClass("collapsed");
-  //   $(".wrapper").removeClass("sidebar-collapsed");
-  //   $(".text-link").show();
-  //   $(".close-btn").hide();
-  //   $(".menu-btn").show();
-  // });
+  setupSidebarToggle(); // initialize sidebar toggle behavior
+  setupCategoryStatusFilters(); // initialize category status filters and search input
 
   // Loading animation
   $(document).ajaxStart(() => $("#wait").show());
@@ -410,7 +597,7 @@ $(document).ready(function () {
     console.error("No username found in cookie.");
   }
 
-  $.when(loadCategorySellerLookup(), profileReq).always(function () {
+  profileReq.always(function () {
     loadCategories();
   });
 
@@ -711,18 +898,24 @@ $(document).ready(function () {
         Accept: "application/json",
       },
       success: function (res) {
+        console.log("Categories response:", res);
+
         const categories = res.data ?? res;
         categoriesCache = Array.isArray(categories) ? categories : [];
 
-        const approved = filterCategoriesByRole(categoriesCache, "approved");
+        categoriesCache.forEach(cacheCategorySeller);
 
-        const pending = filterCategoriesByRole(categoriesCache, "pending");
+        updateCategorySummaryCards(categoriesCache);
+        renderCategoryCards();
+      },
+      error: function (xhr) {
+        console.error("Failed to load categories:", xhr?.responseText || xhr);
 
-        const rejected = filterCategoriesByRole(categoriesCache, "rejected");
-
-        renderApprovedCategories(approved);
-        renderPendingCategories(pending);
-        renderRejectedCategories(rejected);
+        Swal.fire(
+          "Error",
+          getAjaxErrorMessage(xhr, "Failed to load categories."),
+          "error",
+        );
       },
     });
   }

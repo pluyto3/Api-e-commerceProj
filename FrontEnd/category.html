@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -14,24 +14,24 @@
     <link rel="stylesheet" href="assets/css/owl.carousel.min.css" />
     <link rel="stylesheet" href="assets/css/owl.theme.default.min.css" />
     <link rel="stylesheet" href="assets/css/jquery.bxslider.min.css" />
-    <link rel="stylesheet" href="assets/css/datatables.min.css"/>
+    <link rel="stylesheet" href="assets/css/datatables.min.css" />
     <link rel="stylesheet" href="assets/css/stylesheet.css" />
     <link rel="stylesheet" href="assets/css/responsive-fixes.css" />
 
     <!-- jQuery -->
-    <script src="assets/js/jquery-3.5.1.min.js"></script> 
+    <script src="assets/js/jquery-3.5.1.min.js"></script>
 
     <!-- DataTables -->
     <script src="assets/js/datatables.min.js"></script>
 
-    <!-- Bootstrap JS + Others --> 
+    <!-- Bootstrap JS + Others -->
     <script src="assets/js/popper.min.js"></script>
     <script src="assets/js/bootstrap.min.js"></script>
     <script src="assets/js/fontawesome.min.js"></script>
     <script src="assets/js/sweetalert2.all.js"></script>
     <script src="assets/js/owl.carousel.min.js"></script>
     <script src="assets/js/jquery.bxslider.min.js"></script>
-    
+
     <!-- jQuery Cookie Plugin -->
     <script src="assets/js/jquery.cookie.min.js"></script>
 
@@ -41,16 +41,14 @@
     <script src="assets/js/config.js"></script>
     <script src="assets/js/firebase-notification.js"></script>
 
-
     <script src="assets/js/notification-bell.js"></script>
     <script src="assets/js/category.js"></script>
     <script src="assets/js/role-guard.js"></script>
     <script src="assets/js/sidebar-role.js"></script>
     <script src="assets/js/navbar-count.js"></script>
     <script src="assets/js/navbar-role.js"></script>
-
   </head>
-    
+
   <body onload="load_user()">
     <!--Navbar-->
     <nav
@@ -275,270 +273,516 @@
       <!-- Sidebar -->
       <section class="sidebar">
         <ul class="nav-bar">
-          <li id="dashboard"><a href="dashboard.html"><i class="fas fa-tachometer-alt"></i> <span class="text-link"> Dashboard</span></a></li>
-          <li id="account"><a href="account.html"><i class="fas fa-id-badge"></i> <span class="text-link"> Profile</span></a></li>
-          <li id="address"><a href="address.html"><i class="fas fa-address-card"></i> <span class="text-link"> Address</span></a></li>
-          <li id="sidebarAccounts"><a href="manageAccounts.html"><i class="fas fa-images"></i> <span class="text-link"> Accounts</span></a></li>
-          <li id="brand"><a href="brand.html"><i class="fas fa-dolly-flatbed"></i> <span class="text-link"> Brand</span></a></li>
-          <li id="category"><a href="category.html"><i class="fas fa-dolly"></i> <span class="text-link"> Category</span></a></li>
-          <li id="product"><a href="product.html"><i class="fas fa-shopping-basket"></i> <span class="text-link"> Products</span></a></li>
-          <li id="orders"><a href="orderDetails.html"><i class="fas fa-truck"></i> <span class="text-link"> Orders</span></a></li>
+          <li id="dashboard">
+            <a href="dashboard.html"
+              ><i class="fas fa-tachometer-alt"></i>
+              <span class="text-link"> Dashboard</span></a
+            >
+          </li>
+          <li id="account">
+            <a href="account.html"
+              ><i class="fas fa-id-badge"></i>
+              <span class="text-link"> Profile</span></a
+            >
+          </li>
+          <li id="address">
+            <a href="address.html"
+              ><i class="fas fa-address-card"></i>
+              <span class="text-link"> Address</span></a
+            >
+          </li>
+          <li id="sidebarAccounts">
+            <a href="manageAccounts.html"
+              ><i class="fas fa-images"></i>
+              <span class="text-link"> Accounts</span></a
+            >
+          </li>
+          <li id="brand">
+            <a href="brand.html"
+              ><i class="fas fa-dolly-flatbed"></i>
+              <span class="text-link"> Brand</span></a
+            >
+          </li>
+          <li id="category">
+            <a href="category.html"
+              ><i class="fas fa-dolly"></i>
+              <span class="text-link"> Category</span></a
+            >
+          </li>
+          <li id="product">
+            <a href="product.html"
+              ><i class="fas fa-shopping-basket"></i>
+              <span class="text-link"> Products</span></a
+            >
+          </li>
+          <li id="orders">
+            <a href="orderDetails.html"
+              ><i class="fas fa-truck"></i>
+              <span class="text-link"> Orders</span></a
+            >
+          </li>
         </ul>
       </section>
 
       <!-- Working Panel -->
       <section class="working-panel">
         <div class="container-fluid">
-
           <!-- Approved Section -->
           <div class="approvedCategoryContent" id="approvedCategoryContent">
-            <h1 class="display-4"> Seller Category Lists</h1>
+            <h1 class="display-4">Category Management</h1>
             <hr class="admin-hr" />
 
             <!-- Category Section -->
             <div class="category-section">
-
-              <!-- Category Table Display -->
-              <div class="card">
-                <div class="card-header">
-                  <h2 class="mb-0">Approved Category List</h2>
-                </div>
-                <div class="card-body table-responsive">
-                  <table id="approved-category-table" class="table table-striped table-hover">
-                    <thead>
-                      <tr>
-                        <th class="text-center">ID</th>
-                        <th class="text-center">Category Name</th>
-                        <th class="text-center">Seller</th>
-                        <th class="text-center">Description</th>
-                        <th class="text-center">Status</th>
-                        <th class="text-center">Availability</th>
-                        <th class="text-center">Approved Date</th>
-                        <th class="text-center">Image</th>
-                        <th class="text-center">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <!-- Data will be populated here via JavaScript -->
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              <!-- Approved Category -->
-              <div class="modal fade" id="categoryApprovedDetailsModal" tabindex="-1" role="dialog" aria-labelledby="categoryDetailsModalLabel">
-                <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+              <!-- Approved Category Details Modal -->
+              <div
+                class="modal fade"
+                id="categoryApprovedDetailsModal"
+                tabindex="-1"
+                role="dialog"
+                aria-labelledby="categoryDetailsModalLabel">
+                <div
+                  class="modal-dialog modal-lg modal-dialog-centered"
+                  role="document">
                   <div class="modal-content">
                     <div class="modal-header">
-                      <h5 class="modal-title" id="categoryDetailsModalLabel"> Approved Category Details</h5>
-                      <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                      <h5 class="modal-title" id="categoryDetailsModalLabel">
+                        Approved Category Details
+                      </h5>
+                      <button
+                        type="button"
+                        class="close"
+                        data-dismiss="modal"
+                        aria-label="Close">
                         <span>&times;</span>
                       </button>
                     </div>
                     <div class="modal-body">
                       <div class="row">
                         <div class="col-md-4">
-                          <img id="categoryImage" src="" alt="Category Image" class="img-fluid category-detail-image" style="max-height: 300px; object-fit: cover;">
+                          <img
+                            id="categoryImage"
+                            src=""
+                            alt="Category Image"
+                            class="img-fluid category-detail-image"
+                            style="max-height: 300px; object-fit: cover" />
                         </div>
                         <div class="col-md-8">
-                          <p><strong>Category ID:</strong> <span id="detailCategoryId" class="category-detail-id"></span></p>
-                          <p><strong>Category Name:</strong> <span id="detailCategoryName" class="category-detail-name"></span></p>
-                          <p><strong>Seller:</strong> <span id="detailSeller" class="category-detail-seller"></span></p>
+                          <p>
+                            <strong>Category ID:</strong>
+                            <span
+                              id="detailCategoryId"
+                              class="category-detail-id"></span>
+                          </p>
+                          <p>
+                            <strong>Category Name:</strong>
+                            <span
+                              id="detailCategoryName"
+                              class="category-detail-name"></span>
+                          </p>
+                          <p>
+                            <strong>Seller:</strong>
+                            <span
+                              id="detailSeller"
+                              class="category-detail-seller"></span>
+                          </p>
                           <p><strong>Description:</strong></p>
-                          <p id="detailDescription" class="category-detail-description" style="border: 1px solid #ddd; padding: 10px; border-radius: 4px;"></p>
-                          <p><strong>Status:</strong> <span id="detailStatus" class="badge category-detail-status"></span></p>
+                          <p
+                            id="detailDescription"
+                            class="category-detail-description"
+                            style="
+                              border: 1px solid #ddd;
+                              padding: 10px;
+                              border-radius: 4px;
+                            "></p>
+                          <p>
+                            <strong>Status:</strong>
+                            <span
+                              id="detailStatus"
+                              class="badge category-detail-status"></span>
+                          </p>
                           <div
                             class="category-detail-reason-wrap alert alert-danger"
-                            style="display: none;">
-
+                            style="display: none">
                             <strong>Rejection Reason:</strong>
 
-                            <p
-                              class="category-detail-reason mb-0 mt-1">
-                            </p>
+                            <p class="category-detail-reason mb-0 mt-1"></p>
                           </div>
-                          <p><strong>Submitted Date:</strong> <span id="detailDate" class="category-detail-date"></span></p>
+                          <p>
+                            <strong>Submitted Date:</strong>
+                            <span
+                              id="detailDate"
+                              class="category-detail-date"></span>
+                          </p>
                         </div>
                       </div>
                     </div>
                     <div class="modal-footer">
-                      <button type="button" class="btn btn-danger" id="rejectApprovedCategoryBtn">Reject</button>
-                      <button type="button" class="btn btn-secondary" id="closeApprovedCategoryBtn" data-dismiss="modal">Close</button>
+                      <button
+                        type="button"
+                        class="btn btn-danger"
+                        id="rejectApprovedCategoryBtn">
+                        Reject
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn-secondary"
+                        id="closeApprovedCategoryBtn"
+                        data-dismiss="modal">
+                        Close
+                      </button>
                     </div>
                   </div>
                 </div>
               </div>
-
             </div>
-
           </div>
 
           <!-- Category Section -->
           <div class="category-section">
-            
             <!-- Add a New Category -->
-            <div class="modal fade" id="categoryModal" tabindex="-1" role="dialog" aria-labelledby="categoryModalLabel">
+            <div
+              class="modal fade"
+              id="categoryModal"
+              tabindex="-1"
+              role="dialog"
+              aria-labelledby="categoryModalLabel">
               <div class="modal-dialog modal-dialog-centered" role="document">
                 <div class="modal-content">
                   <div class="modal-header">
-                    <h5 class="modal-title" id="categoryModalLabel">Add a New Category</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <h5 class="modal-title" id="categoryModalLabel">
+                      Add a New Category
+                    </h5>
+                    <button
+                      type="button"
+                      class="close"
+                      data-dismiss="modal"
+                      aria-label="Close">
                       <span>&times;</span>
                     </button>
                   </div>
                   <div class="modal-body">
-                    <form action="#" method="POST" id="categoryForm" enctype="multipart/form-data">
+                    <form
+                      action="#"
+                      method="POST"
+                      id="categoryForm"
+                      enctype="multipart/form-data">
                       <div class="form-group">
-                        <label for="name" class="font-weight-bold">Category Name</label>
-                        <input type="text" class="form-control" id="name" name="name" placeholder="Enter category name " required>
-                        <label for="description" class="font-weight-bold">Description</label>
-                        <textarea class="form-control" id="description" name="description" rows="3" placeholder="Enter category description " required></textarea>
-                        <label for="image" class="font-weight-bold">Images</label>
-                        <input type="file" class="form-control" id="image" name="image" placeholder="Enter image " required>
+                        <label for="name" class="font-weight-bold"
+                          >Category Name</label
+                        >
+                        <input
+                          type="text"
+                          class="form-control"
+                          id="name"
+                          name="name"
+                          placeholder="Enter category name "
+                          required />
+                        <label for="description" class="font-weight-bold"
+                          >Description</label
+                        >
+                        <textarea
+                          class="form-control"
+                          id="description"
+                          name="description"
+                          rows="3"
+                          placeholder="Enter category description "
+                          required></textarea>
+                        <label for="image" class="font-weight-bold"
+                          >Images</label
+                        >
+                        <input
+                          type="file"
+                          class="form-control"
+                          id="image"
+                          name="image"
+                          placeholder="Enter image "
+                          required />
                       </div>
-                  <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary create" id="createCategory">Add</button>
-                    <button type="button" class="btn btn-danger closeBtn" data-dismiss="modal">Close</button>
+                      <div class="modal-footer">
+                        <button
+                          type="submit"
+                          class="btn btn-primary create"
+                          id="createCategory">
+                          Add
+                        </button>
+                        <button
+                          type="button"
+                          class="btn btn-danger closeBtn"
+                          data-dismiss="modal">
+                          Close
+                        </button>
+                      </div>
+                    </form>
                   </div>
-                  </form>
                 </div>
               </div>
-              </div>     
             </div>
 
             <!-- Approval Category Modal -->
-            <div class="modal fade" id="categoryApprovalModal" tabindex="-1" role="dialog" aria-labelledby="categoryApprovalModalLabel">
+            <div
+              class="modal fade"
+              id="categoryApprovalModal"
+              tabindex="-1"
+              role="dialog"
+              aria-labelledby="categoryApprovalModalLabel">
               <div class="modal-dialog modal-dialog-centered" role="document">
                 <div class="modal-content">
-                    <div class="modal-header">
-                      <h5 class="modal-title" id="categoryApprovalModalLabel">Approval Category</h5>
-                      <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
+                  <div class="modal-header">
+                    <h5 class="modal-title" id="categoryApprovalModalLabel">
+                      Approval Category
+                    </h5>
+                    <button
+                      type="button"
+                      class="close"
+                      data-dismiss="modal"
+                      aria-label="Close">
+                      <span aria-hidden="true">&times;</span>
+                    </button>
+                  </div>
+                  <div class="modal-body">
+                    <div class="row">
+                      <div class="col-md-4">
+                        <img
+                          src=""
+                          alt="Category Image"
+                          class="img-fluid category-detail-image"
+                          style="max-height: 300px; object-fit: cover" />
+                      </div>
+                      <div class="col-md-8">
+                        <p>
+                          <strong>Category ID:</strong>
+                          <span class="category-detail-id"></span>
+                        </p>
+                        <p>
+                          <strong>Category Name:</strong>
+                          <span class="category-detail-name"></span>
+                        </p>
+                        <p>
+                          <strong>Seller:</strong>
+                          <span class="category-detail-seller"></span>
+                        </p>
+                        <p><strong>Description:</strong></p>
+                        <p
+                          class="category-detail-description"
+                          style="
+                            border: 1px solid #ddd;
+                            padding: 10px;
+                            border-radius: 4px;
+                          "></p>
+                        <p>
+                          <strong>Status:</strong>
+                          <span class="badge category-detail-status"></span>
+                        </p>
+                        <p>
+                          <strong>Submitted Date:</strong>
+                          <span class="category-detail-date"></span>
+                        </p>
+                      </div>
+                    </div>
+                    <div class="modal-footer">
+                      <button
+                        type="button"
+                        class="btn btn-success"
+                        id="approveCategoryBtn">
+                        Approve
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn-danger"
+                        id="rejectCategoryBtn">
+                        Reject
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn-secondary"
+                        id="cancelCategoryBtn"
+                        data-dismiss="modal">
+                        Cancel
                       </button>
                     </div>
-                    <div class="modal-body">
-                      <div class="row">
-                        <div class="col-md-4">
-                          <img src="" alt="Category Image" class="img-fluid category-detail-image" style="max-height: 300px; object-fit: cover;">
-                        </div>
-                        <div class="col-md-8">
-                          <p><strong>Category ID:</strong> <span class="category-detail-id"></span></p>
-                          <p><strong>Category Name:</strong> <span class="category-detail-name"></span></p>
-                          <p><strong>Seller:</strong> <span class="category-detail-seller"></span></p>
-                          <p><strong>Description:</strong></p>
-                          <p class="category-detail-description" style="border: 1px solid #ddd; padding: 10px; border-radius: 4px;"></p>
-                          <p><strong>Status:</strong> <span class="badge category-detail-status"></span></p>
-                          <p><strong>Submitted Date:</strong> <span class="category-detail-date"></span></p>
-                        </div>
-                      </div>
-                      <div class="modal-footer">
-                        <button type="button" class="btn btn-success" id="approveCategoryBtn">Approve</button>
-                        <button type="button" class="btn btn-danger" id="rejectCategoryBtn">Reject</button>
-                        <button type="button" class="btn btn-secondary" id="cancelCategoryBtn" data-dismiss="modal">Cancel</button>
-                      </div>
-                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
             <!-- Edit New Category -->
-            <div class="modal fade" id="editCategoryModal" tabindex="-1" role="dialog" aria-labelledby="editCategoryModalLabel">
-                <div class="modal-dialog modal-dialog-centered" role="document">
-                  <div class="modal-content">
-                      <div class="modal-header">
-                        <h5 class="modal-title" id="editCategoryModalLabel">Edit Category</h5>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                          <span aria-hidden="true">&times;</span>
+            <div
+              class="modal fade"
+              id="editCategoryModal"
+              tabindex="-1"
+              role="dialog"
+              aria-labelledby="editCategoryModalLabel">
+              <div class="modal-dialog modal-dialog-centered" role="document">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title" id="editCategoryModalLabel">
+                      Edit Category
+                    </h5>
+                    <button
+                      type="button"
+                      class="close"
+                      data-dismiss="modal"
+                      aria-label="Close">
+                      <span aria-hidden="true">&times;</span>
+                    </button>
+                  </div>
+                  <div class="modal-body">
+                    <form
+                      action="#"
+                      method="POST"
+                      id="editCategoryForm"
+                      enctype="multipart/form-data">
+                      <div class="form-group">
+                        <input
+                          type="hidden"
+                          class="form-control"
+                          id="category_id"
+                          name="category_id" />
+                        <input type="hidden" name="_method" value="PUT" />
+                        <label for="name" class="font-weight-bold"
+                          >Category Name</label
+                        >
+                        <input
+                          type="text"
+                          class="form-control"
+                          id="editName"
+                          name="editName"
+                          placeholder="Enter category name " />
+                        <label for="description" class="font-weight-bold"
+                          >Description</label
+                        >
+                        <input
+                          type="text"
+                          class="form-control"
+                          id="editDescription"
+                          name="editDescription"
+                          placeholder="Enter category description " />
+                        <label for="image" class="font-weight-bold"
+                          >Images</label
+                        >
+                        <input
+                          type="file"
+                          class="form-control"
+                          id="image"
+                          name="image"
+                          placeholder="Enter image " />
+                        <label
+                          for="currentImage"
+                          class="form-control form-label mt-4"
+                          >Current Image: </label
+                        ><br />
+                        <img
+                          id="currentImagePreview"
+                          alt="Current Category Image"
+                          style="max-width: 100px; max-height: 100px" />
+                      </div>
+                      <div class="modal-footer">
+                        <button
+                          type="submit"
+                          class="btn btn-primary editCategory"
+                          id="editCategory">
+                          Update
+                        </button>
+                        <button
+                          type="button"
+                          src=""
+                          class="btn btn-danger"
+                          data-dismiss="modal">
+                          Close
                         </button>
                       </div>
-                      <div class="modal-body">
-                        <form action="#" method="POST" id="editCategoryForm" enctype="multipart/form-data">
-                              <div class="form-group">
-                                <input type="hidden" class="form-control" id="category_id" name="category_id">
-                                <input type="hidden" name="_method" value="PUT">
-                                <label for="name" class="font-weight-bold">Category Name</label>
-                                <input type="text" class="form-control" id="editName" name="editName" placeholder="Enter category name ">
-                                <label for="description" class="font-weight-bold">Description</label>
-                                <input type="text" class="form-control" id="editDescription" name="editDescription" placeholder="Enter category description ">
-                                <label for="image" class="font-weight-bold">Images</label>
-                                <input type="file" class="form-control" id="image" name="image" placeholder="Enter image ">
-                                <label for="currentImage" class="form-control form-label mt-4">Current Image: </label><br>
-                                <img id="currentImagePreview" alt="Current Category Image" style="max-width: 100px; max-height: 100px;">
-                              </div>
-                          <div class="modal-footer">
-                            <button type="submit" class="btn btn-primary editCategory" id="editCategory">Update </button>
-                            <button type="button" src="" class="btn btn-danger" data-dismiss="modal">Close </button>
-                          </div>
-                        </form>
-                      </div>
+                    </form>
                   </div>
-                </div>     
-            </div>
-
-            <!-- Category Table Display -->
-            <div class="card">
-              <div id="addCategorySection" class="p-2 d-flex justify-content-end d-none">
-                <button type="button" class="btn btn-primary add_category" data-toggle="modal" data-target="#categoryModal"> Create Category</button>
-              </div>
-              <div class="card-header">
-                <h2>Category Pending Approval</h2>
-              </div>
-              <div class="card-body table-responsive">
-                <table id="approval-category-table" class="table table-striped table-sm text-center table-hover justify-content-center" >
-                  <thead>
-                      <tr>
-                        <th class="text-center">ID</th>
-                        <th class="text-center">Category Name</th>
-                        <th class="text-center">Seller</th>
-                        <th class="text-center">Description</th>
-                        <th class="text-center">Status</th>
-                        <th class="text-center">Submitted Date</th>
-                        <th class="text-center">Image</th>
-                        <th class="text-center">Action</th>
-                      </tr>
-                  </thead>
-                  <tbody>
-                      <!-- Populate this Area -->
-                  </tbody>
-                </table>
+                </div>
               </div>
             </div>
 
-            <!-- Rejected Categories -->
-            <div class="card mt-4">
-              <div class="card-header">
-                <h2 class="mb-0">Rejected Categories</h2>
+            <!-- Category Management Card Layout -->
+            <div class="category-management-panel">
+              <div class="category-summary-grid mb-4">
+                <div class="category-summary-card" data-category-filter="all">
+                  <span class="category-summary-label">All Categories</span>
+                  <strong id="totalCategoriesCount">0</strong>
+                </div>
+
+                <div
+                  class="category-summary-card"
+                  data-category-filter="active">
+                  <span class="category-summary-label">Active</span>
+                  <strong id="activeCategoriesCount">0</strong>
+                </div>
+
+                <div
+                  class="category-summary-card"
+                  data-category-filter="inactive">
+                  <span class="category-summary-label">Deactivated</span>
+                  <strong id="inactiveCategoriesCount">0</strong>
+                </div>
               </div>
 
-              <div class="card-body table-responsive">
-                <table
-                  id="rejected-category-table"
-                  class="table table-striped table-hover">
+              <div
+                id="addCategorySection"
+                class="d-flex justify-content-end mb-3 d-none">
+                <button
+                  type="button"
+                  class="btn btn-primary add_category"
+                  data-toggle="modal"
+                  data-target="#categoryModal">
+                  Create Category
+                </button>
+              </div>
 
-                  <thead>
-                    <tr>
-                      <th>ID</th>
-                      <th>Category Name</th>
-                      <th>Seller</th>
-                      <th>Description</th>
-                      <th>Status</th>
-                      <th>Rejection Reason</th>
-                      <th>Submitted Date</th>
-                      <th>Image</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
+              <div class="card category-card-panel">
+                <div
+                  class="card-header d-flex flex-column flex-lg-row justify-content-between align-items-lg-center">
+                  <div>
+                    <h2 class="mb-1">Categories</h2>
+                    <p class="text-muted mb-0">
+                      Manage product categories used in the shop.
+                    </p>
+                  </div>
 
-                  <tbody></tbody>
-                </table>
+                  <div class="category-status-filters mt-3 mt-lg-0">
+                    <button
+                      type="button"
+                      class="btn btn-dark btn-sm category-status-filter active"
+                      data-status="all">
+                      All
+                    </button>
+
+                    <button
+                      type="button"
+                      class="btn btn-outline-dark btn-sm category-status-filter"
+                      data-status="active">
+                      Active
+                    </button>
+
+                    <button
+                      type="button"
+                      class="btn btn-outline-dark btn-sm category-status-filter"
+                      data-status="inactive">
+                      Deactivated
+                    </button>
+                  </div>
+                </div>
+
+                <div class="card-body">
+                  <div class="category-card-toolbar">
+                    <input
+                      type="text"
+                      id="categorySearchInput"
+                      class="form-control"
+                      placeholder="Search category name or description..." />
+                  </div>
+
+                  <div id="categoryCards" class="category-card-grid"></div>
+                </div>
               </div>
             </div>
-
           </div>
-          
         </div>
       </section>
-
     </div>
 
     <!--Footer-->
@@ -611,16 +855,11 @@
         top: 50%;
         left: 50%;
         padding: 2px;
-      "
-    >
+      ">
       <img
         src="assets/img/demo_wait.gif"
         width="64"
-        height="64"
-      /><br />Loading..
+        height="64" /><br />Loading..
     </div>
-
   </body>
 </html>
-</html>
-

@@ -43,7 +43,6 @@
         "#account",
         "#address",
         "#brand",
-        "#category",
         "#product",
         "#orders",
       ]);
