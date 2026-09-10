@@ -14,6 +14,8 @@ let role = ($.cookie("role") || "").toLowerCase();
 let currentProductId = null;
 let allProducts = [];
 let approvedOrdersCache = [];
+let activeProductFilter = "all";
+let productSearchTerm = "";
 
 console.log("adminProductApproval.js loaded", { token, usr, role, ip });
 
@@ -187,57 +189,36 @@ function loadProductsForApproval() {
     },
     success: function (res) {
       console.log("All Products:", res);
-      allProducts = res.data || res || [];
 
-      // ======================================
-      // FILTER PRODUCTS IF SELLER IS LOGGED IN
-      // ======================================
-      let filteredProducts = allProducts;
+      const products = res.data || res || [];
+
+      allProducts = Array.isArray(products) ? products : [];
 
       if (role === "seller") {
-        filteredProducts = allProducts.filter((p) => {
+        allProducts = allProducts.filter((p) => {
           return p.seller?.username === usr;
         });
       }
 
-      // ======================================
-      // SEPARATE PRODUCTS BY APPROVAL STATUS
-      // ======================================
-      const pendingProducts = filteredProducts.filter((p) => {
-        return (p.approval_status || "pending").toLowerCase() === "pending";
-      });
-
-      const approvedProducts = filteredProducts.filter((p) => {
-        return (p.approval_status || "").toLowerCase() === "approved";
-      });
-
-      const rejectedProducts = filteredProducts.filter((p) => {
-        return (p.approval_status || "").toLowerCase() === "rejected";
-      });
-
-      // ======================================
-      // DISPLAY TABLES
-      // ======================================
-      displayProductsTable(pendingProducts, "all");
-
-      // Keep using your EXISTING approved function for now
-      displayApprovedOrders(approvedProducts);
-
-      // Keep using your EXISTING rejected function for now
-      displayRejectedProducts(rejectedProducts);
+      updateProductSummaryCards(allProducts);
+      renderProductCards();
     },
     error: function (xhr) {
       console.error("Error loading products:", xhr.responseText);
+
       Swal.fire({
         icon: "error",
         title: "Error",
         text: "Failed to load products.",
       });
-      // show message in table so admin sees immediate feedback
-      const tbody = $("#product-table tbody");
-      tbody.html(
-        `<tr><td colspan="11" class="text-center text-danger py-4">Failed to load products. Check console for details.</td></tr>`,
-      );
+
+      $("#productCards").html(`
+        <div class="product-empty-card">
+          <i class="fas fa-exclamation-triangle"></i>
+          <h5>Failed to load products</h5>
+          <p class="mb-0">Please check the console or try again.</p>
+        </div>
+      `);
     },
   });
 }
@@ -934,7 +915,14 @@ function buildImageCandidates(image) {
   // candidate 3: relative FrontEnd path
   const c3 = joinParts(base, "FrontEnd", "assets", "img", "product", filename);
 
-  return [c1, c2, c3];
+  if (
+    window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1"
+  ) {
+    return [c2, c3, c1];
+  }
+
+  return [c1, c3, c2];
 }
 
 // =======================================
@@ -1065,6 +1053,20 @@ function loadProductDetails(productId) {
     $("#approveBtn").hide();
     $("#rejectBtn").hide();
   }
+
+  // Show rejection reason only for rejected products
+  if (status === "rejected") {
+    $("#detailProductRejectionReasonWrap").show();
+    $("#detailProductRejectionReason").text(
+      product.approval_reason || "No reason provided.",
+    );
+  } else {
+    $("#detailProductRejectionReasonWrap").hide();
+    $("#detailProductRejectionReason").text("");
+  }
+
+  // Open modal after details are loaded
+  $("#productDetailsModal").modal("show");
 }
 
 // =======================================
@@ -1202,12 +1204,349 @@ function displayRejectedProducts(products) {
 }
 
 // =======================================
+// Normalize Product Approval Status
+// =======================================
+function normalizeProductApprovalStatus(status) {
+  return String(status || "pending")
+    .toLowerCase()
+    .trim();
+}
+
+// =======================================
+// Normalize Product Availability
+// =======================================
+function normalizeProductAvailability(status, stock) {
+  const stockNumber = parseInt(stock || 0);
+
+  if (stockNumber <= 0) {
+    return "out_of_stock";
+  }
+
+  return String(status || "active")
+    .toLowerCase()
+    .trim();
+}
+
+// =======================================
+// Get Product Category Name
+// =======================================
+function getProductCategoryName(product) {
+  if (typeof product.category === "object" && product.category) {
+    return product.category.name || product.category.category_name || "N/A";
+  }
+
+  return product.category || product.category_name || "N/A";
+}
+
+// =======================================
+// Get Product Brand Name
+// =======================================
+function getProductBrandName(product) {
+  if (typeof product.brand === "object" && product.brand) {
+    return product.brand.name || product.brand.brand_name || "N/A";
+  }
+
+  return product.brand || product.brand_name || "N/A";
+}
+
+// =======================================
+// Get Product Seller Name
+// =======================================
+function getProductSellerName(product) {
+  if (typeof product.seller === "object" && product.seller) {
+    return product.seller.username || "N/A";
+  }
+
+  return product.seller || "N/A";
+}
+
+// =======================================
+// Update Product Summary Cards
+// =======================================
+function updateProductSummaryCards(products) {
+  const approvedCount = products.filter(
+    (p) => normalizeProductApprovalStatus(p.approval_status) === "approved",
+  ).length;
+
+  const pendingCount = products.filter(
+    (p) => normalizeProductApprovalStatus(p.approval_status) === "pending",
+  ).length;
+
+  const rejectedCount = products.filter(
+    (p) => normalizeProductApprovalStatus(p.approval_status) === "rejected",
+  ).length;
+
+  const outOfStockCount = products.filter((p) => {
+    return (
+      normalizeProductAvailability(p.status, p.stock_quantity) ===
+      "out_of_stock"
+    );
+  }).length;
+
+  $("#totalProductsCount").text(products.length);
+  $("#approvedProductsCount").text(approvedCount);
+  $("#pendingProductsCount").text(pendingCount);
+  $("#rejectedProductsCount").text(rejectedCount);
+  $("#outOfStockProductsCount").text(outOfStockCount);
+}
+
+// =======================================
+// Get Product Action Buttons
+// =======================================
+function getProductActionButtons(product) {
+  const productId = product.product_id || product.id || "";
+  const approvalStatus = normalizeProductApprovalStatus(
+    product.approval_status,
+  );
+  const availability = normalizeProductAvailability(
+    product.status,
+    product.stock_quantity,
+  );
+
+  let buttons = `
+    <button
+      class="btn btn-sm btn-info view-product"
+      data-id="${productId}"
+      title="View Details">
+      <i class="fas fa-eye"></i> View
+    </button>
+  `;
+
+  if (role === "seller") {
+    if (approvalStatus === "pending") {
+      buttons += `
+        <button class="btn btn-sm btn-primary edit-product" data-id="${productId}">
+          <i class="fas fa-edit"></i> Edit
+        </button>
+      `;
+    }
+
+    if (approvalStatus === "rejected") {
+      buttons += `
+        <button class="btn btn-sm btn-warning edit-product" data-id="${productId}">
+          <i class="fas fa-redo"></i> Edit & Resubmit
+        </button>
+      `;
+    }
+
+    if (approvalStatus === "approved") {
+      buttons += `
+        <button class="btn btn-sm btn-warning request-product-edit" data-id="${productId}">
+          <i class="fas fa-edit"></i> Request Edit
+        </button>
+
+        <button class="btn btn-sm btn-primary update-product-stock" data-id="${productId}">
+          <i class="fas fa-boxes"></i> Stock
+        </button>
+      `;
+
+      if (availability === "active") {
+        buttons += `
+          <button
+            class="btn btn-sm btn-danger toggle-product-availability"
+            data-id="${productId}"
+            data-action="inactive">
+            <i class="fas fa-ban"></i> Deactivate
+          </button>
+        `;
+      }
+
+      if (availability === "inactive") {
+        buttons += `
+          <button
+            class="btn btn-sm btn-success toggle-product-availability"
+            data-id="${productId}"
+            data-action="active">
+            <i class="fas fa-check-circle"></i> Activate
+          </button>
+        `;
+      }
+    }
+  }
+
+  return buttons;
+}
+
+// =======================================
+// Determine if a product should be shown based on the active filter
+// =======================================
+function shouldShowProduct(product) {
+  const approvalStatus = normalizeProductApprovalStatus(
+    product.approval_status,
+  );
+  const availability = normalizeProductAvailability(
+    product.status,
+    product.stock_quantity,
+  );
+
+  if (activeProductFilter === "all") return true;
+  if (["approved", "pending", "rejected"].includes(activeProductFilter)) {
+    return approvalStatus === activeProductFilter;
+  }
+  if (["active", "inactive", "out_of_stock"].includes(activeProductFilter)) {
+    return availability === activeProductFilter;
+  }
+
+  return true;
+}
+
+// =======================================
+// Render Product Cards
+// =======================================
+function renderProductCards() {
+  let filteredProducts = allProducts.filter(shouldShowProduct);
+
+  if (productSearchTerm) {
+    filteredProducts = filteredProducts.filter((product) => {
+      const searchableText = [
+        product.product_name,
+        product.product_description,
+        getProductSellerName(product),
+        getProductCategoryName(product),
+        getProductBrandName(product),
+        product.approval_status,
+        product.status,
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      return searchableText.includes(productSearchTerm);
+    });
+  }
+
+  const $cards = $("#productCards");
+  $cards.empty();
+
+  if (!filteredProducts.length) {
+    $cards.html(`
+      <div class="product-empty-card">
+        <i class="fas fa-box-open"></i>
+        <h5>No products found</h5>
+        <p class="mb-0">There are no products to display.</p>
+      </div>
+    `);
+    return;
+  }
+
+  filteredProducts.forEach((product) => {
+    const productId = product.product_id || product.id || "N/A";
+    const productName = product.product_name || "N/A";
+    const seller = getProductSellerName(product);
+    const category = getProductCategoryName(product);
+    const brand = getProductBrandName(product);
+    const description =
+      product.product_description || "No description provided.";
+    const price = parseFloat(product.product_price || 0).toFixed(2);
+    const stock = product.stock_quantity ?? 0;
+    const approvalStatus = normalizeProductApprovalStatus(
+      product.approval_status,
+    );
+    const availability = normalizeProductAvailability(product.status, stock);
+    const imageUrl = buildImageCandidates(product.image)[0];
+    const actionButtons = getProductActionButtons(product);
+
+    let rejectionReason = "";
+
+    if (approvalStatus === "rejected") {
+      rejectionReason = `
+        <div class="product-card-reason">
+          <strong>Reason:</strong>
+          ${product.approval_reason || "No reason provided."}
+        </div>
+      `;
+    }
+
+    $cards.append(`
+      <div class="product-card-item">
+        <div class="product-card-image-wrap">
+          <img
+            src="${imageUrl}"
+            alt="${productName}"
+            class="product-card-image"
+            onerror="this.onerror=null;this.src='assets/img/back.jpg';" />
+        </div>
+
+        <div class="product-card-content">
+          <div class="product-card-top">
+            <div>
+              <h4>${productName}</h4>
+              <p class="product-card-seller mb-0">Sold by ${seller}</p>
+            </div>
+
+            <div class="product-card-badges">
+              ${getStatusBadge(approvalStatus)}
+              ${getAvailabilityBadge(availability)}
+            </div>
+          </div>
+
+          <p class="product-card-description">${description}</p>
+
+          ${rejectionReason}
+
+          <div class="product-card-meta">
+            <span><i class="fas fa-tags"></i> ${category}</span>
+            <span><i class="fas fa-copyright"></i> ${brand}</span>
+            <span><i class="fas fa-box"></i> Stock: ${stock}</span>
+            <span><i class="far fa-calendar-alt"></i> ${formatDate(product.approved_at || product.created_at)}</span>
+            <span>Product ID: ${productId}</span>
+          </div>
+
+          <div class="product-card-bottom">
+            <strong class="product-card-price">₱${price}</strong>
+
+            <div class="product-card-actions">
+              ${actionButtons}
+            </div>
+          </div>
+        </div>
+      </div>
+    `);
+  });
+}
+
+// =======================================
+// Setup Product Card Filters
+// =======================================
+function setupProductCardFilters() {
+  $(document).on(
+    "click",
+    ".product-status-filter, .product-summary-card",
+    function () {
+      activeProductFilter =
+        $(this).data("status") || $(this).data("product-filter") || "all";
+
+      $(".product-status-filter")
+        .removeClass("active btn-dark")
+        .addClass("btn-outline-dark");
+
+      $(`.product-status-filter[data-status="${activeProductFilter}"]`)
+        .addClass("active btn-dark")
+        .removeClass("btn-outline-dark");
+
+      renderProductCards();
+    },
+  );
+
+  $(document).on(
+    "input keyup search change",
+    "#productSearchInput",
+    function () {
+      productSearchTerm = String($(this).val() || "")
+        .toLowerCase()
+        .trim();
+      renderProductCards();
+    },
+  );
+}
+
+// =======================================
 // Main Initialization
 // =======================================
 $(document).ready(function () {
-  load_user();
-  setupSidebarToggle();
-  loadProductsForApproval();
+  load_user(); // Load user info and set global variables
+  setupSidebarToggle(); // Setup sidebar toggle functionality
+  loadProductsForApproval(); // Load products for approval and render
+  setupProductCardFilters(); // Setup product card filters and search functionality
 
   // --- Add Product Handler ---
   $(".add_product").on("click", () => {
@@ -1497,7 +1836,9 @@ $(document).ready(function () {
   });
 
   // --- View Product Details ---
-  $(document).on("click", ".view-product", function () {
+  $(document).on("click", ".view-product", function (e) {
+    e.preventDefault();
+
     const productId = $(this).data("id");
     loadProductDetails(productId);
   });
