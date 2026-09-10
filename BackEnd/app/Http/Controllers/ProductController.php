@@ -287,9 +287,12 @@ class ProductController extends Controller
                     ], 403);
                 }
 
-                // Only allow admins and sellers to create products
-                if (!in_array($user->role, ['admin', 'seller'], true)) {
-                    return response()->json(['msg' => 'Unauthorized.'], 403);
+                // Only sellers can create products.
+                // Admins manage approval and product moderation.
+                if ($user->role !== 'seller') {
+                    return response()->json([
+                        'msg' => 'Only sellers can create products.'
+                    ], 403);
                 }
 
                 $request->validate([
