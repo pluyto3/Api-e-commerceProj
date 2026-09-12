@@ -2499,3 +2499,385 @@ body.modal-open .navbar.sticky-top {
     width: 100%;
   }
 }
+
+/* =======================================
+   Order Management - Card Layout
+======================================= */
+
+.order-page-container {
+  max-width: 1400px;
+}
+
+.order-management-panel {
+  max-width: 1180px;
+  margin: 0 auto 40px;
+}
+
+.order-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.order-summary-card {
+  cursor: pointer;
+  background: #ffffff;
+  border: 1px solid #e8edf5;
+  border-radius: 18px;
+  padding: 20px 14px;
+  text-align: center;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+  transition: 0.15s ease;
+}
+
+.order-summary-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.12);
+}
+
+.order-summary-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.order-summary-card strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 28px;
+  color: #0f172a;
+}
+
+.order-card-panel {
+  border: 1px solid #e8edf5;
+  border-radius: 22px;
+  overflow: hidden;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+}
+
+.order-card-panel .card-header {
+  background: #ffffff;
+  border-bottom: 1px solid #e8edf5;
+  padding: 22px;
+}
+
+.admin-order-status-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-order-filter {
+  border-radius: 999px;
+  padding: 8px 15px;
+  font-weight: 800;
+}
+
+.admin-order-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.admin-order-toolbar .form-control {
+  min-height: 44px;
+  border: 1px solid #d8e0ec;
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+#adminOrderSearch {
+  max-width: 460px;
+}
+
+#adminDateFilter {
+  max-width: 180px;
+}
+
+.admin-order-card-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+}
+
+.admin-order-card {
+  display: grid;
+  grid-template-columns: 135px 1fr;
+  gap: 20px;
+  background: #ffffff;
+  border: 1px solid #e8edf5;
+  border-radius: 20px;
+  padding: 18px;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.06);
+  transition: 0.15s ease;
+}
+
+.admin-order-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.1);
+}
+
+.admin-order-card-image-wrap {
+  width: 135px;
+  height: 135px;
+  background: #f8fafc;
+  border: 1px solid #e8edf5;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.admin-order-card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 12px;
+}
+
+.admin-order-card-content {
+  min-width: 0;
+}
+
+.admin-order-card-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.admin-order-card-top h4 {
+  font-size: 20px;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.admin-order-card-subtitle {
+  color: #64748b;
+  font-size: 14px;
+}
+
+.admin-order-card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.admin-order-card-badges .order-status-badge {
+  border-radius: 999px;
+  padding: 7px 10px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.admin-order-card-info {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.admin-order-card-info div {
+  background: #f8fafc;
+  border: 1px solid #e8edf5;
+  border-radius: 14px;
+  padding: 10px 12px;
+}
+
+.admin-order-card-info span {
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 4px;
+}
+
+.admin-order-card-info strong {
+  color: #0f172a;
+  font-size: 14px;
+  word-break: break-word;
+}
+
+.admin-order-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.admin-order-item-pill {
+  display: inline-flex;
+  align-items: center;
+  background: #eff6ff;
+  color: #1e3a8a;
+  border-radius: 999px;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.admin-order-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.admin-order-card-actions .btn {
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 12px;
+  padding: 8px 13px;
+}
+
+.admin-order-empty-card {
+  text-align: center;
+  padding: 44px 20px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 18px;
+  color: #64748b;
+}
+
+.admin-order-empty-card i {
+  font-size: 34px;
+  margin-bottom: 12px;
+  color: #94a3b8;
+}
+
+.admin-order-empty-card h5 {
+  color: #0f172a;
+  font-weight: 800;
+}
+
+@media (max-width: 1199.98px) {
+  .order-summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .admin-order-card-info {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 991.98px) {
+  .order-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-order-card {
+    grid-template-columns: 120px 1fr;
+  }
+
+  .admin-order-card-image-wrap {
+    width: 120px;
+    height: 120px;
+  }
+
+  .admin-order-toolbar {
+    flex-direction: column;
+  }
+
+  #adminOrderSearch,
+  #adminDateFilter {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .order-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-order-filter {
+    flex: 1 1 calc(50% - 8px);
+  }
+
+  .admin-order-card {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-order-card-image-wrap {
+    width: 100%;
+    height: 170px;
+  }
+
+  .admin-order-card-top {
+    flex-direction: column;
+  }
+
+  .admin-order-card-badges {
+    justify-content: flex-start;
+  }
+
+  .admin-order-card-info {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-order-card-actions {
+    justify-content: stretch;
+  }
+
+  .admin-order-card-actions .btn {
+    width: 100%;
+  }
+}
+
+/* =======================================
+   Buyer Order Actions
+======================================= */
+
+.order-buyer-actions {
+  gap: 8px;
+}
+
+.btn-buy-again {
+  background: #ee4d2d;
+  border-color: #ee4d2d;
+  color: #ffffff;
+  border-radius: 999px;
+  font-weight: 800;
+  padding: 7px 14px;
+}
+
+.btn-buy-again:hover {
+  background: #d73211;
+  border-color: #d73211;
+  color: #ffffff;
+}
+
+.btn-contact-seller {
+  background: #ffffff;
+  border: 1px solid #d8e0ec;
+  color: #0f172a;
+  border-radius: 999px;
+  font-weight: 800;
+  padding: 7px 14px;
+}
+
+.btn-contact-seller:hover {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+@media (max-width: 575.98px) {
+  .order-buyer-actions {
+    width: 100%;
+  }
+
+  .order-buyer-actions .btn {
+    width: 100%;
+    margin-right: 0 !important;
+  }
+}

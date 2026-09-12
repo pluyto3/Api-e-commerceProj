@@ -57,7 +57,7 @@
     </script>
   </head>
 
-  <body onload="load_user()">
+  <body>
     <!--Navbar-->
     <nav
       class="navbar navbar-expand-lg navbar-dark sticky-top dashboard-navbar">
@@ -356,20 +356,93 @@
           </div>
           <hr class="admin-hr" />
 
-          <div class="card">
-            <div
-              class="card-header d-flex justify-content-between align-items-center">
-              <h2 class="mb-0">Order List</h2>
-              <div class="d-flex align-items-center">
-                <input
-                  type="date"
-                  id="adminDateFilter"
-                  class="form-control ml-2"
-                  style="width: 170px" />
-                <select
-                  id="statusFilter"
-                  class="form-control ml-2"
-                  style="width: 150px">
+          <!-- Order Management Card Layout -->
+          <div class="order-management-panel">
+            <div class="order-summary-grid mb-4">
+              <div class="order-summary-card" data-order-filter="all">
+                <span class="order-summary-label">All Orders</span>
+                <strong id="totalOrdersCount">0</strong>
+              </div>
+
+              <div class="order-summary-card" data-order-filter="pending">
+                <span class="order-summary-label">Pending</span>
+                <strong id="pendingOrdersCount">0</strong>
+              </div>
+
+              <div class="order-summary-card" data-order-filter="packed">
+                <span class="order-summary-label">Packed</span>
+                <strong id="packedOrdersCount">0</strong>
+              </div>
+
+              <div class="order-summary-card" data-order-filter="shipped">
+                <span class="order-summary-label">Shipped</span>
+                <strong id="shippedOrdersCount">0</strong>
+              </div>
+
+              <div class="order-summary-card" data-order-filter="delivered">
+                <span class="order-summary-label">Delivered</span>
+                <strong id="deliveredOrdersCount">0</strong>
+              </div>
+
+              <div class="order-summary-card" data-order-filter="cancelled">
+                <span class="order-summary-label">Cancelled</span>
+                <strong id="cancelledOrdersCount">0</strong>
+              </div>
+            </div>
+
+            <div class="card order-card-panel">
+              <div
+                class="card-header d-flex flex-column flex-lg-row justify-content-between align-items-lg-center">
+                <div>
+                  <h2 class="mb-1">Orders</h2>
+                  <p class="text-muted mb-0">
+                    Manage customer orders, shipment status, payment status, and
+                    tracking.
+                  </p>
+                </div>
+
+                <div class="admin-order-status-filters mt-3 mt-lg-0">
+                  <button
+                    type="button"
+                    class="btn btn-dark btn-sm admin-order-filter active"
+                    data-status="all">
+                    All
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-outline-dark btn-sm admin-order-filter"
+                    data-status="pending">
+                    Pending
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-outline-dark btn-sm admin-order-filter"
+                    data-status="packed">
+                    Packed
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-outline-dark btn-sm admin-order-filter"
+                    data-status="shipped">
+                    Shipped
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-outline-dark btn-sm admin-order-filter"
+                    data-status="delivered">
+                    Delivered
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-outline-dark btn-sm admin-order-filter"
+                    data-status="cancelled">
+                    Cancelled
+                  </button>
+                </div>
+              </div>
+
+              <div class="card-body">
+                <select id="statusFilter" class="d-none">
                   <option value="all">All</option>
                   <option value="pending">Pending</option>
                   <option value="packed">Packed</option>
@@ -377,26 +450,22 @@
                   <option value="delivered">Delivered</option>
                   <option value="cancelled">Cancelled</option>
                 </select>
+
+                <div class="admin-order-toolbar">
+                  <input
+                    type="text"
+                    id="adminOrderSearch"
+                    class="form-control"
+                    placeholder="Search order, customer, seller, status, or tracking..." />
+
+                  <input
+                    type="date"
+                    id="adminDateFilter"
+                    class="form-control" />
+                </div>
+
+                <div id="adminOrderCards" class="admin-order-card-grid"></div>
               </div>
-            </div>
-            <div class="card-body table-responsive">
-              <table
-                class="table table-bordered table-striped"
-                id="ordersTable">
-                <thead>
-                  <tr>
-                    <th class="text-center">Order ID</th>
-                    <th class="text-center">Customer</th>
-                    <th class="text-center">Seller</th>
-                    <th class="text-center">Quantity</th>
-                    <th class="text-center">Total</th>
-                    <th class="text-center">Status</th>
-                    <th class="text-center">Date</th>
-                    <th class="text-center" style="width: 100px">Action</th>
-                  </tr>
-                </thead>
-                <tbody id="buyerOrders"></tbody>
-              </table>
             </div>
           </div>
         </div>
@@ -452,7 +521,7 @@
               </li>
               <li class="nav-item">
                 <a class="nav-link" href="#" data-status="delivered"
-                  >Delivered</a
+                  >Completed</a
                 >
               </li>
               <li class="nav-item">

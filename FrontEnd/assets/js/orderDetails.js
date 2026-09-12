@@ -20,6 +20,8 @@ let currentUserId = null;
 let currentSellerOrderView = "sales";
 let activeUserUrlFilter = "";
 let autoOpenedOrderDetailsFromUrl = false;
+let activeAdminOrderFilter = "all";
+let adminOrderSearchTerm = "";
 
 // =======================================
 // User Session Handling
@@ -668,7 +670,15 @@ function getOrderItems(order, itemsOverride) {
     );
     const image = item.image || product.image || null;
 
-    return { productName, quantity, price, subtotal, image };
+    const productId =
+      item.product_id ||
+      item.product?.product_id ||
+      item.product?.id ||
+      product.product_id ||
+      product.id ||
+      "";
+
+    return { productId, productName, quantity, price, subtotal, image };
   });
 }
 
@@ -884,12 +894,18 @@ function populateOrderDetails(order, itemsOverride, viewOptions = {}) {
   $("#orderTotal").text(formatCurrency(computedTotal));
 }
 
+// =======================================
+// User Order Quantity Calculation
+// =======================================
 function getUserOrderQuantity(order) {
   const itemsQuantity = sumItemsQuantity(order?.items);
   if (itemsQuantity > 0) return itemsQuantity;
   return getOrderQuantityFallback(order);
 }
 
+// =======================================
+// User Order Total Calculation
+// =======================================
 function getUserOrderTotal(order) {
   const fallbackTotal = Number(order?.total_amount || order?.total || 0);
   const itemsTotal = sumItemsTotal(order?.items);
@@ -899,6 +915,9 @@ function getUserOrderTotal(order) {
   return itemsTotal;
 }
 
+// =======================================
+// User Status Badge Class
+// =======================================
 function getUserStatusBadgeClass(statusLabel) {
   const normalized = getMainOrderStatus(statusLabel);
 
@@ -909,10 +928,16 @@ function getUserStatusBadgeClass(statusLabel) {
   return "status-pending";
 }
 
+// =======================================
+// User Order Status Filter
+// =======================================
 function getActiveUserStatusFilter() {
   return $(".order-status-tabs .nav-link.active").data("status") || "all";
 }
 
+// =======================================
+// User Order Filtering
+// =======================================
 function matchesUserStatusFilter(order, filterValue) {
   const selectedFilter = normalizeStatus(filterValue || "all");
   const orderStatus = getMainOrderStatus(
@@ -941,6 +966,9 @@ function matchesUserStatusFilter(order, filterValue) {
   }
 }
 
+// =======================================
+// Searchable Text for User Orders
+// =======================================
 function getUserOrderSearchText(order) {
   const orderId = order?.checkout_id || order?.order_id || "N/A";
   const sellerDisplay = getOrderSellerDisplayName(order);
@@ -989,6 +1017,9 @@ function getUserOrderSearchText(order) {
     .toLowerCase();
 }
 
+// =======================================
+// Populate User Seller Filter
+// =======================================
 function populateUserSellerFilter() {
   const $sellerFilter = $("#userSellerFilter");
   if ($sellerFilter.length === 0) return;
@@ -1011,6 +1042,58 @@ function populateUserSellerFilter() {
   if (sellers.includes(previousValue)) {
     $sellerFilter.val(previousValue);
   }
+}
+
+// =======================================
+// Get Customer Status Label
+// =======================================
+function getCustomerStatusLabel(status) {
+  const mainStatus = getMainOrderStatus(status);
+
+  if (mainStatus === "delivered") {
+    return "COMPLETED";
+  }
+
+  return formatStatusLabel(mainStatus);
+}
+
+// =======================================
+// Generate Payload for Buy Again Items
+// =======================================
+function getBuyAgainPayload(items = []) {
+  return (items || [])
+    .map((item) => ({
+      product_id: item.productId,
+      quantity: Number(item.quantity || 1),
+    }))
+    .filter((item) => item.product_id && item.quantity > 0);
+}
+
+// =======================================
+// Add Buy Again Items to Cart
+// =======================================
+function addBuyAgainItemsToCart(items = []) {
+  let requestChain = $.Deferred().resolve().promise();
+
+  items.forEach((item) => {
+    requestChain = requestChain.then(() =>
+      $.ajax({
+        url: `${ip}/api/cart`,
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        data: JSON.stringify({
+          product_id: item.product_id,
+          quantity: item.quantity,
+        }),
+      }),
+    );
+  });
+
+  return requestChain;
 }
 
 // =======================================
@@ -1103,7 +1186,7 @@ function renderUserOrders() {
 
       const total = formatCurrency(totalValue);
 
-      const statusLabel = formatStatusLabel(groupStatusKey).toLowerCase();
+      const statusLabel = getCustomerStatusLabel(groupStatusKey);
       const statusDisplayLabel = formatStatusText(groupStatusKey);
       const paymentDisplayLabel = formatStatusText(
         order.payment_status || "pending",
@@ -1185,12 +1268,38 @@ function renderUserOrders() {
         .map(
           (item) => `
         <div class="order-item-row d-flex justify-content-between align-items-center">
-          <div class="order-item-name text-dark">${item.productName} (x${item.quantity})</div>
+          <div class="order-item-name text-dark">
+            ${escapeHtml(item.productName)} (x${escapeHtml(item.quantity)})
+          </div>
           <div class="order-item-price">₱${formatCurrency(item.subtotal)}</div>
         </div>
       `,
         )
         .join("");
+
+      const buyAgainItems = getBuyAgainPayload(items);
+      const buyAgainItemsJson = escapeHtmlAttribute(
+        JSON.stringify(buyAgainItems),
+      );
+
+      const completedButtons =
+        groupStatusKey === "delivered"
+          ? `
+      <button
+        type="button"
+        class="btn btn-sm btn-buy-again"
+        data-items="${buyAgainItemsJson}">
+        <i class="fas fa-redo"></i> Buy Again
+      </button>
+
+      <button
+        type="button"
+        class="btn btn-sm btn-contact-seller"
+        data-seller-name="${safeSellerName}">
+        <i class="fas fa-comments"></i> Contact Seller
+      </button>
+    `
+          : "";
 
       $container.append(`
         <div class="order-card mb-3">
@@ -1201,13 +1310,13 @@ function renderUserOrders() {
             <div class="order-header-product d-flex align-items-center">
               <img
                 src="${headerImage}"
-                alt="${headerTitle}"
+                alt="${escapeHtmlAttribute(headerTitle)}"
                 class="order-header-thumb"
                 onerror="this.onerror=null;this.src='assets/img/back.jpg';" />
               <div class="order-header-meta d-flex flex-column">
-                <span class="order-card-title">${headerTitle}</span>
+                <span class="order-card-title">${seller}</span>
                 <small class="order-card-seller text-muted">
-                  Sold by ${seller}
+                  Order #${orderId} • ${headerTitle}
                 </small>
               </div>
             </div>
@@ -1239,7 +1348,7 @@ function renderUserOrders() {
                   <div>Delivery/Shipping Date: ${deliveryDate}</div>
                 </div>
 
-                <div class="d-flex">
+                <div class="d-flex flex-wrap order-buyer-actions">
                   <button
                     class="btn btn-dark btn-sm rounded px-3 mr-2 btn-view-order"
                     data-order-id="${orderId}"
@@ -1248,6 +1357,8 @@ function renderUserOrders() {
                     data-current-status="${safeStatus}">
                     View Details
                   </button>
+
+                  ${completedButtons}
 
                   ${
                     canCancelOrder(parentStatusKey) && allSellerGroupsPending
@@ -1366,7 +1477,13 @@ function fetchBuyerOrders() {
       const errorRow = `<tr><td colspan="8" class="text-center text-danger py-4">Failed to load orders.</td></tr>`;
 
       if (managementView) {
-        $("#buyerOrders").html(errorRow);
+        $("#adminOrderCards").html(`
+    <div class="admin-order-empty-card text-danger">
+      <i class="fas fa-exclamation-triangle"></i>
+      <h5>Failed to load orders</h5>
+      <p class="mb-0">Please refresh the page or check the server.</p>
+    </div>
+  `);
       } else {
         $("#userOrderListCards").html(
           `<div class="text-center text-danger py-5">Failed to load orders.</div>`,
@@ -1546,40 +1663,125 @@ function getItemsForSellerGroup(order = {}, sellerId = "", sellerName = "") {
 }
 
 // =======================================
+// escape HTML Logic
+// =======================================
+function escapeHtml(value) {
+  return $("<div>")
+    .text(value ?? "")
+    .html();
+}
+
+// =======================================
+// Update Order Summary Cards
+// =======================================
+function updateOrderSummaryCards(orders = []) {
+  const counts = {
+    all: 0,
+    pending: 0,
+    packed: 0,
+    shipped: 0,
+    delivered: 0,
+    cancelled: 0,
+  };
+
+  (orders || []).forEach((order) => {
+    const sellerGroups = groupItemsBySeller(order);
+
+    sellerGroups.forEach((group) => {
+      const groupSellerId = getSellerIdForGroup(order, group);
+      const sellerOrder = getSellerOrderForGroup(order, groupSellerId);
+
+      const status = getMainOrderStatus(
+        sellerOrder?.shipping_status || order.shipping_status || order.status,
+      );
+
+      counts.all++;
+
+      if (counts[status] !== undefined) {
+        counts[status]++;
+      }
+    });
+  });
+
+  $("#totalOrdersCount").text(counts.all);
+  $("#pendingOrdersCount").text(counts.pending);
+  $("#packedOrdersCount").text(counts.packed);
+  $("#shippedOrdersCount").text(counts.shipped);
+  $("#deliveredOrdersCount").text(counts.delivered);
+  $("#cancelledOrdersCount").text(counts.cancelled);
+}
+
+// =======================================
+// Admin Order Card Filters Setup
+// =======================================
+function setupAdminOrderCardFilters() {
+  $(document).on(
+    "click",
+    ".admin-order-filter, .order-summary-card",
+    function () {
+      activeAdminOrderFilter =
+        $(this).data("status") || $(this).data("order-filter") || "all";
+
+      $("#statusFilter").val(activeAdminOrderFilter);
+
+      $(".admin-order-filter")
+        .removeClass("active btn-dark")
+        .addClass("btn-outline-dark");
+
+      $(`.admin-order-filter[data-status="${activeAdminOrderFilter}"]`)
+        .addClass("active btn-dark")
+        .removeClass("btn-outline-dark");
+
+      renderOrders(activeAdminOrderFilter);
+    },
+  );
+
+  $(document).on("input keyup search change", "#adminOrderSearch", function () {
+    adminOrderSearchTerm = String($(this).val() || "")
+      .toLowerCase()
+      .trim();
+    renderOrders($("#statusFilter").val() || activeAdminOrderFilter || "all");
+  });
+}
+
+// =======================================
 // Render Orders Based on Status
 // =======================================
-function renderOrders(filter = "All") {
+function renderOrders(filter = "all") {
   if (!isAdminView()) {
     return;
   }
 
-  const $table = $("#ordersTable");
-  const $tbody = $("#buyerOrders");
+  const $container = $("#adminOrderCards");
   const selectedDate = ($("#adminDateFilter").val() || "").trim();
   const filterKey = normalizeStatus(filter || "all");
+  const searchTerm = (
+    $("#adminOrderSearch").val() ||
+    adminOrderSearchTerm ||
+    ""
+  )
+    .trim()
+    .toLowerCase();
 
-  $tbody.empty();
+  updateOrderSummaryCards(globalOrders || []);
 
-  if ($.fn.DataTable && $.fn.DataTable.isDataTable($table)) {
-    $table.DataTable().clear().destroy();
-  }
+  $container.empty();
 
-  let renderedRowCount = 0;
+  let renderedCardCount = 0;
   const canUpdateStatus = role === "admin" || isSellerSalesView();
 
   (globalOrders || []).forEach((order) => {
     const dateMatches =
       !selectedDate || getOrderDateFilterValue(order) === selectedDate;
 
-    if (!dateMatches) {
-      return;
-    }
+    if (!dateMatches) return;
 
     const parentStatusKey = getMainOrderStatus(
       order.shipping_status || order.status,
     );
 
     const orderId = order.checkout_id || order.order_id || "N/A";
+
     const customer = isAdminView()
       ? order.user?.username ||
         order.user?.fullname ||
@@ -1590,10 +1792,9 @@ function renderOrders(filter = "All") {
     const fallbackTotal = Number(order.total_amount || order.total || 0);
     const fallbackQuantity = getOrderQuantityFallback(order);
     const date = formatDate(order.created_at || order.updated_at);
-
     const sellerGroups = groupItemsBySeller(order);
 
-    sellerGroups.forEach((group) => {
+    sellerGroups.forEach((group, index) => {
       const seller = group.seller || "N/A";
       const groupSellerId = getSellerIdForGroup(order, group);
       const sellerOrder = getSellerOrderForGroup(order, groupSellerId);
@@ -1602,61 +1803,20 @@ function renderOrders(filter = "All") {
         sellerOrder?.shipping_status || order.shipping_status || order.status,
       );
 
-      if (!doesStatusMatchFilter(groupStatusKey, filterKey)) {
-        return;
-      }
+      if (!doesStatusMatchFilter(groupStatusKey, filterKey)) return;
 
-      const safeGroupStatus = String(groupStatusKey).replace(/'/g, "\\'");
-      const safeSellerName = escapeHtmlAttribute(seller);
+      const groupItems =
+        group.items && group.items.length > 0
+          ? group.items
+          : getItemsForSellerGroup(order, groupSellerId, seller);
 
-      const actionButtons = [];
+      const normalizedItems = getOrderItems(order, groupItems);
 
-      actionButtons.push(`
-        <button class="btn btn-info btn-sm btn-view-order"
-          data-order-id="${orderId}"
-          data-seller-id="${groupSellerId}"
-          data-seller-name="${safeSellerName}"
-          data-current-status="${safeGroupStatus}">
-          <i class="fas fa-eye"></i> View
-        </button>
-      `);
-
-      if (canUpdateStatus && !isFinalOrderStatus(groupStatusKey)) {
-        actionButtons.push(`
-          <button class="btn btn-warning btn-sm btn-update-status"
-            data-order-id="${orderId}"
-            data-current-status="${safeGroupStatus}"
-            data-seller-id="${groupSellerId}"
-            data-seller-name="${safeSellerName}">
-            <i class="fas fa-edit"></i> Update Status
-          </button>
-        `);
-      } else if (canUpdateStatus) {
-        actionButtons.push(`
-          <button class="btn btn-secondary btn-sm" disabled>
-            <i class="fas fa-lock"></i> Final
-          </button>
-        `);
-      } else {
-        if (canCancelOrder(parentStatusKey)) {
-          actionButtons.push(`
-            <button class="btn btn-outline-danger btn-sm btn-cancel"
-              data-id="${orderId}">
-              Cancel
-            </button>
-          `);
-        } else {
-          actionButtons.push(
-            `<button class="btn btn-secondary btn-sm" disabled>Cancel</button>`,
-          );
-        }
-      }
-
-      const groupTotal = sumItemsTotal(group.items);
-      const groupQuantity = sumItemsQuantity(group.items);
+      const groupTotal = sumItemsTotal(groupItems);
+      const groupQuantity = sumItemsQuantity(groupItems);
 
       const totalValue =
-        group.items.length === 0
+        groupItems.length === 0
           ? fallbackTotal
           : groupTotal > 0
             ? groupTotal
@@ -1665,7 +1825,7 @@ function renderOrders(filter = "All") {
               : groupTotal;
 
       const quantityValue =
-        group.items.length === 0
+        groupItems.length === 0
           ? fallbackQuantity
           : groupQuantity > 0
             ? groupQuantity
@@ -1676,42 +1836,181 @@ function renderOrders(filter = "All") {
       const total = formatCurrency(totalValue);
       const quantity = quantityValue;
 
-      const row = `
-        <tr>
-          <td>${orderId}</td>
-          <td>${customer}</td>
-          <td>${seller}</td>
-          <td>${quantity}</td>
-          <td>&#8369;${total}</td>
-          <td>
-            ${renderStatusBadge(groupStatusKey)}
-            <br>
-            ${renderPaymentBadge(order.payment_status || "pending")}
-          </td>
-          <td>${date}</td>
-          <td class="text-center">${actionButtons.join("")}</td>
-        </tr>
-      `;
+      const tracking =
+        getSellerTrackingNumber(order, sellerOrder) || "Not assigned";
 
-      $tbody.append(row);
-      renderedRowCount++;
+      const paymentStatus = order.payment_status || "pending";
+      const statusDisplayLabel = formatStatusText(groupStatusKey);
+      const paymentDisplayLabel = formatStatusText(paymentStatus);
+
+      const firstItem = normalizedItems[0] || {};
+      const headerTitle =
+        normalizedItems.length > 0
+          ? `${firstItem.productName}${normalizedItems.length > 1 ? ` +${normalizedItems.length - 1} more` : ""}`
+          : `Order #${orderId}`;
+
+      const headerImage =
+        normalizedItems.length > 0
+          ? resolveImageSrc(firstItem.image)
+          : "assets/img/back.jpg";
+
+      const searchHaystack = [
+        orderId,
+        `order #${orderId}`,
+        customer,
+        seller,
+        groupStatusKey,
+        statusDisplayLabel,
+        paymentStatus,
+        paymentDisplayLabel,
+        tracking,
+        date,
+        total,
+        normalizedItems.map((item) => item.productName).join(" "),
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      if (searchTerm && !searchHaystack.includes(searchTerm)) return;
+
+      const safeSellerName = escapeHtmlAttribute(seller);
+      const safeGroupStatus = String(groupStatusKey).replace(/'/g, "\\'");
+
+      const actionButtons = [];
+
+      actionButtons.push(`
+        <button
+          class="btn btn-sm btn-info btn-view-order"
+          data-order-id="${orderId}"
+          data-seller-id="${groupSellerId}"
+          data-seller-name="${safeSellerName}"
+          data-current-status="${safeGroupStatus}">
+          <i class="fas fa-eye"></i> View
+        </button>
+      `);
+
+      if (canUpdateStatus && !isFinalOrderStatus(groupStatusKey)) {
+        actionButtons.push(`
+          <button
+            class="btn btn-sm btn-warning btn-update-status"
+            data-order-id="${orderId}"
+            data-current-status="${safeGroupStatus}"
+            data-seller-id="${groupSellerId}"
+            data-seller-name="${safeSellerName}">
+            <i class="fas fa-edit"></i> Update Status
+          </button>
+        `);
+      } else if (canUpdateStatus) {
+        actionButtons.push(`
+          <button class="btn btn-sm btn-secondary" disabled>
+            <i class="fas fa-lock"></i> Final
+          </button>
+        `);
+      }
+
+      if (!canUpdateStatus && canCancelOrder(parentStatusKey)) {
+        actionButtons.push(`
+          <button class="btn btn-sm btn-outline-danger btn-cancel" data-id="${orderId}">
+            Cancel
+          </button>
+        `);
+      }
+
+      const itemPreview =
+        normalizedItems.length > 0
+          ? normalizedItems
+              .slice(0, 3)
+              .map(
+                (item) => `
+                  <span class="admin-order-item-pill">
+                    ${escapeHtml(item.productName)} × ${escapeHtml(item.quantity)}
+                  </span>
+                `,
+              )
+              .join("")
+          : `<span class="admin-order-item-pill">No product items</span>`;
+
+      const moreItems =
+        normalizedItems.length > 3
+          ? `<span class="admin-order-item-pill">+${normalizedItems.length - 3} more</span>`
+          : "";
+
+      $container.append(`
+        <div class="admin-order-card">
+          <div class="admin-order-card-image-wrap">
+            <img
+              src="${headerImage}"
+              alt="${escapeHtmlAttribute(headerTitle)}"
+              class="admin-order-card-image"
+              onerror="this.onerror=null;this.src='assets/img/back.jpg';" />
+          </div>
+
+          <div class="admin-order-card-content">
+            <div class="admin-order-card-top">
+              <div>
+                <h4>Order #${escapeHtml(orderId)}</h4>
+                <p class="admin-order-card-subtitle mb-0">
+                  ${escapeHtml(headerTitle)}
+                </p>
+              </div>
+
+              <div class="admin-order-card-badges">
+                ${renderStatusBadge(groupStatusKey)}
+                ${renderPaymentBadge(paymentStatus)}
+              </div>
+            </div>
+
+            <div class="admin-order-card-info">
+              <div>
+                <span>Customer</span>
+                <strong>${escapeHtml(customer)}</strong>
+              </div>
+              <div>
+                <span>Seller</span>
+                <strong>${escapeHtml(seller)}</strong>
+              </div>
+              <div>
+                <span>Total</span>
+                <strong>₱${escapeHtml(total)}</strong>
+              </div>
+              <div>
+                <span>Quantity</span>
+                <strong>${escapeHtml(quantity)}</strong>
+              </div>
+              <div>
+                <span>Date</span>
+                <strong>${escapeHtml(date)}</strong>
+              </div>
+              <div>
+                <span>Tracking</span>
+                <strong>${escapeHtml(tracking)}</strong>
+              </div>
+            </div>
+
+            <div class="admin-order-items">
+              ${itemPreview}
+              ${moreItems}
+            </div>
+
+            <div class="admin-order-card-actions">
+              ${actionButtons.join("")}
+            </div>
+          </div>
+        </div>
+      `);
+
+      renderedCardCount++;
     });
   });
 
-  if (renderedRowCount === 0) {
-    $tbody.html(
-      `<tr><td colspan="8" class="text-center text-muted py-4">No orders found.</td></tr>`,
-    );
-    return;
-  }
-
-  if ($.fn.DataTable) {
-    ordersTable = $table.DataTable({
-      pageLength: 10,
-      lengthChange: false,
-      responsive: true,
-      columnDefs: [{ orderable: false, targets: -1 }],
-    });
+  if (renderedCardCount === 0) {
+    $container.html(`
+      <div class="admin-order-empty-card">
+        <i class="fas fa-receipt"></i>
+        <h5>No orders found</h5>
+        <p class="mb-0">There are no orders matching your current filters.</p>
+      </div>
+    `);
   }
 }
 
@@ -2075,6 +2374,7 @@ $(document).ready(function () {
   applySellerOrderView();
   fetchBuyerOrders();
   setupSidebarToggle();
+  setupAdminOrderCardFilters();
 
   // Global AJAX handlers for loading indicator
   $(document)
@@ -2309,6 +2609,78 @@ $(document).ready(function () {
       loadOrderDetails(orderId, sellerId, sellerName, currentStatus);
     },
   );
+
+  /* -----------------------------
+      BUY AGAIN BUTTON LOGIC
+  ----------------------------- */
+  $(document).on("click", ".btn-buy-again", function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    let items = [];
+
+    try {
+      items = JSON.parse($(this).attr("data-items") || "[]");
+    } catch (error) {
+      items = [];
+    }
+
+    if (!items.length) {
+      Swal.fire(
+        "Unavailable",
+        "This order has no available product information to buy again.",
+        "warning",
+      );
+      return;
+    }
+
+    Swal.fire({
+      title: "Buy Again?",
+      text: "The item(s) will be added to your cart.",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Add to Cart",
+    }).then((result) => {
+      if (!result.isConfirmed) return;
+
+      addBuyAgainItemsToCart(items)
+        .done(function () {
+          Swal.fire({
+            icon: "success",
+            title: "Added to Cart",
+            text: "The item(s) were added to your cart.",
+            showCancelButton: true,
+            confirmButtonText: "Go to Cart",
+            cancelButtonText: "Stay Here",
+          }).then((res) => {
+            if (res.isConfirmed) {
+              window.location.href = "cart.html";
+            }
+          });
+        })
+        .fail(function (xhr) {
+          const msg =
+            xhr.responseJSON?.msg ||
+            xhr.responseJSON?.message ||
+            "Failed to add item(s) to cart.";
+
+          Swal.fire("Error", msg, "error");
+        });
+    });
+  });
+
+  $(document).on("click", ".btn-contact-seller", function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const sellerName = $(this).data("seller-name") || "the seller";
+
+    Swal.fire({
+      icon: "info",
+      title: "Contact Seller",
+      text: `Contact feature for ${sellerName} is not connected yet.`,
+    });
+  });
 
   /* -----------------------------
      LOGOUT HANDLER
