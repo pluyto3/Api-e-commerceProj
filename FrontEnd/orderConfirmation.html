@@ -48,7 +48,7 @@
     <script src="assets/js/role-guard.js"></script>
     <script src="assets/js/navbar-role.js"></script>
   </head>
-  <body onload="load_user()">
+  <body>
     <!--Navbar-->
     <nav
       class="navbar navbar-expand-lg navbar-dark sticky-top dashboard-navbar">
@@ -271,7 +271,7 @@
     </nav>
 
     <!-- Confirmation -->
-    <section class="my-2 py-2">
+    <section class="order-confirmation-page">
       <!-- Navigation Tab -->
       <div class="checkout-stepper">
         <a href="cart.html" class="step">Shopping Cart</a>
@@ -380,12 +380,17 @@
                 </div>
               </div>
 
-              <a
-                href="shop.html"
-                class="btn btn-primary btn-block py-2 font-weight-bold"
-                style="background-color: #0076ad; border: none">
-                Continue Shopping
-              </a>
+              <div class="confirmation-action-row">
+                <a href="shop.html" class="btn confirmation-primary-btn">
+                  Continue Shopping
+                </a>
+
+                <a
+                  href="orderDetails.html"
+                  class="btn confirmation-secondary-btn">
+                  View My Orders
+                </a>
+              </div>
 
               <p class="mt-3 small">
                 Need help?

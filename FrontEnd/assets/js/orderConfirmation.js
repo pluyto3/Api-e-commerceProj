@@ -122,9 +122,14 @@ $(document).ready(function () {
   $("#confirmationOrderId").text(`#${order.orderId}`);
   $("#confirmationOrderTotal").text(`₱${order.totalAmount.toLocaleString()}`);
   // $("#confirmationShippingFee").text(`₱${order.shippingFee.toLocaleString()}`);
+  const paymentMethodLabel =
+    String(order.paymentMethod || "").toLowerCase() === "cod"
+      ? "Cash on Delivery"
+      : order.paymentMethod || "Cash on Delivery";
+
   $("#confirmationPaymentMethod").html(
-    `${order.paymentMethod} <i class="fas fa-money-bill-wave ml-1"></i>`,
-  ); // Assuming COD is the only one with icon
+    `${paymentMethodLabel} <i class="fas fa-money-bill-wave ml-1"></i>`,
+  );
   $("#confirmationPaymentStatus").text(order.paymentStatus || "pending");
   $("#confirmationShippingStatus").text(order.shippingStatus || "pending");
 
@@ -139,16 +144,24 @@ $(document).ready(function () {
   $orderItemsContainer.empty(); // Clear existing placeholders
 
   order.orderedItems.forEach((item) => {
+    const itemName = item.name || "Unnamed Product";
+    const itemPrice = Number(item.price || 0);
+    const itemQuantity = Number(item.quantity || 0);
+    const itemSubtotal = Number(item.subtotal || itemPrice * itemQuantity || 0);
+
     const itemHtml = `
-      <div class="d-flex justify-content-between">
-        <span class="text-muted">Item:</span>
-        <span>${item.name} x ${item.quantity}</span>
-      </div>
-      <div class="d-flex justify-content-between">
-        <span class="text-muted">Item Price:</span>
-        <span>₱${item.price.toLocaleString()} each</span>
+      <div class="confirmation-item-row">
+        <div class="confirmation-item-info">
+          <strong>${itemName}</strong>
+          <span>Qty: ${itemQuantity} × ₱${itemPrice.toLocaleString()}</span>
+        </div>
+
+        <div class="confirmation-item-total">
+          ₱${itemSubtotal.toLocaleString()}
+        </div>
       </div>
     `;
+
     $orderItemsContainer.append(itemHtml);
   });
 
@@ -261,5 +274,12 @@ $(document).ready(function () {
 
 // Fetch cart count (Copied from checkout.js for consistency)
 function updateCartCount(count) {
-  $("#cart-count").text(count);
+  const cartCount = Number(count || 0);
+  const $cartBadges = $("#cart-count, #cart-count-mobile");
+
+  if (cartCount > 0) {
+    $cartBadges.text(cartCount).show();
+  } else {
+    $cartBadges.text("").hide();
+  }
 }
