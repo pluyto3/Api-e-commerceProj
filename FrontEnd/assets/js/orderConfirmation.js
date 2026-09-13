@@ -150,17 +150,17 @@ $(document).ready(function () {
     const itemSubtotal = Number(item.subtotal || itemPrice * itemQuantity || 0);
 
     const itemHtml = `
-      <div class="confirmation-item-row">
-        <div class="confirmation-item-info">
-          <strong>${itemName}</strong>
-          <span>Qty: ${itemQuantity} × ₱${itemPrice.toLocaleString()}</span>
-        </div>
-
-        <div class="confirmation-item-total">
-          ₱${itemSubtotal.toLocaleString()}
-        </div>
+    <div class="confirmation-item-row">
+      <div class="confirmation-item-info">
+        <strong>${itemName}</strong>
+        <span>Qty: ${itemQuantity} × ₱${itemPrice.toLocaleString()}</span>
       </div>
-    `;
+
+      <div class="confirmation-item-total">
+        ₱${itemSubtotal.toLocaleString()}
+      </div>
+    </div>
+  `;
 
     $orderItemsContainer.append(itemHtml);
   });
