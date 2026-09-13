@@ -90,7 +90,10 @@ function updateSelectedTotal() {
 
   const hasAvailableItems = $("input.select-item:not(:disabled)").length > 0;
 
-  $("#checkout-btn").prop("disabled", !hasAvailableItems);
+  $("#checkout-btn").prop(
+    "disabled",
+    !hasAvailableItems || $selectedItems.length === 0,
+  );
 
   const unavailableCount = $(".cart-item-card.stock-issue").length;
 
@@ -128,6 +131,21 @@ function updateSelectedTotal() {
     $("#total-row").hide();
     $("#summary-hr").hide();
   }
+}
+
+/* ------------------------------
+  Resolve Cart Image URL
+------------------------------ */
+function resolveCartImage(image) {
+  if (!image) return "assets/img/back.jpg";
+
+  const src = String(image);
+
+  if (/^(https?:)?\/\//i.test(src)) return src;
+  if (src.startsWith("/")) return `${ip}${src}`;
+  if (src.includes("assets/")) return `${ip}/${src.replace(/^\/+/, "")}`;
+
+  return `${ip}/FrontEnd/assets/img/product/${src}`;
 }
 
 /* ------------------------------
@@ -208,7 +226,11 @@ function loadCartItems() {
             </div>
 
             <div class="cart-image-cell">
-               <img src="${ip}/FrontEnd/assets/img/product/${item.product.image}" alt="${name}" class="cart-item-img">
+              <img
+              src="${resolveCartImage(item.product?.image)}"
+              alt="${name}"
+              class="cart-item-img"
+              onerror="this.onerror=null;this.src='assets/img/back.jpg';">
             </div>
 
             <div class="flex-grow-1">
@@ -243,7 +265,7 @@ function loadCartItems() {
 
       $("#cart-stock-alert").remove();
       if (unavailableCount > 0) {
-        $(".order-summary-card .card-body").prepend(`
+        $(".cart-summary-card .card-body").prepend(`
           <div class="cart-stock-alert" id="cart-stock-alert">
             ${unavailableCount} item(s) cannot be checked out because stock is unavailable, below your cart quantity, or owned by your seller account.
           </div>
@@ -359,22 +381,6 @@ $(document).ready(function () {
   $(document)
     .ajaxStart(() => $("#wait").show())
     .ajaxComplete(() => $("#wait").hide());
-  // --- Sidebar Toggle ---
-  // $(".menu-btn").on("click", function () {
-  //   $(".sidebar").addClass("collapsed");
-  //   $(".wrapper").addClass("sidebar-collapsed");
-  //   $(".text-link").hide();
-  //   $(".close-btn").show();
-  //   $(".menu-btn").hide();
-  // });
-
-  // $(".close-btn").on("click", function () {
-  //   $(".sidebar").removeClass("collapsed");
-  //   $(".wrapper").removeClass("sidebar-collapsed");
-  //   $(".text-link").show();
-  //   $(".close-btn").hide();
-  //   $(".menu-btn").show();
-  // });
 
   // -------------------------------
   // Load Navbar Profile Image

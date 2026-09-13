@@ -358,6 +358,34 @@ $(document).ready(function () {
     }
   }
 
+  // Utility function to escape HTML to prevent XSS
+  function escapeHtml(value) {
+    return $("<div>")
+      .text(value ?? "")
+      .html();
+  }
+
+  function resolveCheckoutImage(image) {
+    if (!image) return "assets/img/back.jpg";
+
+    const src = String(image);
+
+    if (/^(https?:)?\/\//i.test(src)) return src;
+    if (src.startsWith("/")) return `${ip}${src}`;
+    if (src.includes("assets/")) return `${ip}/${src.replace(/^\/+/, "")}`;
+
+    return `${ip}/FrontEnd/assets/img/product/${src}`;
+  }
+
+  function formatPeso(amount) {
+    const num = Number(amount || 0);
+
+    return num.toLocaleString("en-PH", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }
+
   // Display Cart Items in CheckOut Page
   $.ajax({
     url: `${ip}/api/cart`,
@@ -371,10 +399,11 @@ $(document).ready(function () {
 
       allCartItems = response.cart || response.data || []; // Assign to the higher-scoped variable
 
+      const selectedIdStrings = selectedIds.map((id) => String(id));
+
       const cartItems = allCartItems.filter((item) =>
-        selectedIds.includes(item.addTocart_id),
+        selectedIdStrings.includes(String(item.addTocart_id)),
       );
-      //   console.log("Cart items:", cartItems);
 
       totalAmount = 0;
       checkoutBlocked = false;
@@ -408,27 +437,37 @@ $(document).ready(function () {
         console.log("Cart item:", item);
 
         const listCartItems = `
-          <div class="d-flex align-items-center mb-3">
-              <img src="${ip}/FrontEnd/assets/img/product/${item.product.image}" alt="${name}" style="width: 65px; height: 65px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0;">
-              <div class="flex-grow-1 ml-3" style="line-height: 1.2;">
-                  <h6 class="font-weight-bold mb-1" style="font-size: 0.95rem;">${name}</h6>
-                  <small class="text-muted d-block">Price: ₱${price.toLocaleString()}</small>
-                  <small class="text-muted d-block">Qty: ${quantity}</small>
-                  <small class="${isAvailable && !isOwnProduct ? "text-muted" : "text-danger font-weight-bold"} d-block">
-                    ${
-                      isOwnProduct
-                        ? "You cannot check out your own product."
-                        : isAvailable
-                          ? `Stock: ${stock}`
-                          : "Stock changed. Please update your cart."
-                    }
-                  </small>
+            <div class="checkout-summary-item">
+              <div class="checkout-summary-image-wrap">
+                <img
+                  src="${resolveCheckoutImage(item.product?.image)}"
+                  alt="${escapeHtml(name)}"
+                  class="checkout-summary-image"
+                  onerror="this.onerror=null;this.src='assets/img/back.jpg';" />
               </div>
-              <div class="font-weight-bold ml-2">
-                  ₱${subtotal.toLocaleString()}
+
+              <div class="checkout-summary-info">
+                <h6>${escapeHtml(name)}</h6>
+                <div class="checkout-summary-meta">
+                  <span>Price: ₱${formatPeso(price)}</span>
+                  <span>Qty: ${quantity}</span>
+                </div>
+                <small class="${isAvailable && !isOwnProduct ? "text-muted" : "text-danger font-weight-bold"} d-block">
+                  ${
+                    isOwnProduct
+                      ? "You cannot check out your own product."
+                      : isAvailable
+                        ? `Stock: ${stock}`
+                        : "Stock changed. Please update your cart."
+                  }
+                </small>
               </div>
-          </div>
-        `;
+
+              <div class="checkout-summary-price">
+                ₱${formatPeso(subtotal)}
+              </div>
+            </div>
+          `;
 
         $(".cartItems").append(listCartItems);
       });
@@ -447,8 +486,8 @@ $(document).ready(function () {
       // Update subtotal and total without adding shipping to the order summary.
       const subtotal = totalAmount;
 
-      $("#ui-subtotal").text(`₱${subtotal.toLocaleString()}`);
-      $("#ui-total").text(`₱${subtotal.toLocaleString()}`);
+      $("#ui-subtotal").text(`₱${formatPeso(subtotal)}`);
+      $("#ui-total").text(`₱${formatPeso(subtotal)}`);
 
       // Keep the checkout payload aligned with the order summary.
       totalAmount = subtotal;

@@ -57,7 +57,7 @@
       }
     </script>
   </head>
-  <body onload="load_user()">
+  <body>
     <!--Navbar-->
     <nav
       class="navbar navbar-expand-lg navbar-dark sticky-top dashboard-navbar">
@@ -272,13 +272,28 @@
     </nav>
 
     <!-- CheckOut -->
-    <section class="my-2 py-2">
+    <section class="checkout-page-section">
       <div class="container">
         <!-- Navigation Tab -->
+        <div class="checkout-page-heading">
+          <div>
+            <p class="checkout-page-kicker mb-1">Checkout</p>
+            <h1 class="checkout-page-title mb-1">
+              Review and place your order
+            </h1>
+            <p class="checkout-page-subtitle mb-0">
+              Confirm your delivery details, selected items, and payment method.
+            </p>
+          </div>
+
+          <a href="cart.html" class="btn checkout-back-btn">
+            <i class="fas fa-arrow-left mr-2"></i> Back to Cart
+          </a>
+        </div>
         <div class="checkout-stepper">
           <a href="cart.html" class="step">Shopping Cart</a>
           <i class="fas fa-chevron-right"></i>
-          <a href="checkout.html" class="step active">CheckOut</a>
+          <a href="checkout.html" class="step active">Checkout</a>
           <i class="fas fa-chevron-right"></i>
           <a href="orderConfirmation.html" class="step">Confirmation</a>
         </div>
