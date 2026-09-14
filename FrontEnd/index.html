@@ -47,7 +47,7 @@
     <script src="assets/js/navbar-role.js"></script>
     <script src="assets/js/notification-bell.js"></script>
   </head>
-  <body onload="load_user()">
+  <body>
     <!--Navbar-->
     <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
       <div class="container-fluid">
@@ -81,10 +81,15 @@
                 >Contact Us</a
               >
             </li>
-            <li class="nav-item d-lg-none">
-              <a class="nav-link" href="#"
-                ><i class="fa fa-shopping-cart white-icon"></i
-              ></a>
+            <li class="nav-item d-lg-none" id="cartNavMobile">
+              <a class="nav-link d-flex align-items-center" href="cart.html">
+                <i class="fa fa-shopping-cart white-icon"></i>
+                <span class="ml-2">Cart</span>
+                <span
+                  id="cart-count-mobile"
+                  class="badge bg-danger rounded-pill ml-2"
+                  style="display: none"></span>
+              </a>
             </li>
           </ul>
           <!-- Search bar (responsive) -->

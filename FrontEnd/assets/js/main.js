@@ -1,7 +1,6 @@
 /* ================================
    GLOBAL VARIABLES
 ================================ */
-// const ip = "https://api.hanzgo.me";
 if (!window.APP_CONFIG?.API_BASE_URL) {
   throw new Error("APP_CONFIG is missing. Load config.js before main.js.");
 }
@@ -14,6 +13,9 @@ let role = null;
 let profileImage = null;
 let currentUserId = null;
 
+/* ================================
+   API CONFIGURATION
+================================ */
 function getApiHeaders(extraHeaders = {}) {
   return {
     Accept: "application/json",
@@ -22,6 +24,9 @@ function getApiHeaders(extraHeaders = {}) {
   };
 }
 
+/* ================================
+   GLOBAL HELPER FUNCTIONS
+================================ */
 function getProductsFromResponse(response) {
   return Array.isArray(response) ? response : response.data || [];
 }
@@ -37,6 +42,27 @@ function escapeHtml(value) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+function resolveHomepageImage(folder, image) {
+  if (!image) return "assets/img/back.jpg";
+
+  const src = String(image);
+
+  if (/^(https?:)?\/\//i.test(src)) return src;
+  if (src.startsWith("/")) return `${ip}${src}`;
+  if (src.includes("assets/")) return `${ip}/${src.replace(/^\/+/, "")}`;
+
+  return `${ip}/FrontEnd/assets/img/${folder}/${src}`;
+}
+
+function formatPeso(amount) {
+  const num = Number(amount || 0);
+
+  return num.toLocaleString("en-PH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 function getStockQuantity(product) {
@@ -65,16 +91,14 @@ function getCartProductIds(cartItems) {
 
 function updateCartCount(count) {
   const cartCount = Number(count) || 0;
-  const $cartCount = $("#cart-count");
+  const $cartBadges = $("#cart-count, #cart-count-mobile");
 
-  // Hide badge for admin/seller or when cart is empty
-  if (role === "admin" || role === "seller" || cartCount <= 0) {
-    $cartCount.text("").hide();
+  if (role === "admin" || cartCount <= 0) {
+    $cartBadges.text("").hide();
     return;
   }
 
-  // Show badge only when count is greater than zero
-  $cartCount.text(cartCount).show();
+  $cartBadges.text(cartCount).show();
 }
 
 function renderHomepageCartButton(product) {
@@ -138,8 +162,9 @@ function renderProductCarousel(products) {
       <div class="product-card">
         <a href="single-product.html?id=${productId}" class="text-decoration-none">
           <div class="product-img">
-            <img src="${ip}/FrontEnd/assets/img/product/${productImage}"
-                 alt="${productName}" height="100px" />
+            <img src="${resolveHomepageImage("product", productImage)}"
+              onerror="this.onerror=null;this.src='assets/img/back.jpg';"
+            />
           </div>
         </a>
 
@@ -211,10 +236,8 @@ function renderFeaturedProducts(products) {
             Featured
           </div>
           <a href="single-product.html?id=${productId}">
-            <img src="${ip}/FrontEnd/assets/img/product/${productImage}"
-                 class="img-fluid mb-3"
-                 alt="${productName}"
-                 style="height: 400px; object-fit: cover; width: 100%;">
+            <img src="${resolveHomepageImage("product", productImage)}"
+                onerror="this.onerror=null;this.src='assets/img/back.jpg';"
           </a>
         </div>
 
@@ -247,10 +270,9 @@ function renderDailyProducts(products) {
         <div class="card dailyProductCard">
           <div class="card-body p-2 d-flex flex-column">
             <a href="single-product.html?id=${productId}" class="text-decoration-none text-dark">
-              <img src="${ip}/FrontEnd/assets/img/product/${productImage}"
-                   class="card-img-top rounded-0"
-                   style="aspect-ratio: 1; object-fit: cover;"
-                   alt="${productName}">
+              <img src="${resolveHomepageImage("product", productImage)}"
+                  onerror="this.onerror=null;this.src='assets/img/back.jpg';"
+              />
             </a>
             <p class="card-title mb-1" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 0.85rem; line-height: 1.2;">${productName}</p>
             <div class="mt-auto">
@@ -448,8 +470,8 @@ $(document).ready(() => {
         $brandCarousel.append(`
           <div class="product-card">
             <div class="product-img">
-              <img src="${ip}/FrontEnd/assets/img/brand/${b.image}" 
-                   alt="${b.brand_name || "Brand"}" height="100px" />
+              <img src="${resolveHomepageImage("brand", b.image)}"
+                onerror="this.onerror=null;this.src='assets/img/back.jpg';" />
             </div>
             
             <a href="shop.html?brand_id=${b.brand_id}&brand=${encodeURIComponent(
