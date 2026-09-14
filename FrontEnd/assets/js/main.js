@@ -230,20 +230,26 @@ function renderFeaturedProducts(products) {
     const productImage = escapeHtml(p.image || "");
 
     $featuredContainer.append(`
-      <div class="product text-center col-lg-3 col-md-4 col-sm-12 mb-4">
-        <div class="position-relative">
+      <div class="homepage-featured-card text-center">
+        <div class="position-relative homepage-featured-image-wrap">
           <div class="badge badge-danger position-absolute" style="top: 10px; left: 10px; z-index: 10;">
             Featured
           </div>
-          <a href="single-product.html?id=${productId}">
-            <img src="${resolveHomepageImage("product", productImage)}"
-                onerror="this.onerror=null;this.src='assets/img/back.jpg';"
+
+          <a href="single-product.html?id=${productId}" class="homepage-featured-image-link">
+            <img
+              src="${resolveHomepageImage("product", productImage)}"
+              class="homepage-featured-image"
+              alt="${productName}"
+              onerror="this.onerror=null;this.src='assets/img/back.jpg';" />
           </a>
         </div>
 
-        <h5 class="p-name">${productName}</h5>
-        <h4 class="p-price">&#8369;${escapeHtml(p.product_price ?? "")}</h4>
-        ${renderHomepageCartButton(p)}
+        <div class="homepage-featured-info">
+          <h5 class="p-name">${productName}</h5>
+          <h4 class="p-price">&#8369;${escapeHtml(p.product_price ?? "")}</h4>
+          ${renderHomepageCartButton(p)}
+        </div>
       </div>
     `);
   });
