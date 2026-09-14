@@ -1,8 +1,6 @@
 /* ================================
    GLOBAL VARIABLES
 ================================ */
-// const ip = "https://api.hanzgo.me"; // For production server
-//const apiBaseUrl = "https://api.hanzgo.me";
 if (!window.APP_CONFIG?.API_BASE_URL) {
   throw new Error("APP_CONFIG is missing. Load config.js before shop.js.");
 }
@@ -610,9 +608,8 @@ function createProductCard(product) {
 
   const $image = $("<img>", {
     src: productImage,
-    class: "card-img-top rounded-0",
+    class: "shop-product-image",
     alt: productName,
-    style: "aspect-ratio: 1; object-fit: cover;",
   }).on("error", function () {
     $(this).off("error").attr("src", "assets/img/back.jpg");
   });
@@ -648,10 +645,11 @@ function createProductCard(product) {
         ),
     )
     .append(
-      $("<small>", {
-        class: stock <= 5 ? "text-warning font-weight-bold" : "text-muted",
-        style: "font-size: 0.7rem;",
-      }).text(`Stock ${stock}`),
+      $("<button>", {
+        type: "button",
+        class: "btn shop-add-cart-btn mt-2",
+        "data-product-id": productId,
+      }).html('<i class="fas fa-cart-plus mr-1"></i> Add to Cart'),
     );
 
   const $card = $("<div>", {
@@ -817,6 +815,103 @@ function setupEvents() {
     window.scrollTo({
       top: $("#shop-products-container").offset().top - 120,
       behavior: "smooth",
+    });
+  });
+  $(document).on("click", ".shop-add-cart-btn", function (event) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const productId = $(this).data("product-id");
+
+    if (!token) {
+      Swal.fire("Warning", "Please login to add items to the cart.", "warning");
+      return;
+    }
+
+    if (normalizeText(role) !== "user") {
+      Swal.fire(
+        "Not Allowed",
+        "Only customers can add products to the cart.",
+        "warning",
+      );
+      return;
+    }
+
+    $.ajax({
+      url: `${apiBaseUrl}/api/cart`,
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      data: JSON.stringify({
+        product_id: productId,
+        quantity: 1,
+      }),
+      success: function (response) {
+        updateCartCount(response.count);
+        Swal.fire("Added", "Product added to your cart.", "success");
+      },
+      error: function (xhr) {
+        console.error("Error adding to cart:", xhr.responseText || xhr);
+
+        const msg =
+          xhr.responseJSON?.msg ||
+          xhr.responseJSON?.message ||
+          "Failed to add product to cart.";
+
+        Swal.fire("Error", msg, "error");
+      },
+    });
+  });
+
+  $(document).on("click", ".shop-add-cart-btn", function (event) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const productId = $(this).data("product-id");
+
+    if (!token) {
+      Swal.fire("Warning", "Please login to add items to the cart.", "warning");
+      return;
+    }
+
+    if (normalizeText(role) !== "user") {
+      Swal.fire(
+        "Not Allowed",
+        "Only customers can add products to the cart.",
+        "warning",
+      );
+      return;
+    }
+
+    $.ajax({
+      url: `${apiBaseUrl}/api/cart`,
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      data: JSON.stringify({
+        product_id: productId,
+        quantity: 1,
+      }),
+      success: function (response) {
+        updateCartCount(response.count);
+        Swal.fire("Added", "Product added to your cart.", "success");
+      },
+      error: function (xhr) {
+        console.error("Error adding to cart:", xhr.responseText || xhr);
+
+        const msg =
+          xhr.responseJSON?.msg ||
+          xhr.responseJSON?.message ||
+          "Failed to add product to cart.";
+
+        Swal.fire("Error", msg, "error");
+      },
     });
   });
 
