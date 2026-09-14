@@ -678,7 +678,24 @@ function getOrderItems(order, itemsOverride) {
       product.id ||
       "";
 
-    return { productId, productName, quantity, price, subtotal, image };
+    const checkoutItemId = item.checkout_item_id || item.id || "";
+
+    const itemStatus = getMainOrderStatus(
+      item.item_status || item.status || "pending",
+    );
+
+    return {
+      checkoutItemId,
+      productId,
+      productName,
+      quantity,
+      price,
+      subtotal,
+      image,
+      itemStatus,
+      cancelledAt: item.cancelled_at || "",
+      cancellationReason: item.cancellation_reason || "",
+    };
   });
 }
 
@@ -1097,6 +1114,32 @@ function addBuyAgainItemsToCart(items = []) {
 }
 
 // =======================================
+// Check if Order Item is Cancelled (Raw)
+// =======================================
+function isCancelledOrderItemRaw(item = {}) {
+  return normalizeStatus(item.item_status || item.status || "") === "cancelled";
+}
+
+// =======================================
+// Check if Order Item is Cancelled
+// =======================================
+function isCancelledOrderItem(item = {}) {
+  return (
+    getMainOrderStatus(item.itemStatus || item.item_status || item.status) ===
+    "cancelled"
+  );
+}
+
+// =======================================
+// Get Active Raw Order Items
+// =======================================
+function getActiveRawOrderItems(items = []) {
+  return (Array.isArray(items) ? items : []).filter(
+    (item) => !isCancelledOrderItemRaw(item),
+  );
+}
+
+// =======================================
 // Render User Orders
 // =======================================
 function renderUserOrders() {
@@ -1167,7 +1210,12 @@ function renderUserOrders() {
 
       const items = getOrderItems(order, sellerItems);
 
-      const groupTotal = sumItemsTotal(sellerItems);
+      const activeSellerItems = getActiveRawOrderItems(sellerItems);
+      const originalGroupTotal = sumItemsTotal(sellerItems);
+      const activeGroupTotal = sumItemsTotal(activeSellerItems);
+
+      const groupTotal =
+        groupStatusKey === "cancelled" ? originalGroupTotal : activeGroupTotal;
       const sellerOrderTotal = Number(
         sellerOrder?.subtotal ||
           sellerOrder?.total ||
@@ -1265,16 +1313,55 @@ function renderUserOrders() {
       }
 
       const itemsHtml = items
-        .map(
-          (item) => `
-        <div class="order-item-row d-flex justify-content-between align-items-center">
-          <div class="order-item-name text-dark">
+        .map((item) => {
+          const itemCancelled = isCancelledOrderItem(item);
+
+          const canCancelThisItem =
+            role === "user" &&
+            groupStatusKey === "pending" &&
+            !itemCancelled &&
+            item.checkoutItemId;
+
+          return `
+      <div class="order-item-row d-flex justify-content-between align-items-center">
+        <div class="order-item-name text-dark">
+          <div>
             ${escapeHtml(item.productName)} (x${escapeHtml(item.quantity)})
+            ${
+              itemCancelled
+                ? `<span class="order-item-cancelled-badge ml-2">Cancelled</span>`
+                : ""
+            }
           </div>
-          <div class="order-item-price">₱${formatCurrency(item.subtotal)}</div>
+
+          ${
+            item.cancelledAt
+              ? `<small class="text-muted d-block">Cancelled on ${escapeHtml(formatDate(item.cancelledAt))}</small>`
+              : ""
+          }
         </div>
-      `,
-        )
+
+        <div class="order-item-actions d-flex align-items-center">
+          <div class="order-item-price mr-3">₱${formatCurrency(item.subtotal)}</div>
+
+          ${
+            canCancelThisItem
+              ? `
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-danger btn-cancel-item"
+                  data-order-id="${escapeHtmlAttribute(orderId)}"
+                  data-item-id="${escapeHtmlAttribute(item.checkoutItemId)}"
+                  data-product-name="${escapeHtmlAttribute(item.productName)}">
+                  Cancel Item
+                </button>
+              `
+              : ""
+          }
+        </div>
+      </div>
+    `;
+        })
         .join("");
 
       const buyAgainItems = getBuyAgainPayload(items);
@@ -1359,15 +1446,6 @@ function renderUserOrders() {
                   </button>
 
                   ${completedButtons}
-
-                  ${
-                    canCancelOrder(parentStatusKey) && allSellerGroupsPending
-                      ? `
-                    <button class="btn btn-danger btn-sm rounded px-3 btn-cancel" data-id="${orderId}">
-                      Cancel Order
-                    </button>`
-                      : ""
-                  }
                 </div>
               </div>
             </div>
@@ -2286,6 +2364,42 @@ function loadOrderDetails(
 }
 
 // =======================================
+// Cancel Order Item Function
+// =======================================
+function cancelOrderItem(orderId, itemId, productName = "this item") {
+  $.ajax({
+    url: `${ip}/api/checkout/orders/${orderId}/items/${itemId}/cancel`,
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    data: JSON.stringify({
+      reason: "Cancelled by buyer.",
+    }),
+    success: function (res) {
+      Swal.fire(
+        "Item Cancelled!",
+        res.msg || `${productName} has been cancelled.`,
+        "success",
+      );
+
+      fetchBuyerOrders();
+    },
+    error: function (xhr) {
+      console.error("Cancel item failed:", xhr.status, xhr.responseText);
+
+      Swal.fire(
+        "Error",
+        extractApiErrorMessage(xhr, "Unable to cancel item."),
+        "error",
+      );
+    },
+  });
+}
+
+// =======================================
 // Cancel Order Function
 // =======================================
 function cancelOrder(orderId) {
@@ -2522,6 +2636,32 @@ $(document).ready(function () {
       if (result.isConfirmed) {
         // Call API to update status to 'cancelled'
         cancelOrder(orderId);
+      }
+    });
+  });
+
+  // -------------------------------
+  // Cancel Item Button Logic
+  // -------------------------------
+  $(document).on("click", ".btn-cancel-item", function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const orderId = $(this).attr("data-order-id");
+    const itemId = $(this).attr("data-item-id");
+    const productName = $(this).attr("data-product-name") || "this item";
+
+    Swal.fire({
+      title: "Cancel Item?",
+      text: `Are you sure you want to cancel ${productName}?`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, cancel item",
+    }).then((result) => {
+      if (result.isConfirmed) {
+        cancelOrderItem(orderId, itemId, productName);
       }
     });
   });

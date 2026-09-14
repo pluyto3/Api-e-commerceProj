@@ -90,6 +90,8 @@ function updateSelectedTotal() {
 
   const hasAvailableItems = $("input.select-item:not(:disabled)").length > 0;
 
+  const availableItemsCount = $("input.select-item:not(:disabled)").length;
+
   $("#checkout-btn").prop(
     "disabled",
     !hasAvailableItems || $selectedItems.length === 0,
@@ -110,6 +112,17 @@ function updateSelectedTotal() {
 
     selectedTotal += itemPrice;
   });
+
+  $("#selectedCartCount").text(
+    `${$selectedItems.length} of ${availableItemsCount} selected`,
+  );
+
+  $("#selectAllCartItems").prop("disabled", availableItemsCount === 0);
+
+  $("#selectAllCartItems").prop(
+    "checked",
+    availableItemsCount > 0 && $selectedItems.length === availableItemsCount,
+  );
 
   const formattedTotal = selectedTotal.toLocaleString("en-PH", {
     minimumFractionDigits: 2,
@@ -375,6 +388,17 @@ $(document).ready(function () {
      Select Item Checkbox
   ------------------------------ */
   $(document).on("change", ".select-item", function () {
+    updateSelectedTotal();
+  });
+
+  /* ------------------------------
+      Select All Checkbox
+  ------------------------------ */
+  $(document).on("change", "#selectAllCartItems", function () {
+    const isChecked = $(this).is(":checked");
+
+    $("input.select-item:not(:disabled)").prop("checked", isChecked);
+
     updateSelectedTotal();
   });
 

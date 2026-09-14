@@ -299,7 +299,23 @@
 
       <div class="container-fluid px-lg-5 py-4">
         <div class="row">
-          <div class="col-lg-8 mb-4" id="cart-items-container"></div>
+          <div class="col-lg-8 mb-4">
+            <div class="cart-select-all-bar">
+              <label class="cart-select-all-label mb-0">
+                <input
+                  type="checkbox"
+                  id="selectAllCartItems"
+                  class="form-check-input m-0" />
+                <span>Select all available items</span>
+              </label>
+
+              <small id="selectedCartCount" class="text-muted">
+                0 selected
+              </small>
+            </div>
+
+            <div id="cart-items-container"></div>
+          </div>
 
           <div class="col-lg-4">
             <div class="card cart-summary-card shadow-sm border-0">

@@ -365,6 +365,11 @@ class CheckoutController extends Controller
                     'quantity' => $item->quantity,
                     'price' => $item->price,
                     'subtotal' => $item->subtotal,
+                    'item_status' => $item->item_status ?? 'pending',
+                    'cancelled_at' => $item->cancelled_at,
+                    'cancelled_by' => $item->cancelled_by,
+                    'cancellation_reason' => $item->cancellation_reason,
+                    'stock_restored_at' => $item->stock_restored_at,
                     'seller_name' => $item->seller?->username ?? $item->product?->seller?->username,
                     'image' => $this->formatImagePath($item->product),
                     'product' => $item->product,
@@ -1392,6 +1397,9 @@ class CheckoutController extends Controller
         ], 200);
     }
 
+    /**
+     * Generate a tracking number for a seller fulfillment.
+     */
     private function generateTrackingNumber(
         $checkout_id,
         $seller_id = null
@@ -1419,6 +1427,312 @@ class CheckoutController extends Controller
         }
 
         return $tracking;
+    }
+
+    /**
+     * Restore stock for a cancelled checkout item, if not already restored.
+     */
+    private function restoreCheckoutItemStock(CheckoutItem $item): void
+    {
+        if ($item->stock_restored_at) {
+            return;
+        }
+
+        $product = Product::where('product_id', $item->product_id)
+            ->lockForUpdate()
+            ->first();
+
+        if (!$product) {
+            return;
+        }
+
+        $product->stock_quantity =
+            (int) $product->stock_quantity + (int) $item->quantity;
+
+        if (
+            $product->status === 'out_of_stock' &&
+            $product->stock_quantity > 0
+        ) {
+            $product->status = 'active';
+        }
+
+        $product->save();
+
+        $item->stock_restored_at = now();
+        $item->save();
+    }
+
+    /**
+     * Get a query builder for active checkout items (not cancelled).
+     */
+    private function activeCheckoutItemsQuery(int $checkoutId)
+    {
+        return CheckoutItem::where('checkout_id', $checkoutId)
+            ->where(function ($query) {
+                $query
+                    ->whereNull('item_status')
+                    ->orWhere('item_status', '!=', 'cancelled');
+            });
+    }
+
+    /**
+     * Cancel a specific item in a checkout order.
+     */
+    public function cancelOrderItem(Request $request, $checkout_id, $item_id)
+    {
+        $user = $this->getAuthenticatedUser($request);
+
+        if (!$user) {
+            return response()->json([
+                'msg' => 'Invalid Token.'
+            ], 401);
+        }
+
+        if (!$user->is_active) {
+            return response()->json([
+                'msg' => 'Your account has been deactivated.'
+            ], 403);
+        }
+
+        if (!in_array($user->role, ['user', 'admin'], true)) {
+            return response()->json([
+                'msg' => 'Only customers or administrators can cancel order items.'
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'reason' => 'nullable|string|max:255',
+        ]);
+
+        $defaultReason = $user->role === 'admin'
+            ? 'Item cancelled by admin.'
+            : 'Item cancelled by buyer.';
+
+        $reason = trim((string) ($validated['reason'] ?? $defaultReason));
+
+        if ($reason === '') {
+            $reason = $defaultReason;
+        }
+
+        $result = DB::transaction(function () use (
+            $checkout_id,
+            $item_id,
+            $user,
+            $reason
+        ) {
+            $checkoutQuery = Checkout::where('checkout_id', $checkout_id)
+                ->lockForUpdate();
+
+            if ($user->role !== 'admin') {
+                $checkoutQuery->where('user_id', $user->user_id);
+            }
+
+            $checkout = $checkoutQuery->first();
+
+            if (!$checkout) {
+                return null;
+            }
+
+            $overallStatus = $this->normalizeShippingStatus(
+                $checkout->shipping_status ?: $checkout->status
+            );
+
+            if (in_array($overallStatus, ['cancelled', 'delivered'], true)) {
+                throw ValidationException::withMessages([
+                    'status' => 'This order is already final and can no longer be changed.'
+                ]);
+            }
+
+            if (
+                $this->normalizePaymentStatus($checkout->payment_status) === 'paid'
+            ) {
+                throw ValidationException::withMessages([
+                    'payment_status' =>
+                        'Paid orders cannot be cancelled directly. A refund process is required.'
+                ]);
+            }
+
+            $item = CheckoutItem::where('checkout_id', $checkout->checkout_id)
+                ->where('checkout_item_id', $item_id)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$item) {
+                throw ValidationException::withMessages([
+                    'item' => 'Order item not found.'
+                ]);
+            }
+
+            if (($item->item_status ?? 'pending') === 'cancelled') {
+                throw ValidationException::withMessages([
+                    'item' => 'This item is already cancelled.'
+                ]);
+            }
+
+            $sellerOrder = null;
+            $sellerStatus = $overallStatus;
+
+            if ($item->seller_id) {
+                $sellerOrder = CheckoutSellerOrder::where('checkout_id', $checkout->checkout_id)
+                    ->where('seller_id', $item->seller_id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($sellerOrder) {
+                    $sellerStatus = $this->normalizeShippingStatus(
+                        $sellerOrder->shipping_status
+                    );
+                }
+            }
+
+            if ($user->role === 'user' && $sellerStatus !== 'pending') {
+                throw ValidationException::withMessages([
+                    'status' =>
+                        'This item can no longer be cancelled because the seller has already started processing it.'
+                ]);
+            }
+
+            if (
+                $user->role === 'admin' &&
+                in_array($sellerStatus, ['shipped', 'delivered', 'cancelled'], true)
+            ) {
+                throw ValidationException::withMessages([
+                    'status' =>
+                        'This item cannot be cancelled because it has already been shipped, delivered, or cancelled.'
+                ]);
+            }
+
+            $this->restoreCheckoutItemStock($item);
+
+            $item->item_status = 'cancelled';
+            $item->cancelled_at = now();
+            $item->cancelled_by = $user->user_id;
+            $item->cancellation_reason = $reason;
+            $item->save();
+
+            if ($sellerOrder) {
+                $remainingSellerItems = $this
+                    ->activeCheckoutItemsQuery($checkout->checkout_id)
+                    ->where('seller_id', $item->seller_id)
+                    ->count();
+
+                $remainingSellerSubtotal = $this
+                    ->activeCheckoutItemsQuery($checkout->checkout_id)
+                    ->where('seller_id', $item->seller_id)
+                    ->sum('subtotal');
+
+                $sellerOrder->seller_subtotal = $remainingSellerSubtotal;
+
+                if ($remainingSellerItems === 0) {
+                    $sellerOrder->shipping_status = 'cancelled';
+                    $sellerOrder->cancelled_at = now();
+                    $sellerOrder->cancelled_by = $user->user_id;
+                    $sellerOrder->cancellation_reason = $reason;
+                }
+
+                $sellerOrder->save();
+            }
+
+            $remainingCheckoutItems = $this
+                ->activeCheckoutItemsQuery($checkout->checkout_id)
+                ->count();
+
+            $remainingCheckoutSubtotal = $this
+                ->activeCheckoutItemsQuery($checkout->checkout_id)
+                ->sum('subtotal');
+
+            $checkout->total_amount = $remainingCheckoutSubtotal;
+
+            if ($remainingCheckoutItems === 0) {
+                $checkout->shipping_status = 'cancelled';
+                $checkout->status = 'cancelled';
+                $checkout->payment_status = 'cancelled';
+                $checkout->cancelled_at = now();
+                $checkout->cancelled_by = $user->user_id;
+                $checkout->cancellation_reason = $reason;
+            } else {
+                $this->syncCheckoutShippingFromSellerOrders($checkout);
+            }
+
+            $checkout->save();
+
+            return [
+                'checkout' => $checkout,
+                'item' => $item,
+                'seller_order' => $sellerOrder,
+            ];
+        });
+
+        if (!$result) {
+            return response()->json([
+                'msg' => 'Checkout not found.'
+            ], 404);
+        }
+
+        $checkout = $result['checkout'];
+
+        $checkout->load([
+            'user',
+            'items.product.brand',
+            'items.product.category',
+            'items.product.seller',
+            'items.seller',
+            'sellerOrders.seller'
+        ]);
+
+        $cancelledItem = $result['item'];
+        $sellerOrder = $result['seller_order'];
+
+        if ($cancelledItem->seller_id) {
+            $sellerMessage =
+                $user->role === 'admin'
+                    ? 'Admin cancelled an item in order #' . $checkout->checkout_id . '.'
+                    : 'A buyer cancelled an item in order #' . $checkout->checkout_id . '.';
+
+            $this->sendPushSafely(
+                $cancelledItem->seller_id,
+                'Order Item Cancelled',
+                $sellerMessage,
+                $this->buildOrderDetailsLink([
+                    'status' => 'cancelled',
+                    'order_id' => $checkout->checkout_id,
+                    'seller_id' => $cancelledItem->seller_id,
+                    'open' => 'details',
+                    'view' => 'sales',
+                ]),
+                'order_item_cancelled',
+                $checkout->checkout_id
+            );
+        }
+
+        if ($user->role === 'admin') {
+            $this->sendPushSafely(
+                $checkout->user_id,
+                'Order Item Cancelled',
+                'An item in your order #' . $checkout->checkout_id . ' was cancelled by Admin.',
+                $this->buildOrderDetailsLink([
+                    'status' => $checkout->shipping_status,
+                    'order_id' => $checkout->checkout_id,
+                    'open' => 'details',
+                ]),
+                'order_item_cancelled',
+                $checkout->checkout_id
+            );
+        }
+
+        return response()->json([
+            'msg' => 'Order item cancelled successfully.',
+            'checkout' => $this->formatOrder($checkout),
+            'cancelled_item' => [
+                'checkout_item_id' => $cancelledItem->checkout_item_id,
+                'product_id' => $cancelledItem->product_id,
+                'seller_id' => $cancelledItem->seller_id,
+                'item_status' => $cancelledItem->item_status,
+                'cancelled_at' => $cancelledItem->cancelled_at,
+                'cancellation_reason' => $cancelledItem->cancellation_reason,
+            ],
+            'seller_order' => $sellerOrder,
+        ], 200);
     }
 
     /**

@@ -136,6 +136,7 @@ Route::group(['prefix' => 'checkout'], function($router) {
         Route::get('/orders', 'getUserOrders'); // Get user orders
         Route::get('/orders/{id}', 'getOrderDetails'); // Get order details by ID
         Route::put('/orders/{id}/status', 'updateStatus'); // Cancel an order by ID
+        Route::put('/orders/{orderId}/items/{itemId}/cancel', 'cancelOrderItem'); // Cancel an order item by ID
         Route::put('/orders/{id}/cancel', 'cancelOrder'); // Count all orders
         Route::get('/all', 'getAllOrders'); // Get all orders (admin)
     });
