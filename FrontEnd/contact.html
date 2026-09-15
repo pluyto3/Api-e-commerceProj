@@ -309,8 +309,13 @@
               </div>
             </div>
             <div class="col-lg-7">
-              <form class="contact-form" id="contactForm" method="POST">
+              <form
+                class="contact-form"
+                id="contactForm"
+                method="POST"
+                novalidate>
                 <div class="row">
+                  <!-- Full Name -->
                   <div class="col-md-6">
                     <div class="form-group">
                       <label for="contactName">Full Name</label>
@@ -319,10 +324,17 @@
                         class="form-control"
                         id="contactName"
                         name="name"
+                        maxlength="100"
                         placeholder="Enter your full name"
+                        autocomplete="name"
                         required />
+                      <small
+                        class="text-danger contact-field-error"
+                        id="contactNameError"></small>
                     </div>
                   </div>
+
+                  <!-- Email -->
                   <div class="col-md-6">
                     <div class="form-group">
                       <label for="contactEmail">Email Address</label>
@@ -331,10 +343,77 @@
                         class="form-control"
                         id="contactEmail"
                         name="email"
+                        maxlength="150"
                         placeholder="Enter your email address"
+                        autocomplete="email"
                         required />
+                      <small
+                        class="text-danger contact-field-error"
+                        id="contactEmailError"></small>
                     </div>
                   </div>
+
+                  <!-- Concern Type -->
+                  <div class="col-md-6">
+                    <div class="form-group">
+                      <label for="contactCategory">How can we help?</label>
+                      <select
+                        class="form-control"
+                        id="contactCategory"
+                        name="category"
+                        required>
+                        <option value="">Select a concern</option>
+                        <option value="order_concern">Order Concern</option>
+                        <option value="product_question">
+                          Product Question
+                        </option>
+                        <option value="delivery_tracking">
+                          Delivery / Tracking
+                        </option>
+                        <option value="cancellation_refund">
+                          Cancellation / Refund
+                        </option>
+                        <option value="account_problem">Account Problem</option>
+                        <option value="payment_concern">Payment Concern</option>
+                        <option value="seller_concern">Seller Concern</option>
+                        <option value="other">Other</option>
+                      </select>
+                      <small
+                        class="text-danger contact-field-error"
+                        id="contactCategoryError"></small>
+                    </div>
+                  </div>
+
+                  <!-- Order Number -->
+                  <div
+                    class="col-md-6"
+                    id="contactOrderGroup"
+                    style="display: none">
+                    <div class="form-group">
+                      <label for="contactOrderId">
+                        Order Number
+                        <span class="text-muted font-weight-normal"
+                          >(optional)</span
+                        >
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        class="form-control"
+                        id="contactOrderId"
+                        name="order_id"
+                        placeholder="Example: 11" />
+                      <small class="text-muted">
+                        Providing your order number helps us locate your order
+                        faster.
+                      </small>
+                      <small
+                        class="text-danger contact-field-error"
+                        id="contactOrderIdError"></small>
+                    </div>
+                  </div>
+
+                  <!-- Subject -->
                   <div class="col-12">
                     <div class="form-group">
                       <label for="contactSubject">Subject</label>
@@ -343,29 +422,58 @@
                         class="form-control"
                         id="contactSubject"
                         name="subject"
-                        placeholder="What can we help you with?"
+                        maxlength="150"
+                        placeholder="Briefly describe your concern"
                         required />
+                      <small
+                        class="text-danger contact-field-error"
+                        id="contactSubjectError"></small>
                     </div>
                   </div>
+
+                  <!-- Message -->
                   <div class="col-12">
                     <div class="form-group">
-                      <label for="contactMessage">Message</label>
+                      <div
+                        class="d-flex justify-content-between align-items-center">
+                        <label for="contactMessage">Message</label>
+                        <small
+                          class="text-muted contact-message-counter"
+                          id="contactMessageCounter">
+                          0 / 2000
+                        </small>
+                      </div>
+
                       <textarea
                         class="form-control"
                         id="contactMessage"
                         name="message"
-                        rows="5"
-                        placeholder="Write your message here"
+                        rows="6"
+                        maxlength="2000"
+                        placeholder="Tell us what happened and include any important details."
                         required></textarea>
+
+                      <small
+                        class="text-danger contact-field-error"
+                        id="contactMessageError"></small>
                     </div>
                   </div>
+
+                  <!-- Submit -->
                   <div class="col-12">
                     <button
                       type="submit"
                       class="btn contact-submit-btn"
                       id="contactSubmitBtn">
-                      <i class="fas fa-paper-plane mr-2"></i> Send Message
+                      <i class="fas fa-paper-plane mr-2"></i>
+                      Send Message
                     </button>
+
+                    <p class="contact-form-privacy-note mb-0 mt-3">
+                      <i class="fas fa-lock mr-1"></i>
+                      Your information will only be used to respond to your
+                      support request.
+                    </p>
                   </div>
                 </div>
               </form>

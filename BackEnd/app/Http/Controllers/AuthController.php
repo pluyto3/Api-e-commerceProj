@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Mail;
 use App\Services\PushNotificationService;
 use App\Models\FcmToken;
 use Illuminate\Support\Facades\DB;
+use App\Models\SupportTicket;
 
 class AuthController extends Controller
 {
@@ -1248,6 +1249,10 @@ class AuthController extends Controller
                 ->where('user_id', $account->user_id)
                 ->exists()
 
+            || DB::table('support_tickets')
+                ->where('user_id', $account->user_id)
+                ->exists()
+
             // Seller products/order history
             || DB::table('products')
                 ->where('seller_id', $account->user_id)
@@ -1327,13 +1332,57 @@ class AuthController extends Controller
     }
 
     /**
-     * Send Contact Email
+     * Submit a customer support ticket.
      */
-    public function sendContactEmail(Request $request) {
+    public function sendContactEmail(Request $request)
+    {
+        /*
+        |--------------------------------------------------------------------------
+        | Identify authenticated user, if present
+        |--------------------------------------------------------------------------
+        |
+        | Your project uses the custom users.token column, so we read the
+        | Bearer token directly instead of Laravel Sanctum authentication.
+        |
+        */
+
+        $authenticatedUser = null;
+        $bearerToken = $request->bearerToken();
+
+        if ($bearerToken) {
+            $authenticatedUser = User::where('token', $bearerToken)->first();
+
+            if (!$authenticatedUser) {
+                return response()->json([
+                    'msg' => 'Your session is invalid or has expired. Please log in again.',
+                ], 401);
+            }
+
+            if (!$authenticatedUser->is_active) {
+                return response()->json([
+                    'msg' => 'Your account is currently inactive.',
+                ], 403);
+            }
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Validate request
+        |--------------------------------------------------------------------------
+        */
 
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:100',
             'email' => 'required|email|max:150',
+
+            'category' => [
+                'required',
+                'string',
+                'in:order_concern,product_question,delivery_tracking,cancellation_refund,account_problem,payment_concern,seller_concern,other',
+            ],
+
+            'order_id' => 'nullable|integer|min:1',
+
             'subject' => 'required|string|max:150',
             'message' => 'required|string|max:2000',
         ]);
@@ -1341,73 +1390,345 @@ class AuthController extends Controller
         if ($validator->fails()) {
             return response()->json([
                 'msg' => 'Please complete all required fields correctly.',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
         $validated = $validator->validated();
 
-            // Send the email using the configured mailer
-            try {
-                $name = htmlspecialchars($validated['name'], ENT_QUOTES, 'UTF-8');
-                $email = htmlspecialchars($validated['email'], ENT_QUOTES, 'UTF-8');
-                $subject = htmlspecialchars($validated['subject'], ENT_QUOTES, 'UTF-8');
-                $contactMessage = nl2br(htmlspecialchars($validated['message'], ENT_QUOTES, 'UTF-8'));
+        /*
+        |--------------------------------------------------------------------------
+        | Trust account data for logged-in users
+        |--------------------------------------------------------------------------
+        |
+        | Do not rely on name/email supplied by the browser when we already know
+        | who the logged-in user is.
+        |
+        */
 
-                $body = "
-                    <h2>New Contact Us Message</h2>
-                    <p><strong>Name:</strong> {$name}</p>
-                    <p><strong>Email:</strong> {$email}</p>
-                    <p><strong>Subject:</strong> {$subject}</p>
-                    <hr>
-                    <p><strong>Message:</strong></p>
-                    <p>{$contactMessage}</p>
-                ";
+        if ($authenticatedUser) {
+            $validated['name'] =
+                $authenticatedUser->fullname ?: $validated['name'];
 
-                Mail::html($body, function ($message) use ($validated) {
-                    $message->to(env('CONTACT_ADMIN_EMAIL'))
-                        ->replyTo($validated['email'], $validated['name'])
-                        ->subject('Hanz-Go Contact Us Message: ' . $validated['subject']);
-                });
+            $validated['email'] =
+                $authenticatedUser->email ?: $validated['email'];
+        }
 
-            // Notify admin through FCM after the email is successfully sent
-            try {
-                $admin = User::where('email', env('CONTACT_ADMIN_EMAIL'))->first();
+        /*
+        |--------------------------------------------------------------------------
+        | Validate optional order number
+        |--------------------------------------------------------------------------
+        */
 
-                \Log::info('Contact notification admin lookup:', [
-                    'contact_admin_email' => env('CONTACT_ADMIN_EMAIL'),
-                    'admin_found' => $admin ? true : false,
-                    'admin_user_id' => $admin ? $admin->user_id : null,
-                ]);
+        $orderId = $validated['order_id'] ?? null;
+        
+        if ($orderId && !$authenticatedUser) {
+            return response()->json([
+                'msg' => 'Please log in before submitting an order-related concern.',
+                'errors' => [
+                    'order_id' => [
+                        'Please log in to reference one of your orders.',
+                    ],
+                ],
+            ], 422);
+        }
 
-                if ($admin) {
-                    app(PushNotificationService::class)->sendToUser(
-                        $admin->user_id,
-                        'New Contact Message',
-                        'A customer sent a message through Contact Us.',
-                        '',
-                        'contact_message',
-                        null
-                    );
-                } else {
-                    \Log::warning('Contact FCM notification not sent: admin email not found in users table.', [
-                        'contact_admin_email' => env('CONTACT_ADMIN_EMAIL'),
-                    ]);
-                }
-            } catch (\Exception $notificationError) {
-                \Log::error('Contact FCM notification failed: ' . $notificationError->getMessage());
+        if ($orderId) {
+            $orderQuery = DB::table('checkouts')
+                ->where('checkout_id', $orderId);
+
+            /*
+            * A customer may only attach one of their own orders.
+            */
+            if (
+                $authenticatedUser &&
+                strtolower((string) $authenticatedUser->role) === 'user'
+            ) {
+                $orderQuery->where(
+                    'user_id',
+                    $authenticatedUser->user_id
+                );
             }
 
-            return response()->json([
-                'msg' => 'Message sent successfully!'   
-            ], 200);
+            if (!$orderQuery->exists()) {
+                return response()->json([
+                    'msg' => 'Please check the order number.',
+                    'errors' => [
+                        'order_id' => [
+                            $authenticatedUser &&
+                            strtolower((string) $authenticatedUser->role) === 'user'
+                                ? 'The selected order could not be found in your account.'
+                                : 'The selected order could not be found.',
+                        ],
+                    ],
+                ], 422);
+            }
+        }
 
+        /*
+        |--------------------------------------------------------------------------
+        | Create support ticket
+        |--------------------------------------------------------------------------
+        */
+
+        try {
+            $ticket = DB::transaction(function () use (
+                $validated,
+                $authenticatedUser,
+                $orderId
+            ) {
+                /*
+                * We first use a temporary unique number because the final
+                * reference number includes the auto-generated ticket ID.
+                *
+                * TMP- + UUID = exactly 40 characters, matching the column size.
+                */
+
+                $ticket = SupportTicket::create([
+                    'ticket_number' => 'TMP-' . Str::uuid(),
+
+                    'user_id' => $authenticatedUser
+                        ? $authenticatedUser->user_id
+                        : null,
+
+                    'order_id' => $orderId,
+
+                    'name' => $validated['name'],
+                    'email' => $validated['email'],
+                    'category' => $validated['category'],
+                    'subject' => $validated['subject'],
+                    'message' => $validated['message'],
+
+                    'status' => 'open',
+                    'priority' => 'normal',
+                ]);
+
+                /*
+                * Example:
+                * HG-SUP-20260915-0001
+                */
+                $ticket->ticket_number = sprintf(
+                    'HG-SUP-%s-%04d',
+                    now()->format('Ymd'),
+                    $ticket->support_ticket_id
+                );
+
+                $ticket->save();
+
+                return $ticket;
+            });
         } catch (\Throwable $e) {
-            \Log::error('Contact email could not be sent: ' . $e->getMessage());
+            \Log::error(
+                'Support ticket could not be created: ' . $e->getMessage()
+            );
 
             return response()->json([
-                'msg' => 'Message could not be sent. Please try again later.'
+                'msg' => 'Your support request could not be saved. Please try again.',
             ], 500);
         }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Friendly category label
+        |--------------------------------------------------------------------------
+        */
+
+        $categoryLabels = [
+            'order_concern' => 'Order Concern',
+            'product_question' => 'Product Question',
+            'delivery_tracking' => 'Delivery / Tracking',
+            'cancellation_refund' => 'Cancellation / Refund',
+            'account_problem' => 'Account Problem',
+            'payment_concern' => 'Payment Concern',
+            'seller_concern' => 'Seller Concern',
+            'other' => 'Other',
+        ];
+
+        $categoryLabel =
+            $categoryLabels[$ticket->category] ?? $ticket->category;
+
+        /*
+        |--------------------------------------------------------------------------
+        | Send admin email
+        |--------------------------------------------------------------------------
+        |
+        | Important:
+        | The ticket has already been safely stored in MySQL.
+        | If email delivery fails, we DO NOT delete the ticket.
+        |
+        */
+
+        $emailSent = false;
+
+        try {
+            $name = htmlspecialchars(
+                $ticket->name,
+                ENT_QUOTES,
+                'UTF-8'
+            );
+
+            $email = htmlspecialchars(
+                $ticket->email,
+                ENT_QUOTES,
+                'UTF-8'
+            );
+
+            $subject = htmlspecialchars(
+                $ticket->subject,
+                ENT_QUOTES,
+                'UTF-8'
+            );
+
+            $safeCategory = htmlspecialchars(
+                $categoryLabel,
+                ENT_QUOTES,
+                'UTF-8'
+            );
+
+            $safeTicketNumber = htmlspecialchars(
+                $ticket->ticket_number,
+                ENT_QUOTES,
+                'UTF-8'
+            );
+
+            $contactMessage = nl2br(
+                htmlspecialchars(
+                    $ticket->message,
+                    ENT_QUOTES,
+                    'UTF-8'
+                )
+            );
+
+            $orderHtml = $ticket->order_id
+                ? '<p><strong>Order Number:</strong> #' .
+                    intval($ticket->order_id) .
+                    '</p>'
+                : '';
+
+            $body = "
+                <h2>New Hanz-Go Support Request</h2>
+
+                <p>
+                    <strong>Reference:</strong>
+                    {$safeTicketNumber}
+                </p>
+
+                <p>
+                    <strong>Category:</strong>
+                    {$safeCategory}
+                </p>
+
+                {$orderHtml}
+
+                <hr>
+
+                <p><strong>Name:</strong> {$name}</p>
+                <p><strong>Email:</strong> {$email}</p>
+                <p><strong>Subject:</strong> {$subject}</p>
+
+                <hr>
+
+                <p><strong>Message:</strong></p>
+                <p>{$contactMessage}</p>
+            ";
+
+            Mail::html(
+                $body,
+                function ($message) use ($ticket) {
+                    $message
+                        ->to(env('CONTACT_ADMIN_EMAIL'))
+                        ->replyTo(
+                            $ticket->email,
+                            $ticket->name
+                        )
+                        ->subject(
+                            '[' .
+                            $ticket->ticket_number .
+                            '] Hanz-Go Support: ' .
+                            $ticket->subject
+                        );
+                }
+            );
+
+            $ticket->email_sent_at = now();
+            $ticket->save();
+
+            $emailSent = true;
+        } catch (\Throwable $emailError) {
+            \Log::error(
+                'Support ticket email failed for ' .
+                $ticket->ticket_number .
+                ': ' .
+                $emailError->getMessage()
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Notify admin through FCM
+        |--------------------------------------------------------------------------
+        */
+
+        try {
+            $admin = User::where(
+                'email',
+                env('CONTACT_ADMIN_EMAIL')
+            )->first();
+
+            \Log::info('Support ticket admin lookup:', [
+                'ticket_number' => $ticket->ticket_number,
+                'admin_found' => $admin ? true : false,
+                'admin_user_id' => $admin
+                    ? $admin->user_id
+                    : null,
+            ]);
+
+            if ($admin) {
+                app(PushNotificationService::class)->sendToUser(
+                    $admin->user_id,
+                    'New Support Request',
+                    $ticket->ticket_number .
+                        ': ' .
+                        $ticket->subject,
+                    '',
+                    'support_ticket',
+                    $ticket->support_ticket_id
+                );
+            } else {
+                \Log::warning(
+                    'Support ticket notification not sent: admin email was not found in users table.',
+                    [
+                        'ticket_number' =>
+                            $ticket->ticket_number,
+
+                        'contact_admin_email' =>
+                            env('CONTACT_ADMIN_EMAIL'),
+                    ]
+                );
+            }
+        } catch (\Throwable $notificationError) {
+            \Log::error(
+                'Support ticket FCM notification failed: ' .
+                $notificationError->getMessage()
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Return success
+        |--------------------------------------------------------------------------
+        */
+
+        return response()->json([
+            'msg' => 'Support request submitted successfully.',
+            'ticket_number' => $ticket->ticket_number,
+            'support_ticket_id' => $ticket->support_ticket_id,
+            'email_sent' => $emailSent,
+
+            'data' => [
+                'ticket_number' => $ticket->ticket_number,
+                'status' => $ticket->status,
+            ],
+        ], 201);
     }
 }   

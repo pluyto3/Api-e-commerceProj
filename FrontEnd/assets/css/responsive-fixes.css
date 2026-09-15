@@ -3853,3 +3853,99 @@ body {
     padding: 7px 8px;
   }
 }
+
+/* =======================================
+   Contact Support - Form Improvements
+======================================= */
+
+.contact-form .form-group {
+  margin-bottom: 18px;
+}
+
+.contact-form label {
+  margin-bottom: 7px;
+  color: #475569;
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.contact-form .form-control {
+  min-height: 46px;
+  padding: 10px 14px;
+  border: 1px solid #dbe3ef;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: none;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.contact-form textarea.form-control {
+  min-height: 150px;
+  resize: vertical;
+}
+
+.contact-form .form-control:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.contact-form .form-control.is-invalid {
+  border-color: #dc3545;
+}
+
+.contact-form .form-control.is-invalid:focus {
+  box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
+}
+
+.contact-form .contact-readonly {
+  background: #f8fafc !important;
+  color: #64748b;
+  cursor: default;
+}
+
+.contact-field-error {
+  display: block;
+  min-height: 18px;
+  margin-top: 5px;
+  font-size: 0.76rem;
+}
+
+.contact-message-counter {
+  margin-bottom: 7px;
+  font-size: 0.75rem;
+}
+
+#contactOrderGroup {
+  transition: 0.18s ease;
+}
+
+.contact-form-privacy-note {
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+.contact-form-privacy-note i {
+  color: #2563eb;
+}
+
+.contact-submit-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+@media (max-width: 767.98px) {
+  .contact-form-panel {
+    border-radius: 18px;
+  }
+
+  .contact-form-copy {
+    padding-bottom: 8px;
+  }
+
+  .contact-submit-btn {
+    width: 100%;
+  }
+}

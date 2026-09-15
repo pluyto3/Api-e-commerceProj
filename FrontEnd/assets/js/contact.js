@@ -1,7 +1,7 @@
-// ==========================
-// Global Configuration
-// ==========================
-// const ip = "https://api.hanzgo.me";
+// =======================================
+// Contact Page
+// =======================================
+
 if (!window.APP_CONFIG?.API_BASE_URL) {
   throw new Error("APP_CONFIG is missing. Load config.js before contact.js.");
 }
@@ -12,156 +12,182 @@ let token = null;
 let usr = null;
 let role = null;
 let profileImage = null;
+
 let accountInfoRequest = null;
 let accountInfoLoaded = false;
 
-// ==========================
-// Load User Session and Update UI
-// ==========================
-function load_user() {
-  usr = $.cookie("username");
-  token = $.cookie("token");
-  role = $.cookie("role");
-  profileImage = $.cookie("profileImage");
+// =======================================
+// Helpers
+// =======================================
+
+function normalizeText(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase();
+}
+
+function getApiHeaders(extraHeaders = {}) {
+  return {
+    Accept: "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...extraHeaders,
+  };
+}
+
+function clearContactErrors() {
+  $(".contact-field-error").text("");
+  $(".contact-form .form-control").removeClass("is-invalid");
+}
+
+function showContactFieldError(fieldId, message) {
+  $(`#${fieldId}`).addClass("is-invalid");
+  $(`#${fieldId}Error`).text(message);
+}
+
+// =======================================
+// Navbar Profile Image
+// =======================================
+
+function displayNavbarProfileImage(imageFilename) {
+  const $navbarProfileImage = $("#navbarProfileImage");
+  const $defaultProfileIcon = $("#defaultProfileIcon");
+
+  if (!imageFilename || String(imageFilename).trim() === "") {
+    $navbarProfileImage.hide().attr("src", "");
+    $defaultProfileIcon.show();
+    return;
+  }
+
+  const imageUrl = `${ip}/FrontEnd/assets/img/user/${imageFilename}`;
+
+  $navbarProfileImage
+    .off("error.contactProfile")
+    .on("error.contactProfile", function () {
+      $(this).hide().attr("src", "");
+      $defaultProfileIcon.show();
+    })
+    .attr("src", imageUrl)
+    .show();
+
+  $defaultProfileIcon.hide();
+}
+
+// =======================================
+// Load Session
+// =======================================
+
+function loadUser() {
+  usr = $.cookie("username") || null;
+  token = $.cookie("token") || null;
+  role = normalizeText($.cookie("role"));
+  profileImage = $.cookie("profileImage") || null;
 
   const $displayUsername = $("#displayUsername");
   const $login = $("#login");
   const $register = $("#register");
   const $logout = $("#logout");
-  const $cartCount = $("#cart-count");
   const $cartNav = $("#cartNav");
   const $cartNavMobile = $("#cartNavMobile");
   const $adminDashboard = $("#adminDashboard");
-  const $navbarProfileImage = $("#navbarProfileImage");
-  const $defaultProfileIcon = $("#defaultProfileIcon");
-  const $sidebarAccounts = $("#sidebarAccounts");
-  const $sidebarDashboard = $("#dashboard");
-  const $sidebarBrand = $("#brand");
-  const $sidebarCategory = $("#category");
-  const $sidebarProduct = $("#product");
 
+  // Guest
   if (!usr || !token) {
-    // No session → show login/register, hide logout & cart
-    $displayUsername.html("Sign In");
+    $displayUsername.text("My Account");
+
     $login.show();
     $register.show();
     $logout.hide();
-    $cartCount.hide();
+
     $cartNav.hide();
     $cartNavMobile.hide();
+
     $adminDashboard.hide();
-    $navbarProfileImage.hide();
-    $defaultProfileIcon.hide();
-    $sidebarAccounts.hide();
-    $sidebarDashboard.hide();
-    $sidebarBrand.hide();
-    $sidebarCategory.hide();
-    $sidebarProduct.hide();
+
+    $("#navbarProfileImage").hide();
+    $("#defaultProfileIcon").show();
+
     return;
   }
 
-  // Session exists → show username & logout
+  // Logged-in user
   $displayUsername.html(`<b>${usr}</b>`);
+
   $login.hide();
   $register.hide();
   $logout.show();
 
-  // Match dashboard behavior: show cart for user/seller, hide for admin
-  if (role === "user" || role === "seller") {
-    $cartCount.show();
+  // Only customers should use the shopping cart
+  if (role === "user") {
     $cartNav.show();
     $cartNavMobile.show();
   } else {
-    $cartCount.hide();
     $cartNav.hide();
     $cartNavMobile.hide();
   }
 
-  // Hide account manage if seller or user
-  if (role === "seller" || role === "user") {
-    $sidebarAccounts.hide();
-    $(".role-choice #role").prop("disabled", true);
-    $(".email-field input").prop("disabled", true);
+  // Admin/Seller dashboard link
+  if (role === "admin" || role === "seller") {
+    $adminDashboard.show();
   } else {
-    $sidebarAccounts.show();
-    $(".role-choice #role").prop("disabled", false);
-    $(".email-field input").prop("disabled", false);
+    $adminDashboard.hide();
   }
-
-  // Hide specific sidebar menus for regular user
-  if (role === "user") {
-    $sidebarDashboard.hide();
-    $sidebarBrand.hide();
-    $sidebarCategory.hide();
-    $sidebarProduct.hide();
-  } else {
-    $sidebarDashboard.show();
-    $sidebarBrand.show();
-    $sidebarCategory.show();
-    $sidebarProduct.show();
-  }
-
-  // Show admin dashboard for admin/seller only
-  role === "admin" || role === "seller"
-    ? $adminDashboard.show()
-    : $adminDashboard.hide();
 
   if (profileImage) {
     displayNavbarProfileImage(profileImage);
   }
 
-  if (token && usr) {
-    loadAccountInfo(usr, token);
-  }
+  loadAccountInfo();
 }
 
-function displayNavbarProfileImage(imageFilename) {
-  const baseUrl = `${ip}/FrontEnd/assets/img/user/`;
-  const $navbarProfileImage = $("#navbarProfileImage");
-  const $defaultProfileIcon = $("#defaultProfileIcon");
+// =======================================
+// Load Account Information
+// =======================================
 
-  if (imageFilename && String(imageFilename).trim() !== "") {
-    $navbarProfileImage
-      .off("error")
-      .on("error", function () {
-        $(this).hide().attr("src", "");
-        $defaultProfileIcon.show();
-      })
-      .attr("src", baseUrl + imageFilename)
-      .show();
-    $defaultProfileIcon.hide();
-  } else {
-    $navbarProfileImage.hide();
-    $defaultProfileIcon.show();
-  }
-}
+function loadAccountInfo() {
+  if (!usr || !token) return null;
 
-// ==========================
-// Fetch User Account Info
-// ==========================
-function loadAccountInfo(usr, token) {
   if (accountInfoLoaded || accountInfoRequest) {
     return accountInfoRequest;
   }
 
   accountInfoRequest = $.ajax({
-    url: `${ip}/api/getAccount_username/${usr}`,
+    url: `${ip}/api/getAccount_username/${encodeURIComponent(usr)}`,
     method: "GET",
-    headers: {
-      Accept: "application/json",
-      Authorization: `Bearer ${token}`,
-    },
+
+    headers: getApiHeaders(),
+
     success: function (res) {
-      if (res.image) {
+      if (res?.image) {
         $.cookie("profileImage", res.image, { path: "/" });
       }
 
-      displayNavbarProfileImage(res.image);
+      displayNavbarProfileImage(res?.image);
+
+      // Auto-fill authenticated customer information
+      if (res?.fullname) {
+        $("#contactName")
+          .val(res.fullname)
+          .prop("readonly", true)
+          .addClass("contact-readonly");
+      }
+
+      if (res?.email) {
+        $("#contactEmail")
+          .val(res.email)
+          .prop("readonly", true)
+          .addClass("contact-readonly");
+      }
+
       accountInfoLoaded = true;
     },
+
     error: function (xhr) {
-      console.error("Error fetching account info:", xhr);
+      console.error(
+        "Error loading account information:",
+        xhr.responseText || xhr,
+      );
     },
+
     complete: function () {
       accountInfoRequest = null;
     },
@@ -170,78 +196,260 @@ function loadAccountInfo(usr, token) {
   return accountInfoRequest;
 }
 
-// ==========================
-// Toast Notification
-// ==========================
-function showToast(message, type = "success") {
-  const $toast = $("#toastMessage");
+// =======================================
+// Concern / Order Number
+// =======================================
 
-  // Change header color dynamically
-  const $header = $toast.find(".toast-header");
-  if (type === "success") {
-    $header.removeClass("bg-danger").addClass("bg-success");
-    $header.find("strong").text("Success");
-  } else {
-    $header.removeClass("bg-success").addClass("bg-danger");
-    $header.find("strong").text("Error");
-  }
+function setupConcernType() {
+  const orderRelatedCategories = [
+    "order_concern",
+    "delivery_tracking",
+    "cancellation_refund",
+    "payment_concern",
+  ];
 
-  // Update message
-  $toast.find(".toast-body").text(message);
+  $("#contactCategory")
+    .off("change.contactConcern")
+    .on("change.contactConcern", function () {
+      const category = $(this).val();
 
-  // Show toast (Bootstrap 4 method)
-  $toast.toast("show");
+      if (orderRelatedCategories.includes(category)) {
+        $("#contactOrderGroup").stop(true, true).slideDown(150);
+      } else {
+        $("#contactOrderGroup").stop(true, true).slideUp(150);
+        $("#contactOrderId").val("");
+      }
+    });
 }
 
-/* ------------------------------
-    Contact Form Submission Handler
------------------------------- */
-function submitContactForm() {
-  $(document)
-    .off("submit", "#contactForm")
-    .on("submit", "#contactForm", function (e) {
-      e.preventDefault();
+// =======================================
+// Character Counter
+// =======================================
 
-      const $btn = $("#contactSubmitBtn");
+function setupMessageCounter() {
+  $("#contactMessage")
+    .off("input.contactCounter")
+    .on("input.contactCounter", function () {
+      const length = $(this).val().length;
+
+      $("#contactMessageCounter").text(`${length} / 2000`);
+    });
+}
+
+// =======================================
+// Client-side Validation
+// =======================================
+
+function validateContactForm() {
+  clearContactErrors();
+
+  const name = $("#contactName").val().trim();
+  const email = $("#contactEmail").val().trim();
+  const category = $("#contactCategory").val();
+  const subject = $("#contactSubject").val().trim();
+  const message = $("#contactMessage").val().trim();
+
+  let valid = true;
+
+  if (!name) {
+    showContactFieldError("contactName", "Please enter your full name.");
+    valid = false;
+  }
+
+  if (!email) {
+    showContactFieldError("contactEmail", "Please enter your email address.");
+    valid = false;
+  } else {
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailPattern.test(email)) {
+      showContactFieldError(
+        "contactEmail",
+        "Please enter a valid email address.",
+      );
+      valid = false;
+    }
+  }
+
+  if (!category) {
+    showContactFieldError(
+      "contactCategory",
+      "Please select the type of concern.",
+    );
+    valid = false;
+  }
+
+  if (!subject) {
+    showContactFieldError("contactSubject", "Please enter a short subject.");
+    valid = false;
+  }
+
+  if (!message) {
+    showContactFieldError("contactMessage", "Please describe your concern.");
+    valid = false;
+  }
+
+  return valid;
+}
+
+// =======================================
+// Laravel Validation Errors
+// =======================================
+
+function displayServerValidationErrors(errors) {
+  if (!errors || typeof errors !== "object") return false;
+
+  const fieldMap = {
+    name: "contactName",
+    email: "contactEmail",
+    category: "contactCategory",
+    order_id: "contactOrderId",
+    subject: "contactSubject",
+    message: "contactMessage",
+  };
+
+  let displayed = false;
+
+  Object.entries(errors).forEach(([field, messages]) => {
+    const fieldId = fieldMap[field];
+
+    if (!fieldId) return;
+
+    const message = Array.isArray(messages) ? messages[0] : String(messages);
+
+    showContactFieldError(fieldId, message);
+    displayed = true;
+  });
+
+  return displayed;
+}
+
+// =======================================
+// Reset Contact Form
+// =======================================
+
+function resetContactFormAfterSuccess() {
+  const savedName = $("#contactName").prop("readonly")
+    ? $("#contactName").val()
+    : "";
+
+  const savedEmail = $("#contactEmail").prop("readonly")
+    ? $("#contactEmail").val()
+    : "";
+
+  $("#contactForm")[0].reset();
+
+  $("#contactName").val(savedName);
+  $("#contactEmail").val(savedEmail);
+
+  $("#contactOrderGroup").hide();
+  $("#contactMessageCounter").text("0 / 2000");
+
+  clearContactErrors();
+}
+
+// =======================================
+// Submit Contact Form
+// =======================================
+
+function setupContactForm() {
+  $(document)
+    .off("submit.contactForm", "#contactForm")
+    .on("submit.contactForm", "#contactForm", function (event) {
+      event.preventDefault();
+
+      if (!validateContactForm()) {
+        return;
+      }
+
+      const $button = $("#contactSubmitBtn");
+
+      if ($button.data("loading")) {
+        return;
+      }
 
       const formData = {
         name: $("#contactName").val().trim(),
         email: $("#contactEmail").val().trim(),
+        category: $("#contactCategory").val(),
+        order_id: $("#contactOrderId").val().trim() || null,
         subject: $("#contactSubject").val().trim(),
         message: $("#contactMessage").val().trim(),
       };
 
-      $btn
+      $button
+        .data("loading", true)
         .prop("disabled", true)
         .html('<i class="fas fa-spinner fa-spin mr-2"></i> Sending...');
 
       $.ajax({
         url: `${ip}/api/contact/send-email`,
         method: "POST",
+
+        headers: getApiHeaders({
+          "Content-Type": "application/json",
+        }),
+
         contentType: "application/json",
         dataType: "json",
         data: JSON.stringify(formData),
-        success: function (res) {
-          Swal.fire(
-            "Sent!",
-            res.msg || "Message sent successfully!",
-            "success",
-          );
 
-          $("#contactForm")[0].reset();
+        success: function (response) {
+          resetContactFormAfterSuccess();
+
+          const ticketNumber =
+            response?.ticket_number || response?.data?.ticket_number || null;
+
+          Swal.fire({
+            icon: "success",
+            title: "Message Sent",
+            html: ticketNumber
+              ? `Your support request has been submitted.<br><br>
+                 <strong>Reference:</strong> ${ticketNumber}`
+              : "Your message has been sent successfully. Our support team will review it.",
+            confirmButtonText: "Okay",
+          });
         },
+
         error: function (xhr) {
-          console.error(xhr.responseText);
+          console.error("Contact form error:", xhr.responseText || xhr);
 
-          Swal.fire(
-            "Error",
+          clearContactErrors();
+
+          if (
+            xhr.status === 422 &&
+            displayServerValidationErrors(xhr.responseJSON?.errors)
+          ) {
+            Swal.fire(
+              "Check Your Information",
+              "Please correct the highlighted fields.",
+              "warning",
+            );
+
+            return;
+          }
+
+          if (xhr.status === 429) {
+            Swal.fire(
+              "Too Many Requests",
+              "You have submitted several requests recently. Please wait a moment before trying again.",
+              "warning",
+            );
+
+            return;
+          }
+
+          const message =
             xhr.responseJSON?.msg ||
-              "Failed to send message. Please try again.",
-            "error",
-          );
+            xhr.responseJSON?.message ||
+            "We could not send your message. Please try again.";
+
+          Swal.fire("Unable to Send", message, "error");
         },
+
         complete: function () {
-          $btn
+          $button
+            .data("loading", false)
             .prop("disabled", false)
             .html('<i class="fas fa-paper-plane mr-2"></i> Send Message');
         },
@@ -249,108 +457,89 @@ function submitContactForm() {
     });
 }
 
-// ==========================
-// Document Ready
-// ==========================
+// =======================================
+// Logout
+// =======================================
+
+function setupLogout() {
+  $("#logout")
+    .off("click.contactLogout")
+    .on("click.contactLogout", function (event) {
+      event.preventDefault();
+
+      function clearAuthCookies() {
+        ["token", "username", "role", "user_id", "profileImage"].forEach(
+          (cookie) => {
+            $.removeCookie(cookie, { path: "/" });
+            $.removeCookie(cookie);
+          },
+        );
+      }
+
+      function logoutFromServer() {
+        $.ajax({
+          url: `${ip}/api/logout`,
+          method: "POST",
+
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+          },
+
+          data: {
+            token: token,
+          },
+
+          success: function () {
+            clearAuthCookies();
+
+            Swal.fire({
+              icon: "success",
+              title: "Logout Successful",
+            }).then(() => {
+              window.location.replace("login.html");
+            });
+          },
+
+          error: function (xhr) {
+            const message =
+              xhr.responseJSON?.msg ||
+              "Your session has ended. Please log in again.";
+
+            clearAuthCookies();
+
+            Swal.fire({
+              icon: "warning",
+              title: "Logged Out",
+              text: message,
+            }).then(() => {
+              window.location.replace("login.html");
+            });
+          },
+        });
+      }
+
+      if (typeof removeFcmTokenFromServer === "function") {
+        removeFcmTokenFromServer(logoutFromServer);
+      } else {
+        logoutFromServer();
+      }
+    });
+}
+
+// =======================================
+// Ready
+// =======================================
+
 $(document).ready(function () {
-  /* ------------------------------
-     Load User Session
-  ------------------------------ */
-  load_user();
-  submitContactForm();
+  loadUser();
+
+  setupConcernType();
+  setupMessageCounter();
+  setupContactForm();
+  setupLogout();
 
   $(document)
     .ajaxStart(() => $("#wait").show())
-    .ajaxComplete(() => $("#wait").hide());
-
-  // --- Profile Image Preview ---
-  $("#image").on("change", function (e) {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = function (event) {
-        $("#profileImg").attr("src", event.target.result).show();
-        $("#defaultIcon").hide();
-      };
-      reader.readAsDataURL(file);
-    }
-  });
-
-  /* -----------------------------
-     LOGOUT HANDLER
-  ----------------------------- */
-  $("#logout").click((e) => {
-    e.preventDefault();
-
-    function clearAuthCookies() {
-      const authCookies = [
-        "token",
-        "username",
-        "role",
-        "user_id",
-        "profileImage",
-      ];
-
-      authCookies.forEach((cookie) => {
-        // Remove cookies created with path "/"
-        $.removeCookie(cookie, { path: "/" });
-
-        // Also remove older cookies that may not have an explicit path
-        $.removeCookie(cookie);
-      });
-    }
-
-    function logoutFromServer() {
-      $.ajax({
-        url: `${ip}/api/logout`,
-        type: "POST",
-
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-
-        data: {
-          token: token,
-        },
-
-        success: () => {
-          clearAuthCookies();
-
-          Swal.fire({
-            icon: "success",
-            title: "Logout Successful",
-          }).then(() => {
-            window.location.replace("login.html");
-          });
-        },
-
-        error: (res) => {
-          // Even if the backend token is already invalid,
-          // clear the local login session.
-          const msg =
-            res.responseJSON?.msg ||
-            "Your session has ended. Please log in again.";
-
-          clearAuthCookies();
-
-          Swal.fire({
-            icon: "warning",
-            title: "Logged Out",
-            text: msg,
-          }).then(() => {
-            window.location.replace("login.html");
-          });
-        },
-      });
-    }
-
-    // Explicit logout should remove the browser's FCM token.
-    if (typeof removeFcmTokenFromServer === "function") {
-      removeFcmTokenFromServer(function () {
-        logoutFromServer();
-      });
-    } else {
-      logoutFromServer();
-    }
-  });
+    .ajaxStop(() => $("#wait").hide());
 });

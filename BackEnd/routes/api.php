@@ -52,7 +52,7 @@ Route::controller(AuthController::class)->group(function () {
   Route::post('/reset-password/{token}', 'resetPassword'); // Reset Password
   Route::get('/getAccount_username/{username}', 'getAccount_username'); // Get a specific user by username
   Route::put('/updateImageAccount/{id}', 'updateImageAccount'); // Update Account Image
-  Route::post('/contact/send-email', 'sendContactEmail'); // Send Contact Message
+  Route::post('/contact/send-email', 'sendContactEmail')->middleware('throttle:5,1'); // Send Contact Message
   Route::post('/resend-verification', 'resendVerificationEmail') ->middleware('throttle:3,1'); // Resend Verification Email
   Route::post('/admin/create-account', 'adminCreateAccount'); // Admin Create Account
   Route::put('/account/profile', 'updateOwnAccount'); // Update logged-in user's own profile
