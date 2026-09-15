@@ -3614,56 +3614,104 @@ body {
   background: #f3f6fb !important;
 }
 
-/* Shop Promo Carousel - final polished layout */
+/* =======================================
+   Shop Promo Carousel - Clean Wide Banner
+======================================= */
 #promoCarousel {
-  width: calc(100% - 24px) !important;
-  max-width: 1320px !important;
-  height: 300px !important;
-  margin: 18px auto 24px !important;
-  border-radius: 22px !important;
-  overflow: hidden !important;
-  background: #ffffff !important;
+  width: calc(100% - 28px) !important;
+  max-width: 1500px !important;
+  height: 270px !important;
+  margin: 18px auto 26px !important;
+
   border: 1px solid #e8edf5 !important;
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08) !important;
+  border-radius: 20px !important;
+  overflow: hidden !important;
+
+  background: #ffffff !important;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08) !important;
 }
 
 #promoCarousel .carousel-inner,
 #promoCarousel .carousel-item {
   width: 100% !important;
   height: 100% !important;
-  background: #ffffff !important;
 }
 
-#promoCarousel img {
+/* First banner: use same image in background */
+#promoCarousel .carousel-item:nth-child(1) {
+  background-image:
+    linear-gradient(
+      90deg,
+      rgba(248, 250, 252, 0.82),
+      rgba(255, 255, 255, 0.45),
+      rgba(248, 250, 252, 0.82)
+    ),
+    url("../img/hanzGo1.jpg") !important;
+
+  background-size: cover !important;
+  background-position: center !important;
+}
+
+/* Second banner */
+#promoCarousel .carousel-item:nth-child(2) {
+  background-image:
+    linear-gradient(
+      90deg,
+      rgba(248, 250, 252, 0.65),
+      rgba(255, 255, 255, 0.2),
+      rgba(248, 250, 252, 0.65)
+    ),
+    url("../img/hanzGo2.jpg") !important;
+
+  background-size: cover !important;
+  background-position: center !important;
+}
+
+/* Main banner image stays fully visible */
+#promoCarousel .carousel-item > img {
+  position: relative;
+  z-index: 1;
+
   display: block !important;
-  width: 100% !important;
+  width: auto !important;
+  max-width: 100% !important;
+
   height: 100% !important;
-  object-fit: cover !important;
-  object-position: center center !important;
-  background: #ffffff !important;
+  max-height: 100% !important;
+
+  margin: 0 auto !important;
+
+  object-fit: contain !important;
+  object-position: center !important;
+
+  box-shadow:
+    -18px 0 30px rgba(255, 255, 255, 0.5),
+    18px 0 30px rgba(255, 255, 255, 0.5);
 }
 
-/* Make carousel arrows visible */
+/* Carousel controls */
 #promoCarousel .carousel-control-prev,
 #promoCarousel .carousel-control-next {
-  width: 56px !important;
+  width: 58px !important;
+  z-index: 5 !important;
   opacity: 1 !important;
 }
 
 #promoCarousel .carousel-control-prev-icon,
 #promoCarousel .carousel-control-next-icon {
-  width: 38px !important;
-  height: 38px !important;
-  padding: 18px !important;
+  width: 36px !important;
+  height: 36px !important;
   border-radius: 50% !important;
-  background-color: rgba(15, 23, 42, 0.55) !important;
-  background-size: 50% 50% !important;
+  background-color: rgba(15, 23, 42, 0.58) !important;
+  background-size: 45% 45% !important;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.2);
 }
 
-/* Social media carousel slide */
+/* Social slide */
 #promoCarousel .carousel-item > .d-flex {
   height: 100% !important;
   min-height: 100% !important;
+
   background: linear-gradient(135deg, #111827 0%, #1e293b 100%) !important;
 }
 
@@ -3673,35 +3721,25 @@ body {
   text-align: center !important;
 }
 
-#promoCarousel .hanzGoSocial h3 {
-  color: #ffffff !important;
-  font-weight: 900 !important;
-  margin-bottom: 10px !important;
-}
-
-#promoCarousel .hanzGoSocial p {
-  color: #fb774b !important;
-  font-weight: 800 !important;
-  font-size: 17px !important;
-}
-
-#promoCarousel .hanzGoSocial i {
-  display: inline-block !important;
-  margin: 14px 10px 0 !important;
+/* Responsive */
+@media (max-width: 1199.98px) {
+  #promoCarousel {
+    height: 245px !important;
+  }
 }
 
 @media (max-width: 991.98px) {
   #promoCarousel {
-    height: 240px !important;
+    width: calc(100% - 20px) !important;
+    height: 220px !important;
   }
 }
 
 @media (max-width: 575.98px) {
   #promoCarousel {
     width: calc(100% - 16px) !important;
-    height: 180px !important;
-    margin-top: 12px !important;
-    border-radius: 16px !important;
+    height: 170px !important;
+    border-radius: 15px !important;
   }
 }
 

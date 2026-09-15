@@ -817,103 +817,94 @@ function setupEvents() {
       behavior: "smooth",
     });
   });
-  $(document).on("click", ".shop-add-cart-btn", function (event) {
-    event.preventDefault();
-    event.stopPropagation();
 
-    const productId = $(this).data("product-id");
+  $(document)
+    .off("click.shopAddCart", ".shop-add-cart-btn")
+    .on("click.shopAddCart", ".shop-add-cart-btn", function (event) {
+      event.preventDefault();
+      event.stopPropagation();
 
-    if (!token) {
-      Swal.fire("Warning", "Please login to add items to the cart.", "warning");
-      return;
-    }
+      const $button = $(this);
+      const productId = $button.data("product-id");
 
-    if (normalizeText(role) !== "user") {
-      Swal.fire(
-        "Not Allowed",
-        "Only customers can add products to the cart.",
-        "warning",
-      );
-      return;
-    }
+      // Prevent accidental double-click requests
+      if ($button.data("loading")) {
+        return;
+      }
 
-    $.ajax({
-      url: `${apiBaseUrl}/api/cart`,
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      data: JSON.stringify({
-        product_id: productId,
-        quantity: 1,
-      }),
-      success: function (response) {
-        updateCartCount(response.count);
-        Swal.fire("Added", "Product added to your cart.", "success");
-      },
-      error: function (xhr) {
-        console.error("Error adding to cart:", xhr.responseText || xhr);
+      if (!token) {
+        Swal.fire(
+          "Warning",
+          "Please login to add items to the cart.",
+          "warning",
+        );
+        return;
+      }
 
-        const msg =
-          xhr.responseJSON?.msg ||
-          xhr.responseJSON?.message ||
-          "Failed to add product to cart.";
+      if (normalizeText(role) !== "user") {
+        Swal.fire(
+          "Not Allowed",
+          "Only customers can add products to the cart.",
+          "warning",
+        );
+        return;
+      }
 
-        Swal.fire("Error", msg, "error");
-      },
+      if (!productId) {
+        Swal.fire("Error", "Product information is missing.", "error");
+        return;
+      }
+
+      $button.data("loading", true);
+      $button.prop("disabled", true);
+
+      $.ajax({
+        url: `${apiBaseUrl}/api/cart`,
+        method: "POST",
+
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+
+        data: JSON.stringify({
+          product_id: productId,
+          quantity: 1,
+        }),
+
+        success: function (response) {
+          updateCartCount(response.count);
+
+          Swal.fire({
+            icon: "success",
+            title: "Added to Cart",
+            text: "Product added to your cart.",
+            timer: 1400,
+            showConfirmButton: false,
+          });
+        },
+
+        error: function (xhr) {
+          console.error(
+            "Error adding product to cart:",
+            xhr.responseText || xhr,
+          );
+
+          const msg =
+            xhr.responseJSON?.msg ||
+            xhr.responseJSON?.message ||
+            "Failed to add product to cart.";
+
+          Swal.fire("Error", msg, "error");
+        },
+
+        complete: function () {
+          $button.data("loading", false);
+          $button.prop("disabled", false);
+        },
+      });
     });
-  });
-
-  $(document).on("click", ".shop-add-cart-btn", function (event) {
-    event.preventDefault();
-    event.stopPropagation();
-
-    const productId = $(this).data("product-id");
-
-    if (!token) {
-      Swal.fire("Warning", "Please login to add items to the cart.", "warning");
-      return;
-    }
-
-    if (normalizeText(role) !== "user") {
-      Swal.fire(
-        "Not Allowed",
-        "Only customers can add products to the cart.",
-        "warning",
-      );
-      return;
-    }
-
-    $.ajax({
-      url: `${apiBaseUrl}/api/cart`,
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      data: JSON.stringify({
-        product_id: productId,
-        quantity: 1,
-      }),
-      success: function (response) {
-        updateCartCount(response.count);
-        Swal.fire("Added", "Product added to your cart.", "success");
-      },
-      error: function (xhr) {
-        console.error("Error adding to cart:", xhr.responseText || xhr);
-
-        const msg =
-          xhr.responseJSON?.msg ||
-          xhr.responseJSON?.message ||
-          "Failed to add product to cart.";
-
-        Swal.fire("Error", msg, "error");
-      },
-    });
-  });
 
   // --- Logout Functionality ---
   $("#logout").click((e) => {
