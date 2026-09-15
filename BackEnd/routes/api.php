@@ -11,6 +11,7 @@ use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FcmTokenController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\SupportTicketController;
 
 /*
 |--------------------------------------------------------------------------
@@ -53,11 +54,21 @@ Route::controller(AuthController::class)->group(function () {
   Route::get('/getAccount_username/{username}', 'getAccount_username'); // Get a specific user by username
   Route::put('/updateImageAccount/{id}', 'updateImageAccount'); // Update Account Image
   Route::post('/contact/send-email', 'sendContactEmail')->middleware('throttle:5,1'); // Send Contact Message
-  Route::post('/resend-verification', 'resendVerificationEmail') ->middleware('throttle:3,1'); // Resend Verification Email
+  Route::post('/resend-verification', 'resendVerificationEmail'); // Resend Verification Email
   Route::post('/admin/create-account', 'adminCreateAccount'); // Admin Create Account
   Route::put('/account/profile', 'updateOwnAccount'); // Update logged-in user's own profile
   Route::put('/account/{id}/deactivate', 'deactivateAccount'); // Deactivate Api
   Route::put('/account/{id}/reactivate', 'reactivateAccount'); // Reactivate Api
+});
+
+// Support Ticket Routes
+Route::group(['prefix' => 'support-tickets'], function($router) {
+    Route::controller(SupportTicketController::class)->group(function () {
+        Route::get('/summary', 'summary')->middleware('admin.token'); // Dashboard counts
+        Route::get('/', 'index')->middleware('admin.token'); // Get all support tickets for the Admin Support Inbox
+        Route::get('/{id}', 'show')->middleware('admin.token'); // Get a specific support ticket by ID
+        Route::put('/{id}', 'update')->middleware('admin.token'); // Update a specific support ticket by ID
+    });
 });
 
 // Product Routes

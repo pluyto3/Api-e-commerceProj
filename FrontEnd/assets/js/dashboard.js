@@ -26,6 +26,13 @@ const dashboardState = {
   categories: [],
   brands: [],
 };
+const supportInboxState = {
+  page: 1,
+  perPage: 10,
+  lastPage: 1,
+  selectedTicketId: null,
+  searchTimer: null,
+};
 
 function normalizeNumber(value) {
   const parsed = Number(value || 0);
@@ -636,6 +643,7 @@ function syncNavbarVisibility() {
   $("#sidebarProfile").toggle(isDashboardRole);
   $("#sidebarAddress").toggle(role === "seller");
   $("#sidebarAccounts").toggle(role === "admin");
+  $("#sidebarSupportInbox").toggle(role === "admin");
 
   setSidebarLabels();
   highlightActiveSidebarLink();
@@ -1777,6 +1785,550 @@ $(document).on("click", ".order-modal-btn", function () {
 });
 
 // =======================================
+// ADMIN SUPPORT INBOX
+// =======================================
+
+function formatSupportDate(value) {
+  if (!value) return "N/A";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "N/A";
+  }
+
+  return date.toLocaleString("en-PH", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function getSupportStatusClass(status) {
+  switch (normalizeStatus(status)) {
+    case "open":
+      return "support-status--open";
+
+    case "in_progress":
+      return "support-status--progress";
+
+    case "resolved":
+      return "support-status--resolved";
+
+    case "closed":
+      return "support-status--closed";
+
+    default:
+      return "support-status--neutral";
+  }
+}
+
+function getSupportPriorityClass(priority) {
+  return normalizeStatus(priority) === "urgent"
+    ? "support-priority--urgent"
+    : "support-priority--normal";
+}
+
+function loadSupportSummary() {
+  if (role !== "admin") return;
+
+  $.ajax({
+    url: `${ip}/api/support-tickets/summary`,
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    },
+
+    success: function (summary) {
+      const total = normalizeNumber(summary?.total);
+      const open = normalizeNumber(summary?.open);
+      const inProgress = normalizeNumber(summary?.in_progress);
+      const resolved = normalizeNumber(summary?.resolved);
+      const urgent = normalizeNumber(summary?.urgent);
+
+      $("#supportTotalCount").text(total);
+      $("#supportOpenCount").text(open);
+      $("#supportProgressCount").text(inProgress);
+      $("#supportResolvedCount").text(resolved);
+      $("#supportUrgentCount").text(urgent);
+
+      $("#supportSidebarBadge")
+        .text(open)
+        .toggle(open > 0);
+    },
+
+    error: function (xhr) {
+      console.error("Error loading support summary:", xhr.responseText);
+    },
+  });
+}
+
+function getSupportFilters() {
+  return {
+    search: $("#supportSearch").val()?.trim() || "",
+    status: $("#supportStatusFilter").val() || "",
+    priority: $("#supportPriorityFilter").val() || "",
+    category: $("#supportCategoryFilter").val() || "",
+  };
+}
+
+function loadSupportTickets(page = 1) {
+  if (role !== "admin") return;
+
+  supportInboxState.page = Math.max(1, Number(page) || 1);
+
+  const filters = getSupportFilters();
+
+  const params = new URLSearchParams();
+
+  params.set("page", supportInboxState.page);
+  params.set("per_page", supportInboxState.perPage);
+
+  if (filters.search) {
+    params.set("search", filters.search);
+  }
+
+  if (filters.status) {
+    params.set("status", filters.status);
+  }
+
+  if (filters.priority) {
+    params.set("priority", filters.priority);
+  }
+
+  if (filters.category) {
+    params.set("category", filters.category);
+  }
+
+  $("#supportTicketsBody").html(`
+    <tr>
+      <td colspan="8" class="text-center py-4">
+        <i class="fas fa-spinner fa-spin mr-2"></i>
+        Loading support tickets...
+      </td>
+    </tr>
+  `);
+
+  $.ajax({
+    url: `${ip}/api/support-tickets?${params.toString()}`,
+    method: "GET",
+
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    },
+
+    success: function (response) {
+      renderSupportTickets(response);
+    },
+
+    error: function (xhr) {
+      console.error("Error loading support tickets:", xhr.responseText);
+
+      $("#supportTicketsBody").html(`
+        <tr>
+          <td colspan="8" class="text-center py-4 text-danger">
+            Unable to load support tickets.
+          </td>
+        </tr>
+      `);
+    },
+  });
+}
+
+function renderSupportTickets(response) {
+  const tickets = Array.isArray(response?.data) ? response.data : [];
+
+  const $body = $("#supportTicketsBody");
+  $body.empty();
+
+  supportInboxState.page = normalizeNumber(response?.current_page) || 1;
+
+  supportInboxState.lastPage = normalizeNumber(response?.last_page) || 1;
+
+  if (!tickets.length) {
+    $body.html(`
+      <tr>
+        <td colspan="8" class="text-center py-5 support-empty-state">
+          <i class="fas fa-inbox"></i>
+          <strong>No support tickets found.</strong>
+          <span>Try changing your search or filters.</span>
+        </td>
+      </tr>
+    `);
+
+    renderSupportPagination(response);
+    return;
+  }
+
+  tickets.forEach((ticket) => {
+    const statusLabel = toTitleCase(ticket.status);
+    const priorityLabel = toTitleCase(ticket.priority);
+
+    const customerSubtext = ticket.customer_username
+      ? `@${ticket.customer_username}`
+      : "Guest inquiry";
+
+    const row = `
+      <tr>
+        <td>
+          <span class="support-ticket-reference">
+            ${escapeHtml(ticket.ticket_number)}
+          </span>
+        </td>
+
+        <td>
+          <div class="dashboard-table-main">
+            ${escapeHtml(ticket.name)}
+          </div>
+
+          <div class="dashboard-table-subtext">
+            ${escapeHtml(customerSubtext)}
+          </div>
+        </td>
+
+        <td>
+          ${escapeHtml(toTitleCase(ticket.category))}
+        </td>
+
+        <td>
+          <div
+            class="support-subject-cell"
+            title="${escapeHtml(ticket.subject)}">
+            ${escapeHtml(ticket.subject)}
+          </div>
+        </td>
+
+        <td>
+          <span class="support-priority-pill ${getSupportPriorityClass(ticket.priority)}">
+            ${escapeHtml(priorityLabel)}
+          </span>
+        </td>
+
+        <td>
+          <span class="support-status-pill ${getSupportStatusClass(ticket.status)}">
+            ${escapeHtml(statusLabel)}
+          </span>
+        </td>
+
+        <td>
+          <span class="support-ticket-date">
+            ${escapeHtml(formatSupportDate(ticket.created_at))}
+          </span>
+        </td>
+
+        <td class="text-center">
+          <button
+            type="button"
+            class="btn btn-sm dashboard-table-action view-support-ticket"
+            data-id="${ticket.support_ticket_id}">
+
+            <i class="fas fa-eye"></i>
+            <span>View</span>
+          </button>
+        </td>
+      </tr>
+    `;
+
+    $body.append(row);
+  });
+
+  renderSupportPagination(response);
+}
+
+function renderSupportPagination(response) {
+  const currentPage = normalizeNumber(response?.current_page) || 1;
+
+  const lastPage = normalizeNumber(response?.last_page) || 1;
+
+  const total = normalizeNumber(response?.total);
+
+  const from = normalizeNumber(response?.from);
+
+  const to = normalizeNumber(response?.to);
+
+  if (!total) {
+    $("#supportPaginationInfo").text("No support tickets found");
+  } else {
+    $("#supportPaginationInfo").text(
+      `Showing ${from}-${to} of ${total} tickets`,
+    );
+  }
+
+  $("#supportPreviousPage").prop("disabled", currentPage <= 1);
+
+  $("#supportNextPage").prop("disabled", currentPage >= lastPage);
+}
+
+function loadSupportTicketDetails(ticketId) {
+  if (role !== "admin" || !ticketId) return;
+
+  supportInboxState.selectedTicketId = ticketId;
+
+  $("#supportModalTicketNumber").text("Loading...");
+  $("#supportModalCustomer").text("Loading...");
+  $("#supportModalUsername").text("");
+  $("#supportModalEmail").text("Loading...");
+  $("#supportModalCategory").text("Loading...");
+  $("#supportModalDate").text("Loading...");
+  $("#supportModalSubject").text("Loading...");
+  $("#supportModalMessage").text("Loading...");
+  $("#supportLinkedOrderSection").hide();
+  $("#supportResolvedInfo").hide();
+
+  $("#supportTicketModal").modal("show");
+
+  $.ajax({
+    url: `${ip}/api/support-tickets/${ticketId}`,
+    method: "GET",
+
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    },
+
+    success: function (response) {
+      populateSupportTicketModal(response?.data);
+    },
+
+    error: function (xhr) {
+      $("#supportTicketModal").modal("hide");
+
+      Swal.fire(
+        "Unable to Load Ticket",
+        extractApiErrorMessage(xhr, "The support ticket could not be loaded."),
+        "error",
+      );
+    },
+  });
+}
+
+function populateSupportTicketModal(ticket) {
+  if (!ticket) return;
+
+  supportInboxState.selectedTicketId = ticket.support_ticket_id;
+
+  $("#supportModalTicketNumber").text(ticket.ticket_number || "N/A");
+
+  $("#supportModalCustomer").text(
+    ticket.name || ticket.customer_fullname || "N/A",
+  );
+
+  const usernameText = ticket.customer_username
+    ? `@${ticket.customer_username}`
+    : "Guest customer";
+
+  $("#supportModalUsername").text(usernameText);
+
+  $("#supportModalEmail").text(ticket.email || "N/A");
+
+  $("#supportModalCategory").text(toTitleCase(ticket.category));
+
+  $("#supportModalDate").text(formatSupportDate(ticket.created_at));
+
+  $("#supportModalSubject").text(ticket.subject || "N/A");
+
+  $("#supportModalMessage").text(ticket.message || "No message provided.");
+
+  $("#supportModalStatus").val(ticket.status || "open");
+
+  $("#supportModalPriority").val(ticket.priority || "normal");
+
+  if (ticket.order_id) {
+    $("#supportModalOrderId").text(`#${ticket.order_id}`);
+
+    $("#supportViewOrderBtn").data("order-id", ticket.order_id);
+
+    $("#supportLinkedOrderSection").show();
+  } else {
+    $("#supportLinkedOrderSection").hide();
+    $("#supportViewOrderBtn").removeData("order-id");
+  }
+
+  if (ticket.resolved_at) {
+    $("#supportModalResolvedDate").text(formatSupportDate(ticket.resolved_at));
+
+    $("#supportResolvedInfo").show();
+  } else {
+    $("#supportResolvedInfo").hide();
+  }
+}
+
+function saveSupportTicketChanges() {
+  const ticketId = supportInboxState.selectedTicketId;
+
+  if (!ticketId) return;
+
+  const status = $("#supportModalStatus").val();
+
+  const priority = $("#supportModalPriority").val();
+
+  const $button = $("#saveSupportTicket");
+
+  $button.prop("disabled", true).html(`
+      <i class="fas fa-spinner fa-spin mr-1"></i>
+      Saving...
+    `);
+
+  $.ajax({
+    url: `${ip}/api/support-tickets/${ticketId}`,
+    method: "PUT",
+
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    },
+
+    contentType: "application/json",
+
+    data: JSON.stringify({
+      status,
+      priority,
+    }),
+
+    success: function () {
+      $("#supportTicketModal").modal("hide");
+
+      loadSupportSummary();
+      loadSupportTickets(supportInboxState.page);
+
+      Swal.fire({
+        icon: "success",
+        title: "Ticket Updated",
+        text: "The support ticket was updated successfully.",
+        timer: 1600,
+        showConfirmButton: false,
+      });
+    },
+
+    error: function (xhr) {
+      Swal.fire(
+        "Update Failed",
+        extractApiErrorMessage(xhr, "Unable to update this support ticket."),
+        "error",
+      );
+    },
+
+    complete: function () {
+      $button.prop("disabled", false).html(`
+          <i class="fas fa-save mr-1"></i>
+          Save Changes
+        `);
+    },
+  });
+}
+
+function initSupportInbox() {
+  if (role !== "admin") {
+    $("#sidebarSupportInbox").hide();
+    return;
+  }
+
+  $("#sidebarSupportInbox").show();
+
+  loadSupportSummary();
+  loadSupportTickets(1);
+
+  $("#refreshSupportInbox")
+    .off("click.supportInbox")
+    .on("click.supportInbox", function () {
+      loadSupportSummary();
+      loadSupportTickets(supportInboxState.page);
+    });
+
+  $("#supportSearch")
+    .off("input.supportInbox")
+    .on("input.supportInbox", function () {
+      clearTimeout(supportInboxState.searchTimer);
+
+      supportInboxState.searchTimer = setTimeout(function () {
+        loadSupportTickets(1);
+      }, 350);
+    });
+
+  $("#supportStatusFilter, #supportPriorityFilter, #supportCategoryFilter")
+    .off("change.supportInbox")
+    .on("change.supportInbox", function () {
+      loadSupportTickets(1);
+    });
+
+  $("#clearSupportFilters")
+    .off("click.supportInbox")
+    .on("click.supportInbox", function () {
+      $("#supportSearch").val("");
+      $("#supportStatusFilter").val("");
+      $("#supportPriorityFilter").val("");
+      $("#supportCategoryFilter").val("");
+
+      loadSupportTickets(1);
+    });
+
+  $("#supportPreviousPage")
+    .off("click.supportInbox")
+    .on("click.supportInbox", function () {
+      if (supportInboxState.page <= 1) {
+        return;
+      }
+
+      loadSupportTickets(supportInboxState.page - 1);
+    });
+
+  $("#supportNextPage")
+    .off("click.supportInbox")
+    .on("click.supportInbox", function () {
+      if (supportInboxState.page >= supportInboxState.lastPage) {
+        return;
+      }
+
+      loadSupportTickets(supportInboxState.page + 1);
+    });
+
+  $(document)
+    .off("click.supportInbox", ".view-support-ticket")
+    .on("click.supportInbox", ".view-support-ticket", function () {
+      loadSupportTicketDetails($(this).data("id"));
+    });
+
+  $("#saveSupportTicket")
+    .off("click.supportInbox")
+    .on("click.supportInbox", function () {
+      saveSupportTicketChanges();
+    });
+
+  $("#supportViewOrderBtn")
+    .off("click.supportInbox")
+    .on("click.supportInbox", function () {
+      const orderId = $(this).data("order-id");
+
+      if (!orderId) return;
+
+      $("#supportTicketModal").modal("hide");
+
+      setTimeout(function () {
+        loadOrderDetailsModal(orderId);
+      }, 250);
+    });
+
+  $(".support-inbox-nav-link")
+    .off("click.supportInbox")
+    .on("click.supportInbox", function (event) {
+      event.preventDefault();
+
+      const target = document.getElementById("supportInboxSection");
+
+      if (target) {
+        target.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }
+    });
+}
+
+// =======================================
 // UTILITIES
 // =======================================
 $(document).ajaxStart(() => $("#wait").show());
@@ -1790,6 +2342,7 @@ $(document).ready(function () {
   loadCounts();
   setupSidebarToggle();
   loadRecentOrders();
+  initSupportInbox();
 
   if (typeof window.updateNavbarCount === "function") {
     window.updateNavbarCount();
