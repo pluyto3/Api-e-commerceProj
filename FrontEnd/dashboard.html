@@ -1004,12 +1004,80 @@
                       <h6 id="supportModalSubject">—</h6>
                     </div>
 
-                    <div class="support-ticket-message mt-3">
-                      <span>Customer Message</span>
+                    <!-- Support Conversation -->
+                    <div class="support-conversation-section mt-4">
+                      <div class="support-conversation-heading">
+                        <div>
+                          <span class="support-conversation-label"
+                            >Conversation</span
+                          >
+                          <p class="support-conversation-copy mb-0">
+                            Messages related to this support request.
+                          </p>
+                        </div>
+                      </div>
 
                       <div
-                        class="support-ticket-message-box"
-                        id="supportModalMessage"></div>
+                        class="support-conversation-list"
+                        id="supportConversationList"
+                        aria-live="polite">
+                        <div class="support-conversation-loading">
+                          <i class="fas fa-spinner fa-spin"></i>
+                          Loading conversation...
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Admin Reply -->
+                    <div
+                      class="support-reply-composer mt-4"
+                      id="supportReplyComposer">
+                      <div class="support-reply-heading">
+                        <div>
+                          <label for="supportReplyMessage" class="mb-1">
+                            Reply to Customer
+                          </label>
+
+                          <small>
+                            Your reply will be saved to the ticket and emailed
+                            to the customer.
+                          </small>
+                        </div>
+                      </div>
+
+                      <textarea
+                        class="form-control"
+                        id="supportReplyMessage"
+                        rows="4"
+                        maxlength="4000"
+                        placeholder="Type your response to the customer..."></textarea>
+
+                      <div class="support-reply-footer">
+                        <span
+                          class="support-reply-counter"
+                          id="supportReplyCounter">
+                          0 / 4000
+                        </span>
+
+                        <button
+                          type="button"
+                          class="btn support-send-reply-btn"
+                          id="sendSupportReply">
+                          <i class="fas fa-paper-plane mr-1"></i>
+                          Send Reply
+                        </button>
+                      </div>
+
+                      <div
+                        class="support-reply-disabled-message"
+                        id="supportReplyDisabledMessage"
+                        style="display: none">
+                        <i class="fas fa-lock"></i>
+                        <span>
+                          This ticket is closed and can no longer receive
+                          replies.
+                        </span>
+                      </div>
                     </div>
 
                     <hr class="my-4" />

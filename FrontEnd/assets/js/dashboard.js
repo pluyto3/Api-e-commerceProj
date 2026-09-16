@@ -2075,7 +2075,20 @@ function loadSupportTicketDetails(ticketId) {
   $("#supportModalCategory").text("Loading...");
   $("#supportModalDate").text("Loading...");
   $("#supportModalSubject").text("Loading...");
-  $("#supportModalMessage").text("Loading...");
+
+  $("#supportConversationList").html(`
+    <div class="support-conversation-loading">
+      <i class="fas fa-spinner fa-spin"></i>
+      Loading conversation...
+    </div>
+  `);
+
+  $("#supportReplyMessage").val("");
+  $("#supportReplyCounter").text("0 / 4000");
+  $("#supportReplyMessage").prop("disabled", true);
+  $("#sendSupportReply").prop("disabled", true);
+  $("#supportReplyDisabledMessage").hide();
+
   $("#supportLinkedOrderSection").hide();
   $("#supportResolvedInfo").hide();
 
@@ -2106,6 +2119,114 @@ function loadSupportTicketDetails(ticketId) {
   });
 }
 
+function formatSupportMessage(value) {
+  return escapeHtml(value || "").replace(/\n/g, "<br>");
+}
+
+function getSupportSenderLabel(reply = {}) {
+  const senderType = normalizeStatus(reply.sender_type);
+
+  if (senderType === "admin") {
+    return reply.sender_fullname || reply.sender_username || "Hanz-Go Support";
+  }
+
+  if (senderType === "customer") {
+    return reply.sender_fullname || reply.sender_username || "Customer";
+  }
+
+  return "System";
+}
+
+function renderSupportConversation(ticket = {}) {
+  const $conversation = $("#supportConversationList");
+  const replies = Array.isArray(ticket.replies) ? ticket.replies : [];
+
+  let html = `
+    <div class="support-conversation-item support-conversation-item--customer">
+      <div class="support-conversation-meta">
+        <strong>${escapeHtml(ticket.name || "Customer")}</strong>
+        <span>${escapeHtml(formatSupportDate(ticket.created_at))}</span>
+      </div>
+
+      <div class="support-conversation-bubble">
+        ${formatSupportMessage(ticket.message || "No message provided.")}
+      </div>
+    </div>
+  `;
+
+  replies.forEach((reply) => {
+    const senderType = normalizeStatus(reply.sender_type);
+    const isAdmin = senderType === "admin";
+    const isSystem = senderType === "system";
+
+    const conversationClass = isAdmin
+      ? "support-conversation-item--admin"
+      : isSystem
+        ? "support-conversation-item--system"
+        : "support-conversation-item--customer";
+
+    const deliveryText = isAdmin
+      ? reply.email_sent_at
+        ? `
+          <span class="support-reply-delivery support-reply-delivery--sent">
+            <i class="fas fa-check-circle"></i>
+            Email sent
+          </span>
+        `
+        : `
+          <span class="support-reply-delivery support-reply-delivery--failed">
+            <i class="fas fa-exclamation-circle"></i>
+            Saved — email not sent
+          </span>
+        `
+      : "";
+
+    html += `
+        <div class="support-conversation-item ${conversationClass}">
+
+        <div class="support-conversation-meta">
+          <strong>${escapeHtml(getSupportSenderLabel(reply))}</strong>
+
+          <span>
+            ${escapeHtml(formatSupportDate(reply.created_at))}
+          </span>
+        </div>
+
+        <div class="support-conversation-bubble">
+          ${formatSupportMessage(reply.message)}
+        </div>
+
+        ${deliveryText}
+      </div>
+    `;
+  });
+
+  $conversation.html(html);
+
+  requestAnimationFrame(function () {
+    const element = $conversation.get(0);
+
+    if (element) {
+      element.scrollTop = element.scrollHeight;
+    }
+  });
+}
+
+function syncSupportReplyComposer(status) {
+  const isClosed = normalizeStatus(status) === "closed";
+
+  $("#supportReplyMessage").prop("disabled", isClosed);
+
+  $("#sendSupportReply").prop("disabled", isClosed);
+
+  $("#supportReplyDisabledMessage").toggle(isClosed);
+
+  if (isClosed) {
+    $("#supportReplyMessage").val("");
+    $("#supportReplyCounter").text("0 / 4000");
+  }
+}
+
 function populateSupportTicketModal(ticket) {
   if (!ticket) return;
 
@@ -2131,11 +2252,15 @@ function populateSupportTicketModal(ticket) {
 
   $("#supportModalSubject").text(ticket.subject || "N/A");
 
-  $("#supportModalMessage").text(ticket.message || "No message provided.");
+  renderSupportConversation(ticket);
 
   $("#supportModalStatus").val(ticket.status || "open");
-
   $("#supportModalPriority").val(ticket.priority || "normal");
+
+  syncSupportReplyComposer(ticket.status);
+
+  $("#supportReplyMessage").val("");
+  $("#supportReplyCounter").text("0 / 4000");
 
   if (ticket.order_id) {
     $("#supportModalOrderId").text(`#${ticket.order_id}`);
@@ -2155,6 +2280,121 @@ function populateSupportTicketModal(ticket) {
   } else {
     $("#supportResolvedInfo").hide();
   }
+}
+
+function sendSupportReply() {
+  const ticketId = supportInboxState.selectedTicketId;
+
+  if (!ticketId) {
+    return;
+  }
+
+  const message = String($("#supportReplyMessage").val() || "").trim();
+
+  if (!message) {
+    Swal.fire({
+      icon: "warning",
+      title: "Reply Required",
+      text: "Please enter a message before sending your reply.",
+    });
+
+    return;
+  }
+
+  const $button = $("#sendSupportReply");
+  const $textarea = $("#supportReplyMessage");
+
+  $button.prop("disabled", true).html(`
+      <i class="fas fa-spinner fa-spin mr-1"></i>
+      Sending...
+    `);
+
+  $textarea.prop("disabled", true);
+
+  $.ajax({
+    url: `${ip}/api/support-tickets/${ticketId}/replies`,
+    method: "POST",
+
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    },
+
+    contentType: "application/json",
+
+    data: JSON.stringify({
+      message,
+    }),
+
+    success: function (response) {
+      $("#supportReplyMessage").val("");
+      $("#supportReplyCounter").text("0 / 4000");
+
+      loadSupportSummary();
+      loadSupportTickets(supportInboxState.page);
+
+      /*
+       * Reload the ticket so the conversation, new status,
+       * timestamps and email-delivery state all come from
+       * the backend.
+       */
+      loadSupportTicketDetails(ticketId);
+
+      Swal.fire({
+        icon: response?.email_sent ? "success" : "warning",
+        title: response?.email_sent ? "Reply Sent" : "Reply Saved",
+        text: response?.msg || "The support reply was saved successfully.",
+        timer: 2000,
+        showConfirmButton: false,
+      });
+    },
+
+    error: function (xhr) {
+      const status = xhr?.status;
+
+      if (status === 422) {
+        /*
+         * This covers empty replies and attempts to reply
+         * to a ticket that has already been closed.
+         */
+        Swal.fire(
+          "Unable to Send Reply",
+          extractApiErrorMessage(xhr, "Please check your reply and try again."),
+          "warning",
+        );
+
+        /*
+         * Reload in case another action changed the ticket
+         * status while this modal was open.
+         */
+        loadSupportTicketDetails(ticketId);
+
+        return;
+      }
+
+      Swal.fire(
+        "Unable to Send Reply",
+        extractApiErrorMessage(xhr, "The support reply could not be sent."),
+        "error",
+      );
+    },
+
+    complete: function () {
+      $button.html(`
+        <i class="fas fa-paper-plane mr-1"></i>
+        Send Reply
+      `);
+
+      /*
+       * loadSupportTicketDetails() will determine whether
+       * this should stay disabled for a closed ticket.
+       */
+      if (normalizeStatus($("#supportModalStatus").val()) !== "closed") {
+        $button.prop("disabled", false);
+        $textarea.prop("disabled", false);
+      }
+    },
+  });
 }
 
 function saveSupportTicketChanges() {
@@ -2296,6 +2536,26 @@ function initSupportInbox() {
     .off("click.supportInbox")
     .on("click.supportInbox", function () {
       saveSupportTicketChanges();
+    });
+
+  $("#supportReplyMessage")
+    .off("input.supportInbox")
+    .on("input.supportInbox", function () {
+      const length = $(this).val().length;
+
+      $("#supportReplyCounter").text(`${length} / 4000`);
+    });
+
+  $("#sendSupportReply")
+    .off("click.supportInbox")
+    .on("click.supportInbox", function () {
+      sendSupportReply();
+    });
+
+  $("#supportModalStatus")
+    .off("change.supportReply")
+    .on("change.supportReply", function () {
+      syncSupportReplyComposer($(this).val());
     });
 
   $("#supportViewOrderBtn")

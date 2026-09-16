@@ -66,6 +66,7 @@ Route::group(['prefix' => 'support-tickets'], function($router) {
     Route::controller(SupportTicketController::class)->group(function () {
         Route::get('/summary', 'summary')->middleware('admin.token'); // Dashboard counts
         Route::get('/', 'index')->middleware('admin.token'); // Get all support tickets for the Admin Support Inbox
+        Route::post('/{id}/replies', 'reply')->middleware('admin.token'); // Reply to a specific support ticket by ID
         Route::get('/{id}', 'show')->middleware('admin.token'); // Get a specific support ticket by ID
         Route::put('/{id}', 'update')->middleware('admin.token'); // Update a specific support ticket by ID
     });
