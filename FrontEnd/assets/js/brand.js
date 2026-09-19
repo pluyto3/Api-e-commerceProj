@@ -293,6 +293,7 @@ function load_user() {
   const $defaultProfileIcon = $("#defaultProfileIcon");
   const $addBrandSection = $(".add_brand");
   const $sidebarAccounts = $("#sidebarAccounts");
+  const $sidebarSupportInbox = $("#sidebarSupportInbox");
 
   // No session → show login/register
   if (!usr || !token) {
@@ -308,6 +309,7 @@ function load_user() {
     $defaultProfileIcon.show();
     $addBrandSection.hide();
     $sidebarAccounts.hide();
+    $sidebarSupportInbox.hide();
     return;
   }
 
@@ -342,6 +344,13 @@ function load_user() {
   } else {
     $addBrandSection.hide();
     $sidebarAccounts.show();
+  }
+
+  // Show "Support Inbox" only to admins
+  if (role === "admin") {
+    $sidebarSupportInbox.show();
+  } else {
+    $sidebarSupportInbox.hide();
   }
 }
 

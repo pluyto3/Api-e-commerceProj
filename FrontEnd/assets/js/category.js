@@ -229,6 +229,7 @@ function load_user() {
   const $defaultProfileIcon = $("#defaultProfileIcon");
   const $addCategorySection = $("#addCategorySection");
   const $sidebarAccounts = $("#sidebarAccounts");
+  const $sidebarSupportInbox = $("#sidebarSupportInbox");
 
   if (!usr || !token) {
     // No session → show login/register, hide logout and cart
@@ -246,6 +247,7 @@ function load_user() {
     $defaultProfileIcon.show();
     $addCategorySection.hide();
     $sidebarAccounts.hide();
+    $sidebarSupportInbox.hide();
 
     return;
   }
@@ -286,6 +288,13 @@ function load_user() {
     } else {
       $sidebarAccounts.show();
     }
+  }
+
+  // Show/hide support inbox based on role
+  if (role === "admin") {
+    $sidebarSupportInbox.show();
+  } else {
+    $sidebarSupportInbox.hide();
   }
 }
 

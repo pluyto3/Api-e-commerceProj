@@ -35,6 +35,7 @@ function load_user() {
   const $adminDashboard = $("#adminDashboard");
   const $navbarProfileImage = $("#navbarProfileImage");
   const $defaultProfileIcon = $("#defaultProfileIcon");
+  const $sidebarSupportInbox = $("#sidebarSupportInbox");
 
   if (!usr || !token) {
     // No session
@@ -48,6 +49,7 @@ function load_user() {
     $adminDashboard.hide();
     $navbarProfileImage.hide();
     $defaultProfileIcon.show();
+    $sidebarSupportInbox.hide();
     return;
   }
 
@@ -73,6 +75,13 @@ function load_user() {
     $adminDashboard.show();
   } else {
     $adminDashboard.hide();
+  }
+
+  // Show/hide support inbox based on role
+  if (role === "admin") {
+    $sidebarSupportInbox.show();
+  } else {
+    $sidebarSupportInbox.hide();
   }
 }
 

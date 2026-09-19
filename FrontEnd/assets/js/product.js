@@ -72,6 +72,7 @@ function load_user() {
   const $addCategorySection = $(".add_product");
   const $addProductSection = $("#addProductSection");
   const $sidebarAccounts = $("#sidebarAccounts");
+  const $sidebarSupportInbox = $("#sidebarSupportInbox");
 
   if (!usr || !token) {
     $displayUsername.html("My Account");
@@ -87,6 +88,7 @@ function load_user() {
     $addCategorySection.hide();
     $addProductSection.addClass("d-none");
     $sidebarAccounts.hide();
+    $sidebarSupportInbox.hide();
     return;
   }
 
@@ -112,6 +114,7 @@ function load_user() {
     $adminDashboard.hide();
   }
 
+  // Show/hide add product/category sections based on role
   if (role === "seller") {
     $addCategorySection.show();
     $addProductSection.removeClass("d-none");
@@ -120,6 +123,13 @@ function load_user() {
     $addCategorySection.hide();
     $addProductSection.addClass("d-none");
     $sidebarAccounts.show();
+  }
+
+  // Show/hide support inbox based on role
+  if (role === "admin") {
+    $sidebarSupportInbox.show();
+  } else {
+    $sidebarSupportInbox.hide();
   }
 }
 

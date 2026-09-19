@@ -30,6 +30,7 @@ function load_user() {
   const $navbarProfileImage = $("#navbarProfileImage");
   const $defaultProfileIcon = $("#defaultProfileIcon");
   const $sidebarAccounts = $("#sidebarAccounts");
+  const $sidebarSupportInbox = $("#sidebarSupportInbox");
   const $sidebarDashboard = $("#dashboard");
   const $sidebarBrand = $("#brand");
   const $sidebarCategory = $("#category");
@@ -47,7 +48,9 @@ function load_user() {
     $adminDashboard.hide();
     $navbarProfileImage.hide();
     $defaultProfileIcon.show();
+
     $sidebarAccounts.hide();
+    $sidebarSupportInbox.hide();
     $sidebarDashboard.hide();
     $sidebarBrand.hide();
     $sidebarCategory.hide();
@@ -77,6 +80,13 @@ function load_user() {
     $sidebarAccounts.hide();
   } else {
     $sidebarAccounts.show();
+  }
+
+  // Show/hide support inbox based on role
+  if (role === "admin") {
+    $sidebarSupportInbox.show();
+  } else {
+    $sidebarSupportInbox.hide();
   }
 
   // Email and role are displayed only for reference on the Profile page.

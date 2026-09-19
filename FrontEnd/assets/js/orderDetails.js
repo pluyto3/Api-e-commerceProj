@@ -47,6 +47,7 @@ function load_user() {
   const $navbarProfileImage = $("#navbarProfileImage");
   const $defaultProfileIcon = $("#defaultProfileIcon");
   const $sidebarAccounts = $("#sidebarAccounts");
+  const $sidebarSupportInbox = $("#sidebarSupportInbox");
   const $sidebarDashboard = $("#dashboard");
   const $sidebarBrand = $("#brand");
   const $sidebarCategory = $("#category");
@@ -77,6 +78,7 @@ function load_user() {
     $adminWorkingPanel.hide();
     $userWorkingPanel.hide();
     $sellerOrderViewSwitcher.hide();
+    $sidebarSupportInbox.hide();
     return;
   }
 
@@ -136,6 +138,7 @@ function load_user() {
     return;
   }
 
+  // Role-based access for order details panels
   if (isRegularUser) {
     $adminWorkingPanel.hide();
     $userWorkingPanel.show();
@@ -143,6 +146,13 @@ function load_user() {
   } else {
     $adminWorkingPanel.show();
     $userWorkingPanel.hide();
+  }
+
+  // Role-based access for support inbox
+  if (role === "admin") {
+    $sidebarSupportInbox.show();
+  } else {
+    $sidebarSupportInbox.hide();
   }
 }
 
