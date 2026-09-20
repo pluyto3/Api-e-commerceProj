@@ -583,6 +583,9 @@ function getDashboardRoot() {
   return $("#adminDashboardContent");
 }
 
+// =======================================
+// SIDEBAR LABELS
+// =======================================
 function setSidebarLabels() {
   $(".sidebar-role-label").each(function () {
     const $label = $(this);
@@ -600,19 +603,18 @@ function setSidebarLabels() {
   });
 }
 
+// =======================================
+// SIDEBAR ROLE VISIBILITY
+// =======================================
 function highlightActiveSidebarLink() {
-  const currentPage =
-    window.location.pathname.split("/").pop() || "dashboard.html";
-
-  $(".sidebar .nav-bar a").each(function () {
-    const $link = $(this);
-    const isActive = String($link.attr("href") || "") === currentPage;
-
-    $link.toggleClass("active", isActive);
-    $link.parent().toggleClass("active", isActive);
-  });
+  if (typeof window.highlightCurrentSidebarItem === "function") {
+    window.highlightCurrentSidebarItem();
+  }
 }
 
+// =======================================
+// NAVBAR & SIDEBAR VISIBILITY
+// =======================================
 function syncNavbarVisibility() {
   const showCart = canShowCart();
   const showNotifications = canShowNotifications();
@@ -2572,6 +2574,9 @@ function initSupportInbox() {
       }, 250);
     });
 
+  // =======================================
+  // Support Inbox Sidebar Navigation
+  // =======================================
   $(".support-inbox-nav-link")
     .off("click.supportInbox")
     .on("click.supportInbox", function (event) {
@@ -2579,12 +2584,21 @@ function initSupportInbox() {
 
       const target = document.getElementById("supportInboxSection");
 
-      if (target) {
-        target.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
+      if (!target) {
+        return;
       }
+
+      // Update the URL so Support Inbox becomes the active sidebar item.
+      if (window.location.hash !== "#supportInboxSection") {
+        window.location.hash = "supportInboxSection";
+      } else if (typeof window.highlightCurrentSidebarItem === "function") {
+        window.highlightCurrentSidebarItem();
+      }
+
+      target.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
     });
 }
 
