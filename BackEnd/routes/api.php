@@ -77,6 +77,7 @@ Route::group(['prefix' => 'products'], function($router) {
     Route::controller(ProductController::class)->group(function () {
         Route::get('/', 'index'); // Get all products
         Route::post('/', 'createProduct'); // Create a new product
+        Route::get('/{id}/related', 'getRelatedProducts');
         Route::get('/{id}', 'getProduct_id'); // Get a specific product
         Route::put('/{id}', 'updateProduct'); // Update a specific product
         Route::put('/{id}/approve', 'approveProduct')->middleware('admin.token'); // Approve a product (admin)

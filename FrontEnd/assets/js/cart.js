@@ -235,7 +235,16 @@ function loadCartItems() {
         const cardHtml = `
           <div class="cart-item-card ${cannotCheckout ? "stock-issue" : ""}" data-price="${price}" data-stock="${stock}" data-own-product="${isOwnProduct}">
             <div class="cart-select-cell">
-               <input type="checkbox" class="select-item form-check-input m-0" style="transform: scale(1.2);" data-id="${id}" data-price="${subtotal}" data-stock-issue="${cannotCheckout}" ${cannotCheckout ? "disabled" : ""}>
+              <input
+                type="checkbox"
+                class="select-item form-check-input m-0"
+                style="transform: scale(1.2);"
+                data-id="${id}"
+                data-product-id="${item.product?.product_id ?? ""}"
+                data-price="${subtotal}"
+                data-stock-issue="${cannotCheckout}"
+                ${cannotCheckout ? "disabled" : ""}
+              >
             </div>
 
             <div class="cart-image-cell">
@@ -273,7 +282,7 @@ function loadCartItems() {
       });
 
       $("#item-count-footer").text(
-        `You have ${cartItems.length} items in your cart.`,
+        `You have ${cartItems.length} products in your cart.`,
       );
 
       $("#cart-stock-alert").remove();
@@ -285,8 +294,29 @@ function loadCartItems() {
         `);
       }
 
-      // Checkboxes unchecked by default and update selected total
+      // ------------------------------------------------
+      // Default cart selection / Buy Now auto-selection
+      // ------------------------------------------------
       $(".select-item").prop("checked", false);
+
+      const params = new URLSearchParams(window.location.search);
+      const buyNowProductId = params.get("select_product_id");
+
+      if (buyNowProductId) {
+        const $buyNowItem = $(".select-item")
+          .filter(function () {
+            return (
+              String($(this).attr("data-product-id")) ===
+              String(buyNowProductId)
+            );
+          })
+          .first();
+
+        if ($buyNowItem.length && !$buyNowItem.prop("disabled")) {
+          $buyNowItem.prop("checked", true);
+        }
+      }
+
       updateSelectedTotal();
     },
     error: function (xhr) {

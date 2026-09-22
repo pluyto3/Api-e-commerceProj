@@ -393,11 +393,31 @@ class ProductController extends Controller
     /**
      * Product read by id
      */
-    public function getProduct_id(Request $request, $id){
+    public function getProduct_id(Request $request, $id)
+    {
         $user = $this->getAuthenticatedUser($request);
         $publicScope = $request->input('scope') === 'public';
 
-        $productQuery = Product::with(['category', 'brand', 'seller'])
+        $soldSubquery = DB::table('checkout_items as ci')
+            ->join('checkouts as c', 'ci.checkout_id', '=', 'c.checkout_id')
+            ->where(function ($query) {
+                if ($this->hasColumn('checkouts', 'shipping_status')) {
+                    $query->where('c.shipping_status', 'delivered')
+                        ->orWhere('c.status', 'completed')
+                        ->orWhere('c.status', 'delivered');
+
+                    return;
+                }
+
+                $query->where('c.status', 'completed')
+                    ->orWhere('c.status', 'delivered');
+            })
+            ->whereColumn('ci.product_id', 'products.product_id')
+            ->selectRaw('COALESCE(SUM(ci.quantity), 0)');
+
+        $productQuery = Product::select('products.*')
+            ->with(['category', 'brand', 'seller'])
+            ->selectSub($soldSubquery, 'sold')
             ->where('product_id', $id);
 
         if (!$publicScope && $this->isSeller($user)) {
@@ -414,6 +434,101 @@ class ProductController extends Controller
         }
 
         return response()->json(['product' => $this->formatProduct($product)], 200);
+    }
+
+    /**
+     * Public related products from the same seller.
+     */
+    public function getRelatedProducts(Request $request, $id)
+    {
+        $limit = min(
+            max((int) $request->input('limit', 6), 1),
+            12
+        );
+
+        /*
+        * Find the current product using the same public visibility rules.
+        */
+        $currentProductQuery = Product::query()
+            ->where('product_id', $id);
+
+        $this->applyPublicVisibility($currentProductQuery);
+
+        $currentProduct = $currentProductQuery->first();
+
+        if (!$currentProduct) {
+            return response()->json([
+                'msg' => 'Product not found.'
+            ], 404);
+        }
+
+        /*
+        * Calculate sold quantity for each related product.
+        */
+        $soldSubquery = DB::table('checkout_items as ci')
+            ->join(
+                'checkouts as c',
+                'ci.checkout_id',
+                '=',
+                'c.checkout_id'
+            )
+            ->where(function ($query) {
+                if ($this->hasColumn('checkouts', 'shipping_status')) {
+                    $query
+                        ->where('c.shipping_status', 'delivered')
+                        ->orWhere('c.status', 'completed')
+                        ->orWhere('c.status', 'delivered');
+
+                    return;
+                }
+
+                $query
+                    ->where('c.status', 'completed')
+                    ->orWhere('c.status', 'delivered');
+            })
+            ->whereColumn(
+                'ci.product_id',
+                'products.product_id'
+            )
+            ->selectRaw(
+                'COALESCE(SUM(ci.quantity), 0)'
+            );
+
+        /*
+        * Get other publicly available products from the same seller.
+        */
+        $relatedProductsQuery = Product::select('products.*')
+            ->with([
+                'category',
+                'brand',
+                'seller'
+            ])
+            ->selectSub($soldSubquery, 'sold')
+            ->where(
+                'seller_id',
+                $currentProduct->seller_id
+            )
+            ->where(
+                'product_id',
+                '<>',
+                $currentProduct->product_id
+            );
+
+        $this->applyPublicVisibility($relatedProductsQuery);
+
+        $relatedProducts = $relatedProductsQuery
+            ->orderByDesc('created_at')
+            ->limit($limit)
+            ->get()
+            ->map(
+                fn ($product) =>
+                    $this->formatProduct($product)
+            )
+            ->values();
+
+        return response()->json([
+            'data' => $relatedProducts
+        ], 200);
     }
 
     /**

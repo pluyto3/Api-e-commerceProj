@@ -1,7 +1,6 @@
 /* ================================
    GLOBAL VARIABLES
 ================================ */
-// const ip = "https://api.hanzgo.me"; // For local testing
 if (!window.APP_CONFIG?.API_BASE_URL) {
   throw new Error(
     "APP_CONFIG is missing. Load config.js before single-product.js.",
@@ -9,7 +8,6 @@ if (!window.APP_CONFIG?.API_BASE_URL) {
 }
 
 const ip = window.APP_CONFIG.API_BASE_URL;
-// const ip = "https://api.hanzgo.me"; // For production server
 
 let token = null;
 let usr = null;
@@ -21,12 +19,99 @@ let currentUserId = null;
 let currentProductSellerId = null;
 let currentProductSellerUsername = "";
 
+// =======================================
+// Utility Functions
+// =======================================
 function getApiHeaders(extraHeaders = {}) {
   return {
     Accept: "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...extraHeaders,
   };
+}
+
+// =======================================
+// Product Data Handling Functions
+// =======================================
+function getProductCategoryName(product) {
+  if (product?.category && typeof product.category === "object") {
+    return (
+      product.category.name || product.category.category_name || "Uncategorized"
+    );
+  }
+
+  return product?.category || product?.category_name || "Uncategorized";
+}
+
+function getProductBrandName(product) {
+  if (product?.brand && typeof product.brand === "object") {
+    return product.brand.name || product.brand.brand_name || "Unbranded";
+  }
+
+  return product?.brand || product?.brand_name || "Unbranded";
+}
+
+function getProductSellerName(product) {
+  return product?.seller?.username || product?.seller_username || "Seller";
+}
+
+function resolveProductImage(image) {
+  if (!image) {
+    return "assets/img/back.jpg";
+  }
+
+  const src = String(image).trim();
+
+  if (/^(https?:)?\/\//i.test(src)) {
+    return src;
+  }
+
+  if (src.startsWith("/")) {
+    return `${ip}${src}`;
+  }
+
+  if (src.includes("assets/")) {
+    return `${ip}/${src.replace(/^\/+/, "")}`;
+  }
+
+  const filename = src.split(/[\\/]/).pop();
+
+  return `${ip}/FrontEnd/assets/img/product/${encodeURIComponent(filename)}`;
+}
+
+function syncQuantityControls() {
+  const $input = $("#product-quantity-input");
+  const $decrease = $("#quantity-decrease");
+  const $increase = $("#quantity-increase");
+
+  if (!currentProductAvailable || currentProductStock <= 0) {
+    $input.val(0).prop("disabled", true);
+    $decrease.prop("disabled", true);
+    $increase.prop("disabled", true);
+    return;
+  }
+
+  let quantity = parseInt($input.val(), 10);
+
+  if (!Number.isFinite(quantity)) {
+    quantity = 1;
+  }
+
+  quantity = Math.max(1, Math.min(quantity, currentProductStock));
+
+  $input.val(quantity).attr("max", currentProductStock).prop("disabled", false);
+
+  $decrease.prop("disabled", quantity <= 1);
+  $increase.prop("disabled", quantity >= currentProductStock);
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 // =======================================
@@ -84,6 +169,31 @@ function load_user() {
 ============================================================ */
 $(document).ready(function () {
   load_user();
+
+  // -------------------------------
+  // Quantity Controls
+  // -------------------------------
+  $("#quantity-decrease").on("click", function () {
+    const currentQuantity =
+      parseInt($("#product-quantity-input").val(), 10) || 1;
+
+    $("#product-quantity-input").val(currentQuantity - 1);
+
+    syncQuantityControls();
+  });
+
+  $("#quantity-increase").on("click", function () {
+    const currentQuantity =
+      parseInt($("#product-quantity-input").val(), 10) || 1;
+
+    $("#product-quantity-input").val(currentQuantity + 1);
+
+    syncQuantityControls();
+  });
+
+  $("#product-quantity-input").on("input change", function () {
+    syncQuantityControls();
+  });
 
   // -------------------------------
   // Global AJAX Loading Animation
@@ -156,43 +266,64 @@ $(document).ready(function () {
         return;
       }
 
-      // Format category properly if it's a nested object
-      let category = "Category Name";
-      if (product.category) {
-        category =
-          typeof product.category === "object"
-            ? product.category.name ||
-              product.category.category_name ||
-              "Category"
-            : product.category;
-      } else if (product.category_name) {
-        category = product.category_name;
-      }
+      // Extract product details
+      const category = getProductCategoryName(product);
+      const brand = getProductBrandName(product);
+      const sellerName = getProductSellerName(product);
 
-      const imgUrl = product.image
-        ? `${ip}/FrontEnd/assets/img/product/${product.image}`
-        : "assets/img/back.jpg";
-      const price = parseFloat(product.product_price || product.price || 0);
+      const productName =
+        product.product_name || product.name || "Unknown Product";
+
+      const soldCount = Math.max(0, Number(product.sold) || 0);
+
+      const imgUrl = resolveProductImage(product.image);
+
+      const price = Number.parseFloat(
+        product.product_price || product.price || 0,
+      );
+
       currentProductSellerId =
         product.seller?.user_id ||
         product.seller?.id ||
         product.seller_id ||
         "";
+
       currentProductSellerUsername =
         product.seller?.username || product.seller_username || "";
 
-      $("#main-img").attr("src", imgUrl);
+      /* Product image */
+      $("#main-img")
+        .attr("src", imgUrl)
+        .attr("alt", productName)
+        .off("error.productImage")
+        .on("error.productImage", function () {
+          $(this).attr("src", "assets/img/back.jpg");
+        });
+
+      /* Breadcrumb */
+      $("#breadcrumb-category").text(category);
+      $("#breadcrumb-product").text(productName);
+
+      /* Main information */
       $("#category-name").text(category);
-      $("#product-name").text(
-        product.product_name || product.name || "Unknown Product",
-      );
+      $("#product-name").text(productName);
+      $("#brand-name").text(brand);
+      $("#seller-name").text(sellerName);
+
+      $("#sold-count").text(soldCount.toLocaleString("en-PH"));
+
       $("#product-price").text(
-        `Price: ₱${price.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        `₱${price.toLocaleString("en-PH", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })}`,
       );
-      $("#product-details-text").html(
+
+      /* Product description */
+      $("#product-details-text").text(
         product.product_description ||
           product.description ||
-          "No details available.",
+          "No product description available.",
       );
 
       const stock = product.stock_quantity ?? product.stock ?? 0;
@@ -206,23 +337,33 @@ $(document).ready(function () {
         productStatus === "active" &&
         currentProductStock > 0;
 
-      $("#product-stock").text(`${stock} pieces available`);
-      $("#product-quantity-input")
-        .val(currentProductAvailable ? 1 : 0)
-        .attr("max", currentProductStock)
-        .prop("disabled", !currentProductAvailable);
+      const $availability = $(".product-availability");
+
+      if (currentProductAvailable) {
+        $("#stock-status").text("In Stock");
+
+        $("#product-stock").text(
+          `${currentProductStock} ${
+            currentProductStock === 1 ? "piece" : "pieces"
+          } available`,
+        );
+
+        $availability.removeClass("product-availability--unavailable");
+      } else {
+        $("#stock-status").text("Out of Stock");
+        $("#product-stock").text("This product is currently unavailable.");
+
+        $availability.addClass("product-availability--unavailable");
+      }
+
+      $("#product-quantity-input").val(currentProductAvailable ? 1 : 0);
 
       $(".product-add-to-cart-btn, .product-buy-now-btn").prop(
         "disabled",
         !currentProductAvailable,
       );
 
-      if (!currentProductAvailable) {
-        $("#product-stock")
-          .removeClass("text-muted")
-          .addClass("text-danger font-weight-bold")
-          .text("Out of stock");
-      }
+      syncQuantityControls();
 
       // Load products from the same shop
       loadSameShopProducts(product);
@@ -234,83 +375,123 @@ $(document).ready(function () {
 
   // --- Load Same Shop Products ---
   function loadSameShopProducts(currentProduct) {
-    const currentSellerUser =
-      currentProduct.seller?.username || currentProduct.seller_username;
-    const currentSellerId =
-      currentProduct.seller?.user_id || currentProduct.seller_id;
+    const currentProductId = currentProduct.product_id || currentProduct.id;
 
-    if (!currentSellerUser && !currentSellerId) {
-      $("#sameShop-products").html(
-        "<p class='text-muted ml-3'>Seller information not available.</p>",
-      );
-      return;
-    }
+    const $container = $("#sameShop-products");
+
+    $container.html(`
+    <div class="related-products-loading">
+      <i class="fas fa-spinner fa-spin"></i>
+      Loading more products from this seller...
+    </div>
+  `);
 
     $.ajax({
-      url: `${ip}/api/products?scope=public`,
+      url: `${ip}/api/products/${currentProductId}/related?limit=6`,
       method: "GET",
       headers: getApiHeaders(),
+
       success: function (response) {
-        const allProducts = response.data || response || [];
-        const $container = $("#sameShop-products").empty();
+        const relatedProducts = Array.isArray(response?.data)
+          ? response.data
+          : [];
 
-        const sameShopProducts = allProducts.filter((p) => {
-          const pSellerUser = p.seller?.username || p.seller_username;
-          const pSellerId = p.seller?.user_id || p.seller_id;
-          const isSameSeller =
-            (currentSellerUser && pSellerUser === currentSellerUser) ||
-            (currentSellerId && pSellerId === currentSellerId);
-          const isNotCurrentProduct =
-            String(p.product_id || p.id) !==
-            String(currentProduct.product_id || currentProduct.id);
-          const isApproved =
-            (p.approval_status || "approved").toLowerCase() === "approved";
-          const isActive = (p.status || "active").toLowerCase() === "active";
-          const hasStock = Number(p.stock_quantity || 0) > 0;
+        $container.empty();
 
-          return (
-            isSameSeller &&
-            isNotCurrentProduct &&
-            isApproved &&
-            isActive &&
-            hasStock
-          );
-        });
+        if (!relatedProducts.length) {
+          $container.html(`
+          <div class="related-products-empty">
+            <i class="fas fa-store"></i>
+            <strong>No other products available</strong>
+            <span>This seller currently has no other available products.</span>
+          </div>
+        `);
 
-        if (sameShopProducts.length === 0) {
-          $container.html(
-            "<p class='text-muted ml-3'>No other products from this shop.</p>",
-          );
           return;
         }
 
-        // Display up to 6 products
-        sameShopProducts.slice(0, 6).forEach((p) => {
-          const imgUrl = p.image
-            ? `${ip}/FrontEnd/assets/img/product/${p.image}`
-            : "assets/img/back.jpg";
-          const price = parseFloat(p.product_price || p.price || 0).toFixed(2);
-          const productName = p.product_name || p.name || "Unknown Product";
+        relatedProducts.forEach(function (product) {
+          const productId = product.product_id || product.id;
+
+          const productName = escapeHtml(
+            product.product_name || product.name || "Unknown Product",
+          );
+
+          const category = escapeHtml(getProductCategoryName(product));
+
+          const brand = escapeHtml(getProductBrandName(product));
+
+          const imageUrl = resolveProductImage(product.image);
+
+          const price = Number(product.product_price || product.price || 0);
+
+          const sold = Math.max(0, Number(product.sold) || 0);
 
           $container.append(`
-            <div class="col-6 col-sm-4 col-md-3 col-lg-2 mb-3">
-              <div class="card dailyProductCard h-100">
-                <div class="card-body p-2 d-flex flex-column">
-                  <a href="single-product.html?id=${p.product_id || p.id}" class="text-decoration-none text-dark">
-                    <img src="${imgUrl}" class="card-img-top rounded-0" style="aspect-ratio: 1; object-fit: cover;" alt="${productName}">
-                  </a>
-                  <p class="card-title mb-1 mt-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 0.85rem; line-height: 1.2;">${productName}</p>
-                  <div class="mt-auto d-flex justify-content-between align-items-center pt-2">
-                      <span style="color: #ee4d2d; font-size: 1.1rem; font-weight: 500;">₱${price}</span>
-                  </div>
-                </div>
+          <article class="related-product-card">
+            <a
+              href="single-product.html?id=${encodeURIComponent(productId)}"
+              class="related-product-image-link"
+            >
+              <div class="related-product-image-wrap">
+                <img
+                  src="${escapeHtml(imageUrl)}"
+                  alt="${productName}"
+                  class="related-product-image"
+                  onerror="this.onerror=null;this.src='assets/img/back.jpg';"
+                />
+              </div>
+            </a>
+
+            <div class="related-product-body">
+              <span class="related-product-category">
+                ${category}
+              </span>
+
+              <a
+                href="single-product.html?id=${encodeURIComponent(productId)}"
+                class="related-product-title"
+              >
+                ${productName}
+              </a>
+
+              <div class="related-product-meta">
+                <span>${brand}</span>
+                <span>${sold.toLocaleString("en-PH")} sold</span>
+              </div>
+
+              <div class="related-product-footer">
+                <strong class="related-product-price">
+                  ₱${price.toLocaleString("en-PH", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </strong>
+
+                <a
+                  href="single-product.html?id=${encodeURIComponent(productId)}"
+                  class="related-product-view"
+                  aria-label="View ${productName}"
+                >
+                  <i class="fas fa-arrow-right"></i>
+                </a>
               </div>
             </div>
-          `);
+          </article>
+        `);
         });
       },
+
       error: function (xhr) {
-        console.error("Error fetching same shop products:", xhr.responseText);
+        console.error("Error fetching related products:", xhr.responseText);
+
+        $container.html(`
+        <div class="related-products-empty">
+          <i class="fas fa-exclamation-circle"></i>
+          <strong>Unable to load products</strong>
+          <span>Please try again later.</span>
+        </div>
+      `);
       },
     });
   }
@@ -359,6 +540,12 @@ $(document).ready(function () {
     const quantity =
       $("#product-quantity-input").val() || $("input[type=number]").val();
 
+    const $button = $(this);
+
+    if ($button.prop("disabled")) {
+      return;
+    }
+
     if (!currentProductAvailable || Number(quantity) > currentProductStock) {
       Swal.fire(
         "Out of Stock",
@@ -388,6 +575,12 @@ $(document).ready(function () {
       return;
     }
 
+    const originalButtonHtml = $button.html();
+
+    $button
+      .prop("disabled", true)
+      .html('<i class="fas fa-spinner fa-spin"></i> Adding...');
+
     $.ajax({
       url: `${ip}/api/cart`,
       method: "POST",
@@ -396,33 +589,60 @@ $(document).ready(function () {
         Accept: "application/json",
         "Content-Type": "application/json",
       },
+      complete: function () {
+        if (currentProductAvailable) {
+          $button.prop("disabled", false).html(originalButtonHtml);
+        }
+      },
       data: JSON.stringify({ product_id: productId, quantity }),
       success: function (response) {
-        console.log(" Added to cart:", response);
+        console.log("Added to cart:", response);
+
+        const newCount = Number(response.count ?? 0);
+        updateCartCount(newCount);
 
         Swal.fire({
           icon: "success",
-          title: "Product Added",
-          text: "Your product has been added to the cart.",
-          showConfirmButton: false,
-          timer: 1500,
-        }).then(() => {
-          const newCount = Number(response.count ?? 0);
-          updateCartCount(newCount);
-          window.location.href = "index.html";
+          title: "Added to Cart",
+          text: "This product has been added to your cart.",
+          showCancelButton: true,
+          confirmButtonText: "View Cart",
+          cancelButtonText: "Continue Shopping",
+          confirmButtonColor: "#fb774b",
+          reverseButtons: true,
+        }).then((result) => {
+          if (result.isConfirmed) {
+            window.location.href = "cart.html";
+          }
         });
       },
       error: function (xhr) {
         console.error(" Error adding to cart:", xhr.responseText);
+
+        const message =
+          xhr.responseJSON?.msg ||
+          xhr.responseJSON?.message ||
+          "Unable to add this product to your cart.";
+
+        Swal.fire({
+          icon: "error",
+          title: "Unable to Add Product",
+          text: message,
+        });
       },
     });
   });
 
   // --- Buy Now ---
   $(".product-buy-now-btn").on("click", function () {
-    const quantity = $("#product-quantity-input").val() || 1;
+    const quantity = Number($("#product-quantity-input").val()) || 1;
+    const $button = $(this);
 
-    if (!currentProductAvailable || Number(quantity) > currentProductStock) {
+    if ($button.prop("disabled")) {
+      return;
+    }
+
+    if (!currentProductAvailable || quantity > currentProductStock) {
       Swal.fire(
         "Out of Stock",
         "This product is currently unavailable.",
@@ -443,6 +663,7 @@ $(document).ready(function () {
           window.location.href = "login.html";
         }
       });
+
       return;
     }
 
@@ -451,23 +672,117 @@ $(document).ready(function () {
       return;
     }
 
+    const originalButtonHtml = $button.html();
+
+    $button
+      .prop("disabled", true)
+      .html('<i class="fas fa-spinner fa-spin"></i> Processing...');
+
+    function restoreBuyNowButton() {
+      if (currentProductAvailable) {
+        $button.prop("disabled", false).html(originalButtonHtml);
+      }
+    }
+
+    function redirectToBuyNowCart() {
+      window.location.href = `cart.html?select_product_id=${encodeURIComponent(productId)}`;
+    }
+
+    function showBuyNowError(xhr) {
+      console.error("Error during Buy Now:", xhr.responseText);
+
+      const message =
+        xhr.responseJSON?.msg ||
+        xhr.responseJSON?.message ||
+        "Unable to process Buy Now. Please try again.";
+
+      Swal.fire({
+        icon: "error",
+        title: "Unable to Buy Product",
+        text: message,
+      });
+
+      restoreBuyNowButton();
+    }
+
+    // Check whether this product already exists in the cart.
     $.ajax({
       url: `${ip}/api/cart`,
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      data: JSON.stringify({ product_id: productId, quantity }),
+      method: "GET",
+      headers: getApiHeaders(),
+
       success: function (response) {
-        window.location.href = `cart.html?select_product_id=${productId}`;
+        const cartItems = response.cart || response.data || [];
+
+        const existingCartItem = cartItems.find((item) => {
+          const cartProductId = item.product?.product_id ?? item.product_id;
+
+          return String(cartProductId) === String(productId);
+        });
+
+        /*
+         * If the product already exists in the cart,
+         * SET its quantity to the exact Buy Now quantity.
+         */
+        if (existingCartItem) {
+          const cartId = existingCartItem.addTocart_id;
+
+          const existingQuantity = Number(existingCartItem.quantity) || 1;
+
+          // No update is needed if the quantities already match.
+          if (existingQuantity === quantity) {
+            redirectToBuyNowCart();
+            return;
+          }
+
+          $.ajax({
+            url: `${ip}/api/cart/${cartId}`,
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: "application/json",
+              "Content-Type": "application/json",
+            },
+            data: JSON.stringify({
+              quantity: quantity,
+            }),
+
+            success: function () {
+              redirectToBuyNowCart();
+            },
+
+            error: showBuyNowError,
+          });
+
+          return;
+        }
+
+        /*
+         * Product is not yet in the cart,
+         * so create a new cart entry.
+         */
+        $.ajax({
+          url: `${ip}/api/cart`,
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+          data: JSON.stringify({
+            product_id: productId,
+            quantity: quantity,
+          }),
+
+          success: function () {
+            redirectToBuyNowCart();
+          },
+
+          error: showBuyNowError,
+        });
       },
-      error: function (xhr) {
-        console.error(" Error during Buy Now:", xhr.responseText);
-        const msg = xhr.responseJSON?.msg || "Failed to add product to cart.";
-        Swal.fire("Error", msg, "error");
-      },
+
+      error: showBuyNowError,
     });
   });
 
