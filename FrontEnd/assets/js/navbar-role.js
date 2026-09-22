@@ -15,7 +15,10 @@
 
   function setCartVisibility(showCart) {
     $("#cartNav, #cartNavMobile").toggle(showCart);
-    $("#cart-count, #cart-count-mobile").toggle(showCart);
+
+    if (!showCart) {
+      $("#cart-count, #cart-count-mobile").hide();
+    }
   }
 
   function setNotificationVisibility(showNotifications) {
