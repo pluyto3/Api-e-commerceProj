@@ -305,6 +305,7 @@ class CheckoutController extends Controller
         return [
             'checkout_id' => $order->checkout_id,
             'user_id' => $order->user_id,
+            'recipient_name' => $order->recipient_name,
             'user' => $order->user ? [
                 'user_id' => $order->user->user_id,
                 'username' => $order->user->username,
@@ -450,6 +451,7 @@ class CheckoutController extends Controller
         }
 
         $validated = $request->validate([
+            'recipient_name' => 'required|string|max:150',
             'payment_method' => 'required|string|in:cod,gcash',
             'purok' => 'required|string|max:50',
             'barangay' => 'required|string|max:100',
@@ -457,7 +459,6 @@ class CheckoutController extends Controller
             'province' => 'required|string|max:100',
             'zipcode' => 'required|string|max:10',
             'phone' => 'required|string|max:20',
-            'total_amount' => 'nullable|numeric|min:0',
             'item_ids' => 'required|array|min:1',
             'item_ids.*' => 'integer',
         ]);
@@ -529,6 +530,7 @@ class CheckoutController extends Controller
 
             $checkout = new Checkout();
             $checkout->user_id = $user->user_id;
+            $checkout->recipient_name = $validated['recipient_name'];
             $checkout->payment_method = $validated['payment_method'];
             $checkout->payment_status = $this->initialPaymentStatus($validated['payment_method']);
             $checkout->purok = $request->purok;

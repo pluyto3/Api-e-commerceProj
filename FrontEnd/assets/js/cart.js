@@ -161,6 +161,12 @@ function resolveCartImage(image) {
   return `${ip}/FrontEnd/assets/img/product/${src}`;
 }
 
+function escapeHtml(value) {
+  return $("<div>")
+    .text(value ?? "")
+    .html();
+}
+
 /* ------------------------------
    Load Cart Items
 ------------------------------ */
@@ -195,9 +201,39 @@ function loadCartItems() {
       let totalAmount = 0;
       let unavailableCount = 0;
 
+      if (cartItems.length === 0) {
+        $container.html(`
+          <div class="cart-empty-state">
+            <div class="cart-empty-icon">
+              <i class="fas fa-shopping-cart"></i>
+            </div>
+
+            <h3>Your cart is empty</h3>
+
+            <p>
+              Looks like you haven't added any products to your cart yet.
+            </p>
+
+            <a href="shop.html" class="btn cart-empty-shop-btn">
+              <i class="fas fa-store mr-2"></i>
+              Browse Products
+            </a>
+          </div>
+        `);
+
+        $("#item-count-footer").text("Your cart is currently empty.");
+
+        $("#selectAllCartItems").prop("checked", false).prop("disabled", true);
+
+        updateSelectedTotal();
+
+        return;
+      }
+
       cartItems.forEach((item) => {
         const id = item.addTocart_id;
         const name = item.product?.product_name ?? "Unnamed Product";
+        const safeName = escapeHtml(name);
         const price = item.product?.product_price ?? 0;
         const quantity = item.quantity ?? 1;
         let stock = parseInt(item.product?.stock_quantity ?? 0, 10);
@@ -250,13 +286,13 @@ function loadCartItems() {
             <div class="cart-image-cell">
               <img
               src="${resolveCartImage(item.product?.image)}"
-              alt="${name}"
+              alt="${safeName}"
               class="cart-item-img"
               onerror="this.onerror=null;this.src='assets/img/back.jpg';">
             </div>
 
             <div class="flex-grow-1">
-               <h5 class="fw-bold mb-1" style="color: #2c3e50;">${name}</h5>
+               <h5 class="fw-bold mb-1" style="color: #2c3e50;">${safeName}</h5>
                <div class="cart-stock-status">${stockStatusHtml}</div>
                <p class="mb-0 text-dark">Price: <span class="fw-bold">₱${price.toLocaleString()}</span></p>
             </div>

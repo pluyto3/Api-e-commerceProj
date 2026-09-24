@@ -134,22 +134,35 @@ $(document).ready(function () {
     return true;
   }
 
-  // Get the selected cart item IDs from sessionStorage
+  // Get selected cart item IDs from sessionStorage
   const selectedIdsJSON = sessionStorage.getItem("selectedCartItems");
 
-  // if no selected items, redirect to cart page
   if (!selectedIdsJSON) {
     console.error("No selected items found. Redirecting to cart.");
-    window.location.href = "cart.html";
+
+    window.location.replace("cart.html");
     return;
   }
 
-  const selectedIds = JSON.parse(selectedIdsJSON);
+  let selectedIds = [];
 
-  // if selected items array is empty, redirect to cart page
-  if (!selectedIds || selectedIds.length === 0) {
-    console.error("Selected items array is empty. Redirecting to cart.");
-    window.location.href = "cart.html";
+  try {
+    selectedIds = JSON.parse(selectedIdsJSON);
+  } catch (error) {
+    console.error("Invalid selectedCartItems data:", error);
+
+    sessionStorage.removeItem("selectedCartItems");
+
+    window.location.replace("cart.html");
+    return;
+  }
+
+  if (!Array.isArray(selectedIds) || selectedIds.length === 0) {
+    console.error("Selected items are invalid or empty. Redirecting to cart.");
+
+    sessionStorage.removeItem("selectedCartItems");
+
+    window.location.replace("cart.html");
     return;
   }
 
@@ -284,6 +297,7 @@ $(document).ready(function () {
       "#barangay",
       "#city",
       "#province",
+      "#zipcode",
     ];
 
     requiredFields.forEach(function (fieldSelector) {
@@ -299,7 +313,7 @@ $(document).ready(function () {
     if (!isValid) {
       Swal.fire(
         "Validation Error",
-        "Please fill in all required billing and shipping address fields.",
+        "Please fill in all required delivery address fields",
         "error",
       );
     }
@@ -310,49 +324,48 @@ $(document).ready(function () {
   $("#sameAddress").on("change", handleAddressCheckbox);
 
   function handleAddressCheckbox() {
-    const isChecked = $("#sameAddress").is(":checked");
-    $("#sameAddress").prop("disabled", false);
-    // Select all input fields in the form, EXCEPT the 'sameAddress' checkbox
-    const formFields = $("#checkoutform input");
+    const $sameAddress = $("#sameAddress");
+    const formFields = $("#checkoutform input").not("#sameAddress");
+
+    const hasSavedAddress = Boolean(defaultAddressInfo);
+
+    // No saved address available.
+    if (!hasSavedAddress) {
+      $sameAddress.prop("checked", false).prop("disabled", true);
+
+      formFields.prop("disabled", false);
+
+      return;
+    }
+
+    $sameAddress.prop("disabled", false);
+
+    const isChecked = $sameAddress.is(":checked");
 
     if (isChecked) {
-      // If checkbox is checked, fill with default info and disable fields
+      // Use saved account information.
       if (defaultAccountInfo) {
         $("#name").val(defaultAccountInfo.fullname || "");
         $("#phone").val(defaultAccountInfo.phone_number || "");
-      } else {
-        // If no default account info, clear name/phone and warn
-        $("#name").val("");
-        $("#phone").val("");
-        console.warn("No default account info found to pre-fill name/phone.");
       }
 
-      if (defaultAddressInfo) {
-        $("#purok").val(defaultAddressInfo.purok || "");
-        $("#barangay").val(defaultAddressInfo.barangay || "");
-        $("#city").val(defaultAddressInfo.city || "");
-        $("#province").val(defaultAddressInfo.province || "");
-        $("#zipcode").val(defaultAddressInfo.zipcode || "");
-      } else {
-        // If no default address, clear address fields and warn
-        $("#purok").val("");
-        $("#barangay").val("");
-        $("#city").val("");
-        $("#province").val("");
-        console.warn("No default address found to pre-fill address fields.");
-      }
+      // Use saved delivery address.
+      $("#purok").val(defaultAddressInfo.purok || "");
+      $("#barangay").val(defaultAddressInfo.barangay || "");
+      $("#city").val(defaultAddressInfo.city || "");
+      $("#province").val(defaultAddressInfo.province || "");
+      $("#zipcode").val(defaultAddressInfo.zipcode || "");
 
       formFields.prop("disabled", true);
-      $("#sameAddress").prop("disabled", false);
     } else {
-      // If checkbox is unchecked, enable fields and clear them for manual entry
+      // Customer wants to enter another delivery address.
       formFields.prop("disabled", false);
+
       $("#name").val("");
       $("#phone").val("");
       $("#purok").val("");
       $("#barangay").val("");
       $("#city").val("");
-      $("#sameAddress").prop("disabled", false);
       $("#province").val("");
       $("#zipcode").val("");
     }
@@ -501,17 +514,16 @@ $(document).ready(function () {
   $("#placeOrder").on("click", function (e) {
     e.preventDefault();
 
-    // Get the current cart items for confirmation page display
-    // This assumes cartItems is populated from the earlier AJAX call
-    const currentCartItems = $(".cartItems")
-      .children()
-      .map(function () {
-        return $(this).data("item-details"); // Assuming you store item details with .data()
-      })
-      .get();
-    // Validate form fields before proceeding
+    const $button = $(this);
+
+    // Prevent duplicate order submissions.
+    if ($button.prop("disabled")) {
+      return;
+    }
+
+    // Validate form fields before proceeding.
     if (!validateForm()) {
-      return; // Stop execution if validation fails
+      return;
     }
 
     if (checkoutBlocked) {
@@ -584,10 +596,7 @@ $(document).ready(function () {
 
     const checkoutData = {
       // Include name for the backend if needed, but for confirmation page, we'll use the form value
-      // name: $("#name").val(),
-      // email: $("#email").val(), // If you add an email field
-      fullname: $("#name").val(), // Assuming name is for recipient
-      username: usr, // Pass username for backend association
+      recipient_name: $("#name").val().trim(), // Assuming name is for recipient
       phone: phone,
       purok: purok,
       barangay: barangay,
@@ -595,10 +604,14 @@ $(document).ready(function () {
       province: province,
       zipcode: zipcode,
       payment_method: paymentMethod,
-      total_amount: totalAmount,
       item_ids: selectedItemIDs,
-      shipping_fee: 50, // Assuming fixed shipping fee for now
     };
+
+    const originalButtonHtml = $button.html();
+
+    $button
+      .prop("disabled", true)
+      .html('<i class="fas fa-spinner fa-spin mr-2"></i> Processing Order...');
 
     console.log("Checkout Data:", checkoutData);
 
@@ -624,7 +637,6 @@ $(document).ready(function () {
           paymentMethod: paymentMethod,
           paymentStatus: confirmedCheckout.payment_status || "pending",
           shippingStatus: confirmedCheckout.shipping_status || "pending",
-          shippingFee: 50, // Consistent with calculation
           shipping: {
             name: $("#name").val(),
             phone: $("#phone").val(),
@@ -658,7 +670,10 @@ $(document).ready(function () {
         });
       },
       error: function (xhr) {
+        $button.prop("disabled", false).html(originalButtonHtml);
+
         console.error("Error during checkout:", xhr.responseText);
+
         let msg =
           "An error occurred while processing your order. Please try again.";
         if (xhr.responseJSON?.errors) {

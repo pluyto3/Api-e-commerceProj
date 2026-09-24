@@ -13,6 +13,7 @@ class Checkout extends Model
 
     protected $fillable = [
         'user_id', 
+        'recipient_name',
         'payment_method', 
         'purok',
         'barangay',
