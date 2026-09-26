@@ -2562,6 +2562,7 @@ footer {
 }
 
 .order-details-summary-item {
+  min-width: 0;
   min-height: 98px;
   padding: 14px 16px;
   border: 1px solid #eef2f7;
@@ -2569,14 +2570,21 @@ footer {
   background: #f8fafc;
 }
 
-.order-details-summary-label {
-  display: inline-block;
-  margin-bottom: 0.55rem;
-  color: #64748b;
-  font-size: 0.78rem;
+.order-details-summary-value {
+  min-width: 0;
+  max-width: 100%;
+  color: #0f172a;
+  font-size: 1rem;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+#summaryContact > div {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .order-details-summary-value {

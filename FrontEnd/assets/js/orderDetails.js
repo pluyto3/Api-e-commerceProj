@@ -870,13 +870,20 @@ function populateOrderDetails(order, itemsOverride, viewOptions = {}) {
   $("#orderStatusTimeline").html(renderOrderTimeline(shippingStatus));
 
   const user = order.user || currentUserProfile || {};
-  const customerName =
-    order.customer_name || user.fullname || user.username || usr || "N/A";
+
+  const recipientName =
+    order.recipient_name ||
+    order.customer_name ||
+    user.fullname ||
+    user.username ||
+    usr ||
+    "N/A";
+
   const email = order.email || user.email || "N/A";
   const phone = order.phone_number || user.phone_number || "N/A";
   const address = formatAddress(order, user);
 
-  $("#summaryCustomer").text(customerName);
+  $("#summaryCustomer").text(recipientName);
   $("#summaryContact").html(`
     <div>${email}</div>
     <div class="order-details-meta">${phone}</div>
@@ -901,11 +908,15 @@ function populateOrderDetails(order, itemsOverride, viewOptions = {}) {
     rows += `
       <tr>
         <td>
-          <img src="${resolveImageSrc(item.image)}"
+          <img src="${escapeHtmlAttribute(resolveImageSrc(item.image))}"
                onerror="this.src='assets/img/back.jpg'"
                class="order-details-product-image">
         </td>
-        <td><span class="order-details-product-name">${item.productName}</span></td>
+        <td>
+          <span class="order-details-product-name">
+            ${escapeHtml(item.productName)}
+          </span>
+        </td>
         <td class="text-center"><span class="order-details-qty">${item.quantity}</span></td>
         <td><span class="order-details-price">&#8369;${formatCurrency(item.price)}</span></td>
         <td><span class="order-details-subtotal">&#8369;${formatCurrency(item.subtotal)}</span></td>
@@ -1387,13 +1398,6 @@ function renderUserOrders() {
         class="btn btn-sm btn-buy-again"
         data-items="${buyAgainItemsJson}">
         <i class="fas fa-redo"></i> Buy Again
-      </button>
-
-      <button
-        type="button"
-        class="btn btn-sm btn-contact-seller"
-        data-seller-name="${safeSellerName}">
-        <i class="fas fa-comments"></i> Contact Seller
       </button>
     `
           : "";
@@ -2816,19 +2820,6 @@ $(document).ready(function () {
 
           Swal.fire("Error", msg, "error");
         });
-    });
-  });
-
-  $(document).on("click", ".btn-contact-seller", function (e) {
-    e.preventDefault();
-    e.stopPropagation();
-
-    const sellerName = $(this).data("seller-name") || "the seller";
-
-    Swal.fire({
-      icon: "info",
-      title: "Contact Seller",
-      text: `Contact feature for ${sellerName} is not connected yet.`,
     });
   });
 
