@@ -2134,6 +2134,10 @@ function openStatusModal(orderId, currentStatus, sellerId = "") {
 
   $statusSelect.empty();
 
+  if (role === "admin" && !finalStatus) {
+    $statusSelect.append(`<option value="">No change</option>`);
+  }
+
   if (allowedNextStatuses.length > 0) {
     allowedNextStatuses.forEach(function (nextStatus) {
       $statusSelect.append(
@@ -2214,20 +2218,53 @@ function submitOrderStatusUpdate() {
     return;
   }
 
-  const payload = {
-    shipping_status: getMainOrderStatus(newStatus),
-  };
+  const payload = {};
 
-  if (role === "admin" && sellerId) {
-    payload.seller_id = sellerId;
+  const normalizedNewStatus = newStatus ? getMainOrderStatus(newStatus) : "";
+
+  const currentShippingStatus = getMainOrderStatus(
+    existingSellerOrder?.shipping_status ||
+      existingOrder?.shipping_status ||
+      existingOrder?.status,
+  );
+
+  const currentTrackingNumber = (
+    getSellerTrackingNumber(existingOrder, existingSellerOrder) || ""
+  ).trim();
+
+  const trackingChanged = trackingNumber !== currentTrackingNumber;
+
+  if (normalizedNewStatus) {
+    payload.shipping_status = normalizedNewStatus;
   }
 
   if (role === "admin" && newPaymentStatus) {
     payload.payment_status = newPaymentStatus;
   }
 
-  if (trackingNumber && canEditTrackingForStatus(payload.shipping_status)) {
+  if (
+    trackingNumber &&
+    trackingChanged &&
+    canEditTrackingForStatus(normalizedNewStatus || currentShippingStatus)
+  ) {
     payload.tracking_number = trackingNumber;
+  }
+
+  if (
+    role === "admin" &&
+    sellerId &&
+    (payload.shipping_status || payload.tracking_number)
+  ) {
+    payload.seller_id = sellerId;
+  }
+
+  if (Object.keys(payload).length === 0) {
+    Swal.fire(
+      "No Changes",
+      "Choose an order status or payment status to update.",
+      "info",
+    );
+    return;
   }
 
   console.log("Status update payload:", payload);
@@ -2259,11 +2296,17 @@ function submitOrderStatusUpdate() {
       );
 
       if (existingOrder) {
-        existingOrder.status = updatedCheckout.status || newStatus;
+        existingOrder.status =
+          updatedCheckout.status ||
+          existingOrder.status ||
+          currentShippingStatus;
+
         existingOrder.shipping_status =
           updatedCheckout.shipping_status ||
           updatedCheckout.status ||
-          payload.shipping_status;
+          existingOrder.shipping_status ||
+          currentShippingStatus;
+
         existingOrder.payment_status =
           updatedCheckout.payment_status || existingOrder.payment_status;
         existingOrder.tracking_number =
@@ -2618,8 +2661,14 @@ $(document).ready(function () {
   });
 
   $("#newOrderStatus").on("change", function () {
-    const status = getMainOrderStatus($(this).val());
+    const selectedStatus = $(this).val();
+
+    const status = selectedStatus
+      ? getMainOrderStatus(selectedStatus)
+      : getMainOrderStatus($(this).data("currentStatus"));
+
     const canEditTracking = canEditTrackingForStatus(status);
+
     $("#trackingNumberGroup").toggle(canEditTracking);
     $("#trackingNumberInput").prop("disabled", !canEditTracking);
   });
