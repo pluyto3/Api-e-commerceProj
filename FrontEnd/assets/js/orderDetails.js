@@ -2132,6 +2132,7 @@ function openStatusModal(orderId, currentStatus, sellerId = "") {
   const allowedNextStatuses = statusFlow[status] || [];
   const $statusSelect = $("#newOrderStatus");
 
+  $statusSelect.data("currentStatus", status);
   $statusSelect.empty();
 
   if (role === "admin" && !finalStatus) {
