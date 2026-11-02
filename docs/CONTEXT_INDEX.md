@@ -11,4 +11,6 @@ This is the **existing system** pilot for ChatGPT + Codex + GitHub. This project
 | What is required before Hostinger? | `docs/DEPLOYMENT.md` | A plan, not a deployment |
 | What changed recently? | `docs/HANDOFF.md` and Git history | Update each meaningful approved task |
 
-**Source-of-truth order:** human-approved scope and decisions; latest committed requirements/docs; verified code and executed tests; prior AI audit; chat notes. GitHub files, local files and separate AI chats do not automatically synchronize.
+**How to resolve documentation versus code:** Human-approved requirements and decisions govern **what the application is supposed to do**. Inspected source code and actual executed tests show **what it currently implements and demonstrably does**. If actual behavior differs from approved intent, record the discrepancy; neither rewrite approved requirements to match an accidental implementation nor claim the requested behavior is already implemented.
+
+**Source-of-truth order by question:** intended behavior → human-approved requirements and decisions; current implementation → inspected code and actual observed test results; current work status → reviewed GitHub commits/PRs and handoff. Earlier AI audits and chats are supporting context, not independently verified evidence. GitHub files, local changes and separate AI chats do not automatically synchronize.
