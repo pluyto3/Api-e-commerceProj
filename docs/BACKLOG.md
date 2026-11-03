@@ -25,3 +25,13 @@ Tasks are **not approved automatically** because an AI listed them. Only the hum
 - **Pending:** establish an owner-authorized disposable test environment, execute regression tests, fresh Codex review, and human acceptance. Development approval is not acceptance or release approval.
 
 **Do not publish detailed vulnerability reproduction steps or customer data in a public issue.** Consider restricting repository visibility while reviewing security-sensitive defects.
+
+## SYS-004 - Already-default address selection
+
+**Status: PROPOSED; runtime unverified; implementation not approved.**
+
+**Reported by a prior audit:** the fresh SYS-001 review identified a possible pre-existing `setDefaultAddress` defect: selecting an already-default address may clear its default flag.
+
+**Verified in code:** the controller loads the selected model, bulk-clears the user's default flags, then updates the loaded model to `true`; the same sequence exists on baseline `main`. **Inferred:** if its original flag was already true, model dirty tracking may omit restoring the persisted flag after the bulk update. **Not verified:** runtime reproduction, database outcomes and impact.
+
+Owner next action: approve separate investigation and a disposable isolated runtime environment. After approval, verify repeated selection preserves the chosen default and leaves other users unchanged, then scope any fix and regression coverage separately. No fix is included in the SYS-001 review correction.

@@ -117,9 +117,12 @@ class LocationAuthorizationTest extends TestCase
         $payload['is_default'] = true;
 
         // account.js sends form data via POST; the API also exposes PUT.
-        $response = $this->withToken($this->owner->token)
-            ->withHeader('Accept', 'application/json')
-            ->call($method, '/api/location/'.$this->address->location_id, $payload);
+        $request = $this->withToken($this->owner->token)
+            ->withHeader('Accept', 'application/json');
+        $path = '/api/location/'.$this->address->location_id;
+        $response = $method === 'PUT'
+            ? $request->put($path, $payload)
+            : $request->post($path, $payload);
 
         $updated = $this->address->fresh();
         $response->assertOk()->assertExactJson([

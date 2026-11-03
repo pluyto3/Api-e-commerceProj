@@ -1,6 +1,26 @@
 # Hanz-Go AI workflow handoff
 
-## Current handoff: SYS-001 implementation (2026-11-02)
+## Current handoff: SYS-001 fresh-review correction (2026-11-03)
+
+**Owner:** human project owner. **Implementer:** Codex. **Branch:** `feature/sys-001-address-ownership`. **Baseline:** `50268c30d4c960d1f0aa52e8f2cb839434718ebe`; correction revision is the commit containing this entry, submitted to existing draft PR #3.
+
+**Approval:** owner explicitly authorized this bounded test correction, documentation, commit and push. No database access, Laravel application commands, PHPUnit, merge or deployment is authorized in this session.
+
+**Reported by a prior audit:** fresh Codex review returned **CHANGES REQUIRED** for owner-update request construction and identified a separate possible already-default address defect.
+
+**Verified in code:** installed Laravel `MakesHttpRequests` stores `withToken()`/`withHeader()` values in default headers; low-level `call()` does not transform them. Replaced that call with `put()`/`post()` helpers, which transform the configured headers while retaining form parameters. All four PUT/POST provider cases (with/without zipcode), payloads, assertions, response shapes and validation checks remain unchanged. Checked all `BackEnd/tests` requests; no other occurrence of this low-level call problem was found. Controller and frontend inspected; neither changed.
+
+**Changed paths:** `BackEnd/tests/Feature/LocationAuthorizationTest.php`, `docs/BACKLOG.md`, `docs/TESTING.md`, `docs/HANDOFF.md`.
+
+**Executed:** PHP 8.4.8 CLI on Office PC; `php -l BackEnd/tests/Feature/LocationAuthorizationTest.php` passed (exit 0, no syntax errors); `git diff --check` and `git diff --cached --check` passed (exit 0, no whitespace errors). Separate second-pass source/diff review checked helper header handling, form parameters, unchanged providers/assertions and bounded file scope. This is same-session review, not independent QA.
+
+**Current environment:** `.env` and `vendor/autoload.php` exist (existence checks only; no secrets displayed). Earlier absence/dependency observations below describe the prior PC/session and do not establish current isolation or compatibility. **Not verified:** effective database configuration, isolation, schema, runtime test behavior and full platform compatibility. No application boot, database connection, fixture, PHPUnit, migration, seeder or reset was run. Regression tests are **NOT RUN**, not passed.
+
+**Separate proposed work:** SYS-004 in `docs/BACKLOG.md` records the already-default selection finding; runtime behavior is unverified and no fix was implemented.
+
+**Next action:** review this correction and obtain human acceptance. Database regression execution remains blocked until the owner authorizes and verifies a disposable isolated environment and its configuration/schema. Existing draft PR #3 is the update target; no new PR, merge or deployment.
+
+## Previous handoff: SYS-001 implementation (2026-11-02)
 
 **Owner:** human project owner; **implementer:** Codex.
 

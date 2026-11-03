@@ -1,6 +1,28 @@
 # Hanz-Go testing and evidence
 
-**Status (2026-11-02):** SYS-001 implementation and regression tests prepared by Codex; database tests **NOT RUN**. No test database was established or connected. Historical baseline observations below remain labeled separately from this session's evidence.
+**Historical status (2026-11-02):** SYS-001 implementation and regression tests prepared by Codex; database tests **NOT RUN**. No test database was established or connected. Historical baseline observations below remain labeled separately from this session's evidence.
+
+## SYS-001 fresh-review correction evidence (2026-11-03)
+
+This entry supersedes earlier current-environment/status statements; the 2026-11-02 logs remain historical evidence. Owner authorized only the bounded correction and non-database checks on `feature/sys-001-address-ownership` for existing draft PR #3.
+
+**Reported by a prior audit:** fresh review returned **CHANGES REQUIRED** because the owner-update test chained configured headers into low-level `call()`.
+
+**Verified in code:** installed Laravel helpers `put()` and `post()` merge/transform configured bearer and Accept headers before calling the kernel; direct `call()` does not. The correction selects these form-parameter helpers by the existing method provider. Both verbs and nullable-zipcode cases remain; no assertion, validation check, payload or response expectation was weakened. Other requests in `BackEnd/tests` use header-aware helpers; no additional instance was found.
+
+| Working directory | Exact command | Actual result |
+|---|---|---|
+| Repository root | `php -l BackEnd/tests/Feature/LocationAuthorizationTest.php` | PASS, exit 0: `No syntax errors detected in BackEnd/tests/Feature/LocationAuthorizationTest.php` |
+| Repository root | `git diff --check` | PASS, exit 0, no output |
+| Repository root | `git diff --cached --check` | PASS, exit 0, no output |
+| Repository root | `php -v` | Exit 0: PHP CLI 8.4.8, NTS Visual C++ 2022 x64 |
+| Repository root | `Test-Path BackEnd/.env`; `Test-Path BackEnd/vendor/autoload.php` | Both True; existence only, no contents displayed or application boot |
+
+Separate same-session second-pass source/diff review checked form submission, header transformation, provider cases, preserved assertions and the documentation-only scope outside the test. This is not runtime verification or independent QA.
+
+**NOT RUN:** PHPUnit, Laravel application commands, migrations, seeders, resets, database connections, browser tests or platform/dependency validation. Existing installed dependencies and `.env` do not establish safety. Effective database configuration, account isolation and schema remain **not verified**; owner authorization and disposable-environment verification are required before any database tests. No regression pass is claimed.
+
+**Separate finding:** SYS-004 is PROPOSED in `docs/BACKLOG.md`. The fresh review reports that selecting an already-default address may clear its flag. Source inspection confirms the bulk reset followed by an update on a previously loaded model, including on `main`; stale model dirty tracking is an inferred cause. Runtime behavior is **unverified**. No controller fix or additional database test was implemented or executed here.
 
 ## Historical baseline source-level observations (before SYS-001)
 - The repository has PHPUnit test scaffolding, with `BackEnd/tests/Unit/ExampleTest.php` and `BackEnd/tests/Feature/ExampleTest.php` only in the inspected test folders.
