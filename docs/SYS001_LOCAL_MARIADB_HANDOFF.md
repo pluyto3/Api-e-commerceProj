@@ -1,7 +1,7 @@
 # SYS-001: Local MariaDB test environment — cross-PC handoff
 
-**Updated:** 2026-11-03 (Philippines time)  
-**Status:** Downloaded and extracted on Office PC; **not initialized or started**. No test database or test user created. PHPUnit **not run**.  
+**Updated:** 2026-11-04 (Philippines time)  
+**Status:** Home PC standalone MariaDB system tables initialized successfully, but server **not yet started** and administrator password **not yet configured**. Office PC setup remains separate and incomplete. No SYS-001 application test database/user created; PHPUnit **not run**.  
 **Git branch:** `feature/sys-001-address-ownership`; **draft PR:** https://github.com/pluyto3/Api-e-commerceProj/pull/3  
 **Scope:** Non-sensitive notes for resuming on another computer. These notes do **not** sync local MariaDB files, configuration, databases, or credentials.
 
@@ -13,6 +13,23 @@
 - PHP syntax checks passed as previously reported, but **no PHPUnit or database-backed regression test has executed**.
 - Unrelated pre-existing default-address concern is recorded separately as proposed SYS-004 in `docs/BACKLOG.md`.
 - PR #3 must remain **draft/unmerged** until isolated regression evidence and human acceptance. No deployment approved.
+
+## Most recent checkpoint: Home PC (2026-11-04)
+
+**Owner-provided PowerShell evidence, not independently executed by ChatGPT or Codex:**
+
+- Home project folder: `C:\xampp\htdocs\Api-e-commerceProj`. On feature branch, user fast-forwarded from commit `50268c3` to `8d323f4` and received the cross-PC handoff.
+- Downloaded `mariadb-11.4.13-winx64.zip`, size **95,024,126 bytes**. SHA-256 computed as `D62986D433EEEBFDE218560B276103831604A61E929E87F1A17F5AEBD80257E2` and matched the checksum previously supplied; independently confirm the checksum with the official distribution for any additional download.
+- Extracted ZIP to `%LOCALAPPDATA%\HanzGo\SYS001-MariaDB\mariadb-11.4.13-winx64` on the Home PC. Verified the four executables `mariadbd.exe`, `mariadb-install-db.exe`, `mariadb.exe`, `mariadb-admin.exe`.
+- Created local `logs` and `tmp` folders. Original `sys001-bootstrap.ini` used unsupported shared-memory options; first initialization failed. Error log identified unrecognized `--shared-memory` and `shared-memory-base-name`. **Do not reuse the old bootstrap configuration.**
+- Created corrected `sys001-namedpipe.ini` with `skip-networking`, `named-pipe`, `socket=HanzGoSYS001Bootstrap`, dedicated basedir/datadir/tmpdir and local error log; server option validation exited 0 and confirmed `named-pipe=TRUE`, `skip-networking=TRUE`, correct unique socket name.
+- The failed initialization had left an empty `data` directory. After confirming it empty, a **one-time retry** using `mariadb-install-db.exe --datadir=<dedicated data> --port=33307 --config=<corrected ini> --skip-networking` reported: "Creation of the database was successful", **exit code 0**.
+- **No subsequent user-run startup or administrator password commands have been reported.** The Home PC server is not verified running; avoid claiming root authentication is secured. Do **not** repeat initialization on that data directory.
+- Two pre-existing `mysqld.exe` processes were previously observed on Home PC. Do not stop, modify or reconfigure them.
+
+**Next action if resuming on Home PC:** independently verify current process state, then securely start the already-initialized standalone instance with TCP disabled and establish administrator authentication via its named pipe. Validate carefully before enabling TCP. Test DB/user creation, migrations and PHPUnit remain separate stages requiring authorization.
+
+**Next action if resuming on Office PC:** the Home PC's initialized `data` and `sys001-namedpipe.ini` do **not** appear on the Office PC via GitHub. The Office PC only previously confirmed ZIP extraction and executable presence; `logs`/`tmp` state was not subsequently confirmed. Inspect Office paths and running services read-only, then configure and initialize a **new Office-local** standalone instance through the supported named-pipe bootstrap procedure. Do not assume earlier Office state includes Home work; do not copy or commit `data`, configs or credentials.
 
 ## Office PC: last owner-confirmed MariaDB checkpoint
 
