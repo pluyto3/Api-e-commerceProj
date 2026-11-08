@@ -28,15 +28,7 @@ function resendVerificationEmail(username) {
     return;
   }
 
-  Swal.fire({
-    title: "Sending Verification Email",
-    text: "Please wait...",
-    allowOutsideClick: false,
-    allowEscapeKey: false,
-    didOpen: () => {
-      Swal.showLoading();
-    },
-  });
+  showOverlaySkeleton();
 
   $.ajax({
     type: "POST",
@@ -53,6 +45,7 @@ function resendVerificationEmail(username) {
     },
 
     success: function (res) {
+      hideOverlaySkeleton();
       Swal.fire({
         icon: "success",
         title: "Email Sent",
@@ -64,6 +57,7 @@ function resendVerificationEmail(username) {
     },
 
     error: function (xhr) {
+      hideOverlaySkeleton();
       let errorMessage =
         "Unable to resend verification email. Please try again.";
 
@@ -82,19 +76,15 @@ function resendVerificationEmail(username) {
         confirmButtonText: "OK",
       });
     },
+    // Hide skeleton loader on complete
+    complete: function () {
+      hideOverlaySkeleton();
+    },
   });
 }
 
 $(document).ready(function () {
   load_user();
-
-  $(document).ajaxStart(function () {
-    $("#wait").css("display", "block");
-  });
-
-  $(document).ajaxComplete(function () {
-    $("#wait").css("display", "none");
-  });
 
   $("#loginForm").on("submit", function (e) {
     e.preventDefault();
@@ -116,6 +106,9 @@ $(document).ready(function () {
     var usr = $("#username").val().trim();
     var pwd = $("#password").val();
 
+    // Show skeleton loader
+    showOverlaySkeleton();
+
     $.ajax({
       type: "POST",
       url: ip + "/api/login",
@@ -132,6 +125,8 @@ $(document).ready(function () {
       },
 
       success: function (res) {
+        hideOverlaySkeleton();
+
         const cookieOptions = {
           expires: 1,
           path: "/",
@@ -163,6 +158,7 @@ $(document).ready(function () {
       },
 
       error: function (xhr) {
+        hideOverlaySkeleton();
         let errorMessage = "Access Denied: Invalid username or password.";
 
         if (xhr.responseJSON) {
@@ -201,6 +197,10 @@ $(document).ready(function () {
           confirmButtonText: "OK",
           footer: '<a href="forgot.html">Forgot Password?</a>',
         });
+      },
+      // Hide skeleton loader on complete
+      complete: function () {
+        hideOverlaySkeleton();
       },
     });
   });

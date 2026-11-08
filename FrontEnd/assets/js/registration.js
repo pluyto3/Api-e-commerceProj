@@ -1,12 +1,4 @@
 $(document).ready(function () {
-  $(document).ajaxStart(function () {
-    $("#wait").css("display", "block");
-  });
-
-  $(document).ajaxComplete(function () {
-    $("#wait").css("display", "none");
-  });
-
   $("#signupForm").on("submit", function (e) {
     e.preventDefault();
 
@@ -37,6 +29,9 @@ $(document).ready(function () {
       return;
     }
 
+    // Show skeleton loader
+    showOverlaySkeleton();
+
     $.ajax({
       type: "POST",
       url: `${ip}/api/register`,
@@ -57,8 +52,9 @@ $(document).ready(function () {
       }),
 
       success: function (res) {
+        hideOverlaySkeleton();
         $(".error-message").text("");
-        $(".form-control").removeClass("is-invalid");
+        $("#signupForm .is-invalid").removeClass("is-invalid");
 
         $("#signupForm")[0].reset();
 
@@ -72,8 +68,9 @@ $(document).ready(function () {
       },
 
       error: function (xhr) {
+        hideOverlaySkeleton();
         $(".error-message").text("");
-        $(".form-control").removeClass("is-invalid");
+        $("#signupForm .is-invalid").removeClass("is-invalid");
 
         if (xhr.status === 422 && xhr.responseJSON?.errors) {
           const errors = xhr.responseJSON.errors;
@@ -102,6 +99,10 @@ $(document).ready(function () {
             icon: "error",
           });
         }
+      },
+      // Hide skeleton loader on complete
+      complete: function () {
+        hideOverlaySkeleton();
       },
     });
   });

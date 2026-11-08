@@ -1,0 +1,472 @@
+/* =========================
+   HANZ-GO SKELETON LOADER
+========================= */
+
+:root {
+  --skeleton-base: #e8edf2;
+  --skeleton-highlight: #f7f9fb;
+  --skeleton-radius: 12px;
+}
+
+.skeleton-line {
+  height: 14px;
+  margin-bottom: 10px;
+}
+
+@keyframes skeleton-wave {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton-hidden {
+  display: none !important;
+}
+
+.skeleton-block,
+.skeleton-line,
+.skeleton-avatar,
+.skeleton-image,
+.skeleton-button {
+  position: relative;
+  overflow: hidden;
+  background: var(--skeleton-base);
+  border-radius: var(--skeleton-radius);
+}
+
+.skeleton-block::before,
+.skeleton-line::before,
+.skeleton-avatar::before,
+.skeleton-image::before,
+.skeleton-button::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.75) 50%,
+    transparent 100%
+  );
+  animation: skeleton-wave 1.4s infinite;
+}
+
+@keyframes skeleton-wave {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Generic pieces */
+.skeleton-line {
+  height: 14px;
+  margin-bottom: 10px;
+}
+
+.skeleton-line.sm {
+  height: 10px;
+}
+
+.skeleton-line.lg {
+  height: 18px;
+}
+
+.skeleton-line.w-25 {
+  width: 25%;
+}
+.skeleton-line.w-40 {
+  width: 40%;
+}
+.skeleton-line.w-50 {
+  width: 50%;
+}
+.skeleton-line.w-60 {
+  width: 60%;
+}
+.skeleton-line.w-75 {
+  width: 75%;
+}
+.skeleton-line.w-80 {
+  width: 80%;
+}
+.skeleton-line.w-100 {
+  width: 100%;
+}
+
+.skeleton-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+}
+
+.skeleton-image {
+  width: 100%;
+  height: 180px;
+  border-radius: 16px;
+}
+
+.skeleton-button {
+  width: 120px;
+  height: 42px;
+  border-radius: 12px;
+}
+
+/* Product card skeleton */
+.skeleton-product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 20px;
+}
+
+.skeleton-product-card {
+  background: #ffffff;
+  border: 1px solid #e7edf3;
+  border-radius: 18px;
+  padding: 14px;
+  box-shadow: 0 8px 20px rgba(20, 32, 56, 0.06);
+}
+
+.skeleton-product-info {
+  margin-top: 14px;
+}
+
+/* Table skeleton */
+.skeleton-table {
+  width: 100%;
+  background: #fff;
+  border-radius: 16px;
+  padding: 16px;
+  border: 1px solid #e7edf3;
+}
+
+.skeleton-table-row {
+  display: grid;
+  grid-template-columns: 1.2fr 2fr 1fr 1fr 1fr;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid #eef3f7;
+}
+
+.skeleton-table-row:last-child {
+  border-bottom: none;
+}
+
+/* Card stats skeleton */
+.skeleton-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.skeleton-stat-card {
+  background: #fff;
+  border: 1px solid #e7edf3;
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: 0 8px 20px rgba(20, 32, 56, 0.06);
+}
+
+/* Auth overlay */
+.skeleton-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+}
+
+.skeleton-auth-card {
+  width: 100%;
+  max-width: 420px;
+  background: #fff;
+  border-radius: 22px;
+  padding: 28px;
+  box-shadow: 0 18px 45px rgba(20, 32, 56, 0.1);
+  border: 1px solid #e7edf3;
+}
+
+.skeleton-auth-logo {
+  width: 60px;
+  height: 60px;
+  border-radius: 16px;
+  margin: 0 auto 18px;
+  background: var(--skeleton-base);
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-auth-logo::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.75) 50%,
+    transparent 100%
+  );
+  animation: skeleton-wave 1.4s infinite;
+}
+
+@media (max-width: 600px) {
+  .skeleton-product-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .skeleton-table-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ============================================
+   HANZ-GO AUTHENTICATION SKELETON
+   Matches the actual Login / Register layout
+============================================ */
+
+/* Keep the original card geometry */
+.auth-container.hg-skeleton-loading {
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Shared shimmering wave */
+@keyframes hg-auth-wave {
+  from {
+    background-position: 200% 0;
+  }
+
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* Apply the same animation to placeholders */
+.auth-container.hg-skeleton-loading .logo-box::after,
+.auth-container.hg-skeleton-loading .auth-title::after,
+.auth-container.hg-skeleton-loading .auth-subtitle::after,
+.auth-container.hg-skeleton-loading .auth-tabs a,
+.auth-container.hg-skeleton-loading .form-group label,
+.auth-container.hg-skeleton-loading .form-group input,
+.auth-container.hg-skeleton-loading .form-group select,
+.auth-container.hg-skeleton-loading .auth-options a,
+.auth-container.hg-skeleton-loading .auth-options label::before,
+.auth-container.hg-skeleton-loading .auth-options label::after,
+.auth-container.hg-skeleton-loading .auth-btn,
+.auth-container.hg-skeleton-loading .bottom-link::after {
+  background-image: linear-gradient(
+    100deg,
+    #e5ebf3 20%,
+    #f8faff 42%,
+    #e5ebf3 64%
+  ) !important;
+
+  background-size: 220% 100% !important;
+  animation: hg-auth-wave 1.45s ease-in-out infinite;
+}
+
+/* ============================================
+   LOGO PLACEHOLDER
+============================================ */
+
+.auth-container.hg-skeleton-loading .logo-box {
+  position: relative;
+}
+
+.auth-container.hg-skeleton-loading .logo-box img {
+  opacity: 0;
+}
+
+.auth-container.hg-skeleton-loading .logo-box::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+
+  width: 82px;
+  height: 82px;
+  border-radius: 16px;
+}
+
+/* Match the smaller Registration logo */
+.register-page .auth-container.hg-skeleton-loading .logo-box::after {
+  width: 58px;
+  height: 58px;
+}
+
+/* ============================================
+   HEADING AND SUBTITLE
+============================================ */
+
+.auth-container.hg-skeleton-loading .auth-title,
+.auth-container.hg-skeleton-loading .auth-subtitle {
+  position: relative;
+  color: transparent !important;
+}
+
+.auth-container.hg-skeleton-loading .auth-title::after,
+.auth-container.hg-skeleton-loading .auth-subtitle::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 8px;
+}
+
+.auth-container.hg-skeleton-loading .auth-title::after {
+  width: 38%;
+  height: 65%;
+}
+
+.auth-container.hg-skeleton-loading .auth-subtitle::after {
+  width: 55%;
+  height: 75%;
+}
+
+/* ============================================
+   LOGIN / REGISTER TABS
+============================================ */
+
+.auth-container.hg-skeleton-loading .auth-tabs a,
+.auth-container.hg-skeleton-loading .auth-tabs a.active {
+  color: transparent !important;
+  box-shadow: none !important;
+}
+
+/* ============================================
+   FORM LABELS AND INPUTS
+============================================ */
+
+.auth-container.hg-skeleton-loading .form-group label {
+  width: 34%;
+  min-height: 14px;
+  color: transparent !important;
+  border-radius: 5px;
+}
+
+/* Keep the original input dimensions */
+.auth-container.hg-skeleton-loading .form-group input,
+.auth-container.hg-skeleton-loading .form-group select {
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+  text-shadow: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+  caret-color: transparent !important;
+}
+
+.auth-container.hg-skeleton-loading .form-group input::placeholder {
+  color: transparent !important;
+  opacity: 0;
+}
+
+/* Hide password eye icons during loading */
+.auth-container.hg-skeleton-loading .password-toggle {
+  opacity: 0;
+}
+
+/* Validation messages aren't shown during loading */
+.auth-container.hg-skeleton-loading .error-message {
+  visibility: hidden;
+}
+
+/* ============================================
+   REMEMBER ME / TERMS / FORGOT PASSWORD
+============================================ */
+
+.auth-container.hg-skeleton-loading .auth-options {
+  color: transparent !important;
+}
+
+.auth-container.hg-skeleton-loading .auth-options label {
+  position: relative;
+  color: transparent !important;
+}
+
+.auth-container.hg-skeleton-loading .auth-options input[type="checkbox"] {
+  opacity: 0;
+}
+
+.auth-container.hg-skeleton-loading .auth-options label::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+}
+
+.auth-container.hg-skeleton-loading .auth-options label::after {
+  content: "";
+  position: absolute;
+  left: 24px;
+  top: 4px;
+  width: 90px;
+  height: 12px;
+  border-radius: 5px;
+}
+
+.register-page .auth-container.hg-skeleton-loading .auth-options label::after {
+  width: 175px;
+}
+
+.auth-container.hg-skeleton-loading .auth-options a {
+  display: inline-block;
+  width: 110px;
+  height: 14px;
+  border-radius: 6px;
+  color: transparent !important;
+  font-size: 0;
+}
+
+/* ============================================
+   LOGIN / SIGN UP BUTTON
+============================================ */
+
+.auth-container.hg-skeleton-loading .auth-btn {
+  color: transparent !important;
+  text-shadow: none !important;
+  box-shadow: none !important;
+}
+
+/* ============================================
+   BOTTOM NAVIGATION
+============================================ */
+
+.auth-container.hg-skeleton-loading .bottom-link {
+  position: relative;
+  color: transparent !important;
+}
+
+.auth-container.hg-skeleton-loading .bottom-link a {
+  color: transparent !important;
+}
+
+.auth-container.hg-skeleton-loading .bottom-link::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+
+  width: 55%;
+  height: 12px;
+  border-radius: 6px;
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .auth-container.hg-skeleton-loading *,
+  .auth-container.hg-skeleton-loading *::before,
+  .auth-container.hg-skeleton-loading *::after {
+    animation: none !important;
+  }
+}
