@@ -23,12 +23,13 @@ class AuthController extends Controller
     /**
      * User registration
      */
-    public function register(Request $request){
+    public function register(Request $request)
+    {
 
         $validator = Validator::make($request->all(), [
             'username' => 'required|string|max:255|unique:users,username',
             'email' => 'required|string|email|max:255|unique:users,email',
-            'phone_number' =>'required|string|max:13|unique:users,phone_number',
+            'phone_number' => 'required|string|max:13|unique:users,phone_number',
             'password' => 'required|string|min:8|confirmed',
             'fullname' => 'required|string|max:255',
             'role' => 'required|string|in:user,seller',
@@ -66,7 +67,6 @@ class AuthController extends Controller
         // Send verification email
         try {
             $this->sendVerificationEmail($user);
-
         } catch (\Throwable $e) {
 
             \Log::error(
@@ -99,9 +99,10 @@ class AuthController extends Controller
 
     /**
      * PHP Mailer for sending verification email
-     */ 
-    public function adminCreateAccount(Request $request) {
-        
+     */
+    public function adminCreateAccount(Request $request)
+    {
+
         // Check admin authentication
         $token = $request->bearerToken();
 
@@ -172,11 +173,12 @@ class AuthController extends Controller
     /**
      * PHP Mailer for sending verification email
      */
-    private function sendVerificationEmail($user) {
+    private function sendVerificationEmail($user)
+    {
 
         $verifyUrl = url(
             '/api/verify-email/' .
-            urlencode($user->verification_token)
+                urlencode($user->verification_token)
         );
 
         $fullname = htmlspecialchars(
@@ -226,7 +228,8 @@ class AuthController extends Controller
     /**
      * Resend Verification Email
      */
-    public function resendVerificationEmail(Request $request){
+    public function resendVerificationEmail(Request $request)
+    {
 
         $validator = Validator::make($request->all(), [
             'username' => 'required|string|max:255',
@@ -253,7 +256,7 @@ class AuthController extends Controller
         if (!is_null($user->email_verified_at)) {
             return response()->json([
                 'msg' =>
-                    'Your email is already verified. You may log in.'
+                'Your email is already verified. You may log in.'
             ], 400);
         }
 
@@ -268,9 +271,8 @@ class AuthController extends Controller
 
             return response()->json([
                 'msg' =>
-                    'A new verification email has been sent. Please check your inbox.'
+                'A new verification email has been sent. Please check your inbox.'
             ], 200);
-
         } catch (\Throwable $e) {
 
             \Log::error(
@@ -284,7 +286,7 @@ class AuthController extends Controller
 
             return response()->json([
                 'msg' =>
-                    'Unable to send the verification email. Please try again later.'
+                'Unable to send the verification email. Please try again later.'
             ], 500);
         }
     }
@@ -292,37 +294,56 @@ class AuthController extends Controller
     /**
      * Verify Email
      */
-    public function verifyEmail(Request $request, $token){
 
-        $user = User::where('verification_token', $token)->first();
+    public function verifyEmail(Request $request, $token)
+    {
+        $loginUrl = rtrim(
+            config('app.frontend_url'),
+            '/'
+        ) . '/login.html';
+
+        $user = User::where(
+            'verification_token',
+            $token
+        )->first();
 
         if (!$user) {
-            return response()->json([
-                'msg' => 'Invalid or expired verification token.'
-            ], 400);
+            return response()->view(
+                'auth.verify-email-result',
+                [
+                    'verified' => false,
+                    'loginUrl' => $loginUrl,
+                ],
+                400
+            )
+                ->header('Cache-Control', 'no-store')
+                ->header('Referrer-Policy', 'no-referrer');
         }
 
-            // Check if already verified
-        if ($user->email_verified_at) {
-            return response()->json([
-                'msg' => 'Email is already verified.'
-            ], 400);
+        if (!$user->email_verified_at) {
+            $user->email_verified_at = now();
+            $user->verification_token = null;
+            $user->save();
         }
 
-        $user->email_verified_at = now();
-        $user->verification_token = null; // Clear the token
-        $user->save();
-
-        return response()->json([
-            'msg' => 'Email successfully verified! You can now log in.',
-        ], 200);
+        return response()->view(
+            'auth.verify-email-result',
+            [
+                'verified' => true,
+                'loginUrl' => $loginUrl,
+            ],
+            200
+        )
+            ->header('Cache-Control', 'no-store')
+            ->header('Referrer-Policy', 'no-referrer');
     }
 
     /**
      * Reset Password
      */
-    public function forgotPassword(Request $request) {
-        
+    public function forgotPassword(Request $request)
+    {
+
         $validator = Validator::make($request->all(), [
             'email' => 'required|string|email|max:255|exists:users,email',
         ], [
@@ -364,13 +385,14 @@ class AuthController extends Controller
     /**
      * PHP Mailer for sending reset email
      */
-    public function sendResetEmail($user) {
+    public function sendResetEmail($user)
+    {
 
         try {
 
             $frontendUrl = rtrim(config('app.frontend_url'), '/');
             $resetUrl = $frontendUrl . '/resetPassword.html?token=' . urlencode($user->reset_token);
-            
+
             $fullname = htmlspecialchars($user->fullname, ENT_QUOTES, 'UTF-8');
 
             $body = "
@@ -391,17 +413,17 @@ class AuthController extends Controller
                 $message->to($user->email, $user->fullname)
                     ->subject('Reset Your Password');
             });
-
         } catch (\Throwable $e) {
             \Log::error('Reset email could not be sent: ' . $e->getMessage());
         }
     }
 
     /**
-    * PHP Mailer for sending reset email
-    */
-    
-    public function resetPassword(Request $request, $token) {
+     * PHP Mailer for sending reset email
+     */
+
+    public function resetPassword(Request $request, $token)
+    {
         $user = User::where('reset_token', $token)->first();
 
         if (!$user) {
@@ -438,7 +460,8 @@ class AuthController extends Controller
     /**
      * User login
      */
-    public function login(Request $request){
+    public function login(Request $request)
+    {
         $request->validate([
             'username' => 'required|string',
             'password' => 'required|string',
@@ -449,7 +472,7 @@ class AuthController extends Controller
         if (!$user) {
             return response()->json(['msg' => 'Username does not exist.'], 400);
         }
-        
+
         if (!Hash::check($request->password, $user->password)) {
             return response()->json(['msg' => 'Wrong password.'], 401);
         }
@@ -482,32 +505,30 @@ class AuthController extends Controller
     /**
      * User logout
      */
-    public function logout(Request $request){
+    public function logout(Request $request)
+    {
         $tokenh = $request->bearerToken();
-        if($tokenh){
+        if ($tokenh) {
             $token = $request->token;
-            if($tokenh == $token){
+            if ($tokenh == $token) {
                 $user = User::where('token', $token)->first();
-                if($user){
+                if ($user) {
                     $user->token = '';
                     $user->save();
                     return response()->json([
                         'msg' => 'Thank you.'
                     ], 200);
-                }
-                else {
+                } else {
                     return response()->json([
                         'msg' => 'Access Denied'
                     ], 400);
                 }
-            }
-            else{
+            } else {
                 return response()->json([
                     'msg' => 'Invalid Token.'
                 ], 400);
             }
-        }
-        else {
+        } else {
             return response()->json([
                 'msg' => 'No Token Provided.'
             ], 400);
@@ -517,16 +538,17 @@ class AuthController extends Controller
     /**
      * Get Account by ID
      */
-    public function getAccount_id(Request $request, $id) {
+    public function getAccount_id(Request $request, $id)
+    {
         $token = $request->bearerToken();
-        if($token){
+        if ($token) {
             $user = User::where('token', $token)->first();
-            if($user && $user->role === 'admin'){
+            if ($user && $user->role === 'admin') {
                 $account = User::find($id);
-                if($account->role === 'admin'){
+                if ($account->role === 'admin') {
                     return response()->json($account, 200);
-                } else if ($account->role === 'seller'){
-                    return response()->json($account, 200); 
+                } else if ($account->role === 'seller') {
+                    return response()->json($account, 200);
                 } else if ($account->role === 'user') {
                     return response()->json($account, 200);
                 } else {
@@ -547,13 +569,14 @@ class AuthController extends Controller
     /**
      * Get Account by Username profile section
      */
-    public function getAccount_username(Request $request, $username) {
+    public function getAccount_username(Request $request, $username)
+    {
         $token = $request->bearerToken();
-        if($token){
+        if ($token) {
             $user = User::where('token', $token)->first();
-            if($user){
+            if ($user) {
                 $account = User::where('username', $username)->first();
-                if($account){
+                if ($account) {
                     return response()->json($account, 200);
                 } else {
                     return response()->json(['message' => 'Account not Found'], 404);
@@ -573,9 +596,10 @@ class AuthController extends Controller
     /**
      * Update Account by ID
      */
-    public function updateAccount(Request $request, $id) {
+    public function updateAccount(Request $request, $id)
+    {
         $token = $request->bearerToken();
-        if($token) {
+        if ($token) {
 
             $user = User::where('token', $token)->first();
 
@@ -583,49 +607,48 @@ class AuthController extends Controller
                 return response()->json([
                     'msg' => 'Not Authorized. Only Admins can Update Accounts'
                 ], 403);
+            }
 
-                }
+            $account = User::find($id);
 
-                $account = User::find($id);
+            if (!$account) {
+                return response()->json(['msg' => 'Account not found.'], 404);
+            }
 
-                if (!$account) {
-                return response()->json(['msg' => 'Account not found.'], 404);  
-                }
+            $validated = $request->validate([
+                'editUsername' => 'sometimes|string|max:255|unique:users,username,' . $account->user_id . ',user_id',
+                'editPhone_number' => 'sometimes|string|max:13|unique:users,phone_number,' . $account->user_id . ',user_id',
+                'editEmail'    => 'sometimes|string|email|max:255|unique:users,email,' . $account->user_id . ',user_id',
+                'editFullname' => 'sometimes|string|max:255',
+                'editRole'     => 'sometimes|string|in:admin,seller,user',
+                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:102400'
+            ], [
+                'editUsername.unique' =>
+                'This username is already taken.',
 
-                $validated = $request->validate([
-                    'editUsername' => 'sometimes|string|max:255|unique:users,username,' . $account->user_id . ',user_id',
-                    'editPhone_number' => 'sometimes|string|max:13|unique:users,phone_number,' . $account->user_id . ',user_id',
-                    'editEmail'    => 'sometimes|string|email|max:255|unique:users,email,' . $account->user_id . ',user_id',
-                    'editFullname' => 'sometimes|string|max:255',
-                    'editRole'     => 'sometimes|string|in:admin,seller,user',
-                    'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:102400'
-                ], [
-                    'editUsername.unique' =>
-                        'This username is already taken.',
+                'editEmail.unique' =>
+                'This email is already registered.',
 
-                    'editEmail.unique' =>
-                        'This email is already registered.',
+                'editPhone_number.unique' =>
+                'This phone number is already registered.',
 
-                    'editPhone_number.unique' =>
-                        'This phone number is already registered.',
+                'editRole.in' =>
+                'Role must be either Admin, Seller, or Customer.',
+            ]);
 
-                    'editRole.in' =>
-                        'Role must be either Admin, Seller, or Customer.',
-                ]);
+            $account->username = $request->editUsername;
+            $account->phone_number = $request->editPhone_number;
+            $account->email = $request->editEmail;
+            $account->fullname = $request->editFullname;
+            $account->role = $request->editRole;
+            $account->save();
 
-                $account->username = $request->editUsername;
-                $account->phone_number = $request->editPhone_number;
-                $account->email = $request->editEmail;
-                $account->fullname = $request->editFullname;
-                $account->role = $request->editRole;
-                $account->save();
-
-                return response()->json([
-                    'msg' => 'Account info updated successfully.',
-                    'user' => $account->only(['user_id', 'username', 'email', 'fullname', 'role']),
-                    'status' => 200,
-                ]);
-        } else {    
+            return response()->json([
+                'msg' => 'Account info updated successfully.',
+                'user' => $account->only(['user_id', 'username', 'email', 'fullname', 'role']),
+                'status' => 200,
+            ]);
+        } else {
             return response()->json([
                 'msg' => 'No Token Provided.'
             ], 400);
@@ -682,13 +705,13 @@ class AuthController extends Controller
             ],
         ], [
             'username.unique' =>
-                'This username is already taken.',
+            'This username is already taken.',
 
             'phone_number.unique' =>
-                'This phone number is already registered.',
+            'This phone number is already registered.',
 
             'password.confirmed' =>
-                'Password confirmation does not match.',
+            'Password confirmation does not match.',
         ]);
 
         if ($validator->fails()) {
@@ -728,7 +751,8 @@ class AuthController extends Controller
     /**
      * Update Image Accounts
      */
-    public function updateImageAccount(Request $request, $id){
+    public function updateImageAccount(Request $request, $id)
+    {
         try {
             $token = $request->bearerToken();
 
@@ -775,7 +799,6 @@ class AuthController extends Controller
                 'user' => $account->only(['user_id', 'username', 'email', 'fullname', 'role', 'image']),
                 'status' => 200,
             ], 200);
-
         } catch (\Exception $e) {
             return response()->json([
                 'msg' => 'Server Error: ' . $e->getMessage(),
@@ -904,7 +927,8 @@ class AuthController extends Controller
     /**
      * Get all Admin accounts
      */
-    public function getAdmins(){
+    public function getAdmins()
+    {
 
         $admins = User::where('role', 'admin')->get([
             'user_id',
@@ -925,7 +949,8 @@ class AuthController extends Controller
     /**
      * Get All Seller Accounts
      */
-    public function getSellers(){
+    public function getSellers()
+    {
         $sellers = User::where('role', 'seller')->get([
             'user_id',
             'username',
@@ -945,7 +970,8 @@ class AuthController extends Controller
     /**
      * Get All Users Accounts
      */
-    public function getUsers(){
+    public function getUsers()
+    {
 
         $users = User::where('role', 'user')->get([
             'user_id',
@@ -966,7 +992,8 @@ class AuthController extends Controller
     /**
      * Get account tables and counts in one request.
      */
-    public function accountsSummary(){
+    public function accountsSummary()
+    {
 
         $columns = ['user_id', 'username', 'email', 'fullname', 'phone_number', 'role', 'image', 'is_active',];
         $admins = User::where('role', 'admin')->get($columns);
@@ -987,7 +1014,8 @@ class AuthController extends Controller
     /**
      * Get All Account Counts
      */
-    public function countAccounts(){
+    public function countAccounts()
+    {
 
         $totalAccounts = User::count();
 
@@ -999,8 +1027,9 @@ class AuthController extends Controller
     /**
      * Get All Admin Counts
      */
-    public function countAdmins(){
-        
+    public function countAdmins()
+    {
+
         $totalAdmins = User::where('role', 'admin')->count();
 
         return response()->json([
@@ -1011,8 +1040,9 @@ class AuthController extends Controller
     /**
      * Get All Seller Counts
      */
-    public function countSellers(){
-        
+    public function countSellers()
+    {
+
         $totalSellers = User::where('role', 'seller')->count();
 
         return response()->json([
@@ -1023,8 +1053,9 @@ class AuthController extends Controller
     /**
      * Get All Users Counts
      */
-    public function countUsers(){
-        
+    public function countUsers()
+    {
+
         $totalUsers = User::where('role', 'user')->count();
 
         return response()->json([
@@ -1035,8 +1066,9 @@ class AuthController extends Controller
     /**
      * Get All Categories Counts
      */
-    public function countCategories(){
-        
+    public function countCategories()
+    {
+
         $totalCategories = Category::count();
 
         return response()->json([
@@ -1047,8 +1079,9 @@ class AuthController extends Controller
     /**
      * Get All Brand Counts
      */
-    public function countBrands(){
-        
+    public function countBrands()
+    {
+
         $totalBrands = Brands::count();
 
         return response()->json([
@@ -1059,8 +1092,9 @@ class AuthController extends Controller
     /**
      * Get All Order Counts
      */
-    public function countCheckout(){
-        
+    public function countCheckout()
+    {
+
         $totalCheckout = Checkout::count();
 
         return response()->json([
@@ -1071,7 +1105,8 @@ class AuthController extends Controller
     /**
      * Backward-compatible alias for legacy calls
      */
-    public function checkoutOrders(){
+    public function checkoutOrders()
+    {
         return $this->countCheckout();
     }
 
@@ -1079,7 +1114,8 @@ class AuthController extends Controller
      * Role Based Counts
      */
 
-    public function counts(Request $request){
+    public function counts(Request $request)
+    {
         $token = $request->bearerToken();
         $user = User::where('token', $token)->first();
 
@@ -1113,7 +1149,7 @@ class AuthController extends Controller
             $data['brands'] = Brands::count();
             $data['users'] = User::where('role', 'user')->count();
             $data['total_products'] = Product::count();
-            
+
             // Admin sees ALL orders
             $data['total_orders'] = Checkout::count();
             $data['pending_orders'] = Checkout::where(function ($query) {
@@ -1242,54 +1278,54 @@ class AuthController extends Controller
         $hasImportantRecords =
             // Customer/order history
             DB::table('checkouts')
-                ->where('user_id', $account->user_id)
-                ->exists()
+            ->where('user_id', $account->user_id)
+            ->exists()
 
             || DB::table('orders')
-                ->where('user_id', $account->user_id)
-                ->exists()
+            ->where('user_id', $account->user_id)
+            ->exists()
 
             || DB::table('support_tickets')
-                ->where('user_id', $account->user_id)
-                ->exists()
+            ->where('user_id', $account->user_id)
+            ->exists()
 
             // Seller products/order history
             || DB::table('products')
-                ->where('seller_id', $account->user_id)
-                ->exists()
+            ->where('seller_id', $account->user_id)
+            ->exists()
 
             || DB::table('checkout_items')
-                ->where('seller_id', $account->user_id)
-                ->exists()
+            ->where('seller_id', $account->user_id)
+            ->exists()
 
             || DB::table('brands')
-                ->where('seller_id', $account->user_id)
-                ->exists()
+            ->where('seller_id', $account->user_id)
+            ->exists()
 
             || DB::table('categories')
-                ->where('seller_id', $account->user_id)
-                ->exists()
+            ->where('seller_id', $account->user_id)
+            ->exists()
 
             || DB::table('product_edit_requests')
-                ->where('seller_id', $account->user_id)
-                ->exists()
+            ->where('seller_id', $account->user_id)
+            ->exists()
 
             // Admin approval/audit history
             || DB::table('brands')
-                ->where('approved_by', $account->user_id)
-                ->exists()
+            ->where('approved_by', $account->user_id)
+            ->exists()
 
             || DB::table('categories')
-                ->where('approved_by', $account->user_id)
-                ->exists()
+            ->where('approved_by', $account->user_id)
+            ->exists()
 
             || DB::table('products')
-                ->where('approved_by', $account->user_id)
-                ->exists()
+            ->where('approved_by', $account->user_id)
+            ->exists()
 
             || DB::table('checkouts')
-                ->where('cancelled_by', $account->user_id)
-                ->exists();
+            ->where('cancelled_by', $account->user_id)
+            ->exists();
 
         if ($hasImportantRecords) {
             return response()->json([
@@ -1421,7 +1457,7 @@ class AuthController extends Controller
         */
 
         $orderId = $validated['order_id'] ?? null;
-        
+
         if ($orderId && !$authenticatedUser) {
             return response()->json([
                 'msg' => 'Please log in before submitting an order-related concern.',
@@ -1456,7 +1492,7 @@ class AuthController extends Controller
                     'errors' => [
                         'order_id' => [
                             $authenticatedUser &&
-                            strtolower((string) $authenticatedUser->role) === 'user'
+                                strtolower((string) $authenticatedUser->role) === 'user'
                                 ? 'The selected order could not be found in your account.'
                                 : 'The selected order could not be found.',
                         ],
@@ -1601,8 +1637,8 @@ class AuthController extends Controller
 
             $orderHtml = $ticket->order_id
                 ? '<p><strong>Order Number:</strong> #' .
-                    intval($ticket->order_id) .
-                    '</p>'
+                intval($ticket->order_id) .
+                '</p>'
                 : '';
 
             $body = "
@@ -1643,9 +1679,9 @@ class AuthController extends Controller
                         )
                         ->subject(
                             '[' .
-                            $ticket->ticket_number .
-                            '] Hanz-Go Support: ' .
-                            $ticket->subject
+                                $ticket->ticket_number .
+                                '] Hanz-Go Support: ' .
+                                $ticket->subject
                         );
                 }
             );
@@ -1657,9 +1693,9 @@ class AuthController extends Controller
         } catch (\Throwable $emailError) {
             \Log::error(
                 'Support ticket email failed for ' .
-                $ticket->ticket_number .
-                ': ' .
-                $emailError->getMessage()
+                    $ticket->ticket_number .
+                    ': ' .
+                    $emailError->getMessage()
             );
         }
 
@@ -1699,17 +1735,17 @@ class AuthController extends Controller
                     'Support ticket notification not sent: admin email was not found in users table.',
                     [
                         'ticket_number' =>
-                            $ticket->ticket_number,
+                        $ticket->ticket_number,
 
                         'contact_admin_email' =>
-                            env('CONTACT_ADMIN_EMAIL'),
+                        env('CONTACT_ADMIN_EMAIL'),
                     ]
                 );
             }
         } catch (\Throwable $notificationError) {
             \Log::error(
                 'Support ticket FCM notification failed: ' .
-                $notificationError->getMessage()
+                    $notificationError->getMessage()
             );
         }
 
@@ -1731,4 +1767,4 @@ class AuthController extends Controller
             ],
         ], 201);
     }
-}   
+}
