@@ -30,39 +30,43 @@ use App\Http\Controllers\SupportTicketController;
 
 // Authentication Routes
 Route::controller(AuthController::class)->group(function () {
-  Route::post('/register', 'register'); // Register a new user
-  Route::post('/login', 'login'); // Login an existing user 
-  Route::post('/logout', 'logout'); // Logout the authenticated user
-  Route::get('/admins', 'getAdmins')->middleware('admin.token'); // Get all admins
-  Route::get('/sellers', 'getSellers')->middleware('admin.token'); // Get all sellers
-  Route::get('/users', 'getUsers')->middleware('admin.token'); // Get all users
-  Route::get('/accountsSummary', 'accountsSummary')->middleware('admin.token'); // Get account tables and counts
-  Route::get('/countedAccounts', 'countAccounts'); // Count all users
-  Route::get('/countedAdmins', 'countAdmins'); // Count all admins
-  Route::get('/countedSellers', 'countSellers'); // Count all sellers
-  Route::get('/countedUsers', 'countUsers'); // Count all users
-  Route::get('/countedCategories', 'countCategories'); // Count all categories
-  Route::get('/countedBrands', 'countBrands'); // Count all brands
-  Route::get('/countedCheckout', 'countCheckout'); // Count all checkout
-  Route::get('/counts', 'counts'); // Get Counts
-  Route::get('/getAccount_id/{id}', 'getAccount_id'); // Get a specific user by ID
-  Route::put('/updateAccount/{id}', 'updateAccount'); // Update Account
-  Route::delete('/deleteAccount/{id}', 'deleteAccount'); // Deleteing Accounts
-  Route::get('/verify-email/{token}', 'verifyEmail'); // Verify Email
-  Route::post('/forgot-password', 'forgotPassword'); // Forgot Password
-  Route::post('/reset-password/{token}', 'resetPassword'); // Reset Password
-  Route::get('/getAccount_username/{username}', 'getAccount_username'); // Get a specific user by username
-  Route::put('/updateImageAccount/{id}', 'updateImageAccount'); // Update Account Image
-  Route::post('/contact/send-email', 'sendContactEmail')->middleware('throttle:5,1'); // Send Contact Message
-  Route::post('/resend-verification', 'resendVerificationEmail'); // Resend Verification Email
-  Route::post('/admin/create-account', 'adminCreateAccount'); // Admin Create Account
-  Route::put('/account/profile', 'updateOwnAccount'); // Update logged-in user's own profile
-  Route::put('/account/{id}/deactivate', 'deactivateAccount'); // Deactivate Api
-  Route::put('/account/{id}/reactivate', 'reactivateAccount'); // Reactivate Api
+    Route::post('/register', 'register'); // Register a new user
+    Route::post('/login', 'login'); // Login an existing user 
+    Route::post('/logout', 'logout'); // Logout the authenticated user
+    Route::get('/admins', 'getAdmins')->middleware('admin.token'); // Get all admins
+    Route::get('/sellers', 'getSellers')->middleware('admin.token'); // Get all sellers
+    Route::get('/users', 'getUsers')->middleware('admin.token'); // Get all users
+    Route::get('/accountsSummary', 'accountsSummary')->middleware('admin.token'); // Get account tables and counts
+    Route::get('/countedAccounts', 'countAccounts'); // Count all users
+    Route::get('/countedAdmins', 'countAdmins'); // Count all admins
+    Route::get('/countedSellers', 'countSellers'); // Count all sellers
+    Route::get('/countedUsers', 'countUsers'); // Count all users
+    Route::get('/countedCategories', 'countCategories'); // Count all categories
+    Route::get('/countedBrands', 'countBrands'); // Count all brands
+    Route::get('/countedCheckout', 'countCheckout'); // Count all checkout
+    Route::get('/counts', 'counts'); // Get Counts
+    Route::get('/getAccount_id/{id}', 'getAccount_id'); // Get a specific user by ID
+    Route::put('/updateAccount/{id}', 'updateAccount'); // Update Account
+    Route::delete('/deleteAccount/{id}', 'deleteAccount'); // Deleteing Accounts
+    Route::match(
+        ['get', 'post'],
+        '/verify-email/{token}',
+        'verifyEmail'
+    ); // Verify Email
+    Route::post('/forgot-password', 'forgotPassword'); // Forgot Password
+    Route::post('/reset-password/{token}', 'resetPassword'); // Reset Password
+    Route::get('/getAccount_username/{username}', 'getAccount_username'); // Get a specific user by username
+    Route::put('/updateImageAccount/{id}', 'updateImageAccount'); // Update Account Image
+    Route::post('/contact/send-email', 'sendContactEmail')->middleware('throttle:5,1'); // Send Contact Message
+    Route::post('/resend-verification', 'resendVerificationEmail'); // Resend Verification Email
+    Route::post('/admin/create-account', 'adminCreateAccount'); // Admin Create Account
+    Route::put('/account/profile', 'updateOwnAccount'); // Update logged-in user's own profile
+    Route::put('/account/{id}/deactivate', 'deactivateAccount'); // Deactivate Api
+    Route::put('/account/{id}/reactivate', 'reactivateAccount'); // Reactivate Api
 });
 
 // Support Ticket Routes
-Route::group(['prefix' => 'support-tickets'], function($router) {
+Route::group(['prefix' => 'support-tickets'], function ($router) {
     Route::controller(SupportTicketController::class)->group(function () {
         Route::get('/summary', 'summary')->middleware('admin.token'); // Dashboard counts
         Route::get('/', 'index')->middleware('admin.token'); // Get all support tickets for the Admin Support Inbox
@@ -73,7 +77,7 @@ Route::group(['prefix' => 'support-tickets'], function($router) {
 });
 
 // Product Routes
-Route::group(['prefix' => 'products'], function($router) {
+Route::group(['prefix' => 'products'], function ($router) {
     Route::controller(ProductController::class)->group(function () {
         Route::get('/', 'index'); // Get all products
         Route::post('/', 'createProduct'); // Create a new product
@@ -89,7 +93,7 @@ Route::group(['prefix' => 'products'], function($router) {
 });
 
 // Category Routes
-Route::group(['prefix' => 'category'], function($router) {
+Route::group(['prefix' => 'category'], function ($router) {
     Route::controller(CategoryController::class)->group(function () {
         Route::get('/', 'index'); // Get all categories
         Route::post('/', 'createCategory')->middleware('admin.token'); // Create a new category Only for Admin
@@ -103,7 +107,7 @@ Route::group(['prefix' => 'category'], function($router) {
 });
 
 // Brands Routes
-Route::group(['prefix' => 'brands'], function($router) {
+Route::group(['prefix' => 'brands'], function ($router) {
     Route::controller(BrandsController::class)->group(function () {
         Route::get('/', 'index'); // Get all brands
         Route::post('/', 'createBrands'); // Create a new brand
@@ -119,9 +123,9 @@ Route::group(['prefix' => 'brands'], function($router) {
 });
 
 // Location Routes
-Route::group(['prefix' => 'location'], function($router) {
+Route::group(['prefix' => 'location'], function ($router) {
     Route::controller(LocationController::class)->group(function () {
-       // Route::get('/', 'index');  Get all locations
+        // Route::get('/', 'index');  Get all locations
         Route::put('/{id}/setDefaultAddress', 'setDefaultAddress'); // Set a location as default
         Route::get('/', 'getUserLocations'); // Get locations for a specific user
         Route::get('/{id}', 'getLocation_id'); // Get a specific location by ID
@@ -133,7 +137,7 @@ Route::group(['prefix' => 'location'], function($router) {
 });
 
 // Add to Cart Routes
-Route::group(['prefix' => 'cart'], function($router) {
+Route::group(['prefix' => 'cart'], function ($router) {
     Route::controller(AddToCartController::class)->group(function () {
         Route::post('/', 'addToCart'); // Add a product to the cart
         Route::get('/', 'getCart'); // Add a product to the cart
@@ -143,7 +147,7 @@ Route::group(['prefix' => 'cart'], function($router) {
 });
 
 // Checkout Routes
-Route::group(['prefix' => 'checkout'], function($router) {
+Route::group(['prefix' => 'checkout'], function ($router) {
     Route::controller(CheckoutController::class)->group(function () {
         Route::post('/', 'createCheckout'); // Create a new checkout
         Route::get('/orders', 'getUserOrders'); // Get user orders
@@ -155,17 +159,16 @@ Route::group(['prefix' => 'checkout'], function($router) {
     });
 
     // Chart Dashboard Routes
-    Route::group(['prefix' => 'dashboard'], function($router) {
+    Route::group(['prefix' => 'dashboard'], function ($router) {
         Route::controller(CheckoutController::class)->group(function () {
             Route::get('/orders/monthly', 'ordersMonthly'); // Get sales data for dashboard
             Route::get('/orders/status', 'ordersByStatus'); // Get order status counts for dashboard
         });
     });
-
 });
 
 // Seller Dashboard Routes
-Route::group(['prefix' => 'seller'], function($router) {
+Route::group(['prefix' => 'seller'], function ($router) {
     Route::controller(DashboardController::class)->group(function () {
         Route::get('/dashboard', 'sellerDashboard'); // Get seller dashboard data
     });
@@ -179,7 +182,7 @@ Route::controller(FcmTokenController::class)->group(function () {
 });
 
 // Notification Routes
-Route::group(['prefix' => 'notifications'], function($router) {
+Route::group(['prefix' => 'notifications'], function ($router) {
     Route::controller(NotificationController::class)->group(function () {
         Route::get('/', 'index');
         Route::get('/unread-count', 'unreadCount');
@@ -187,4 +190,3 @@ Route::group(['prefix' => 'notifications'], function($router) {
         Route::post('/read-all', 'markAllAsRead');
     });
 });
-    

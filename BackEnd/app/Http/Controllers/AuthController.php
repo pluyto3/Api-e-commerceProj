@@ -291,10 +291,10 @@ class AuthController extends Controller
         }
     }
 
-    /**
-     * Verify Email
-     */
 
+    /**
+     * Verify Email - Two-Step Verification
+     */
     public function verifyEmail(Request $request, $token)
     {
         $loginUrl = rtrim(
@@ -302,41 +302,83 @@ class AuthController extends Controller
             '/'
         ) . '/login.html';
 
+        $headers = [
+            'Cache-Control' => 'no-store',
+            'Referrer-Policy' => 'no-referrer',
+        ];
+
+        // Find the account using its verification token.
         $user = User::where(
             'verification_token',
             $token
         )->first();
 
-        if (!$user) {
+        // Invalid, previously used, or already verified.
+        if (!$user || $user->email_verified_at) {
             return response()->view(
                 'auth.verify-email-result',
                 [
                     'verified' => false,
+                    'pending' => false,
                     'loginUrl' => $loginUrl,
                 ],
-                400
-            )
-                ->header('Cache-Control', 'no-store')
-                ->header('Referrer-Policy', 'no-referrer');
+                400,
+                $headers
+            );
         }
 
-        if (!$user->email_verified_at) {
-            $user->email_verified_at = now();
-            $user->verification_token = null;
-            $user->save();
+        // GET: Display the confirmation page only.
+        // Do not update the account or consume its token.
+        if ($request->isMethod('get')) {
+            return response()->view(
+                'auth.verify-email-result',
+                [
+                    'verified' => false,
+                    'pending' => true,
+                    'loginUrl' => $loginUrl,
+                    'verifyUrl' => $request->url(),
+                ],
+                200,
+                $headers
+            );
         }
 
+        // POST: Confirm verification.
+        // Only one request can consume the valid token.
+        $updated = User::where('user_id', $user->user_id)
+            ->where('verification_token', $token)
+            ->whereNull('email_verified_at')
+            ->update([
+                'email_verified_at' => now(),
+                'verification_token' => null,
+            ]);
+
+        if (!$updated) {
+            return response()->view(
+                'auth.verify-email-result',
+                [
+                    'verified' => false,
+                    'pending' => false,
+                    'loginUrl' => $loginUrl,
+                ],
+                400,
+                $headers
+            );
+        }
+
+        // Display the successful verification page.
         return response()->view(
             'auth.verify-email-result',
             [
                 'verified' => true,
+                'pending' => false,
                 'loginUrl' => $loginUrl,
             ],
-            200
-        )
-            ->header('Cache-Control', 'no-store')
-            ->header('Referrer-Policy', 'no-referrer');
+            200,
+            $headers
+        );
     }
+
 
     /**
      * Reset Password
