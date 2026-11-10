@@ -159,6 +159,17 @@ $(document).ready(function () {
 
       error: function (xhr) {
         hideOverlaySkeleton();
+
+        if (xhr.status === 0) {
+          Swal.fire({
+            icon: "error",
+            title: "Server Connection Failed",
+            text: "Unable to connect to the Hanz-Go server. Please check your connection and try again.",
+            confirmButtonText: "OK",
+          });
+          return;
+        }
+
         let errorMessage = "Access Denied: Invalid username or password.";
 
         if (xhr.responseJSON) {
