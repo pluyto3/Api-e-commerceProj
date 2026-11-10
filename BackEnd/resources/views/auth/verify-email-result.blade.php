@@ -24,6 +24,19 @@
       color: #151a2f;
     }
 
+    .logo-box {
+      margin-bottom: 12px;
+      text-align: center;
+    }
+
+    .logo-box img {
+      display: inline-block;
+      width: 82px;
+      height: 82px;
+      object-fit: contain;
+      border-radius: 16px;
+    }
+
     .verification-card {
       width: 100%;
       max-width: 430px;
@@ -33,20 +46,6 @@
       border: 1px solid #d7e1ee;
       border-radius: 22px;
       box-shadow: 0 18px 45px rgba(20, 32, 56, 0.1);
-    }
-
-    .logo {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 66px;
-      height: 66px;
-      margin-bottom: 24px;
-      border-radius: 16px;
-      background: #edf3ff;
-      color: #173b92;
-      font-size: 27px;
-      font-weight: 800;
     }
 
     .status-icon {
@@ -101,38 +100,91 @@
       color: #94a3b8;
       font-size: 12px;
     }
+
+
+    /* Pending email verification */
+    .status-icon.pending {
+        background: #edf3ff;
+        color: #1d4ed8;
+    }
+
+    /* Button styling */
+    button.login-btn {
+        border: none;
+        font-size: 15px;
+        font-family: inherit;
+        cursor: pointer;
+    }
+
+    button.login-btn:active {
+        transform: scale(0.98);
+    }
+
   </style>
 </head>
 <body>
 
   <main class="verification-card">
 
-    <div class="logo">HG</div>
+    <div class="logo-box">
+        <img
+            src="{{ rtrim(config('app.frontend_url'), '/') }}/assets/img/HanzGo.png"
+            alt="Hanz-Go Logo"
+        >
+    </div>
+
 
     @if ($verified)
-      <div class="status-icon" aria-hidden="true">✓</div>
 
-      <h1>Email Verified!</h1>
+        <!-- Successfully verified -->
+        <div class="status-icon" aria-hidden="true">✓</div>
 
-      <p>
-        Your email address has been successfully verified.
-        You can now sign in to your Hanz-Go account.
-      </p>
+        <h1>Email Verified!</h1>
+
+        <p>
+            Your email address has been successfully verified.
+            You can now sign in to your Hanz-Go account.
+        </p>
+
+    @elseif ($pending)
+
+        <!-- Waiting for user confirmation -->
+        <div class="status-icon pending" aria-hidden="true">✉</div>
+
+        <h1>Verify Your Email</h1>
+
+        <p>
+            Your email is ready to be verified.
+            Click the button below to confirm your email
+            address and activate your Hanz-Go account.
+        </p>
+
+        <form action="{{ $verifyUrl }}" method="POST">
+            <button type="submit" class="login-btn">
+                Verify My Email
+            </button>
+        </form>
+
     @else
-      <div class="status-icon error" aria-hidden="true">!</div>
 
-      <h1>Verification Unavailable</h1>
+        <!-- Invalid or already used link -->
+        <div class="status-icon error" aria-hidden="true">!</div>
 
-      <p>
-        This verification link is invalid or has already
-        been used. If you verified your email earlier,
-        you can try logging in.
-      </p>
+        <h1>Verification Unavailable</h1>
+
+        <p>
+            This verification link is invalid or has already
+            been used. If you verified your email earlier,
+            you can try logging in.
+        </p>
+
     @endif
 
-    <a class="login-btn" href="{{ $loginUrl }}">
-      Back to Login
-    </a>
+    @if (!$pending)
+        <a class="login-btn" href="{{ $loginUrl }}">
+            Back to Login
+        </a>
+    @endif
 
     <div class="footer">
       Hanz-Go &middot; Find it, buy it, done.
