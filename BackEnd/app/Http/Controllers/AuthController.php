@@ -411,17 +411,24 @@ class AuthController extends Controller
         }
 
         // Generate reset token only for verified accounts
-        $resetToken = Str::random(15);
+        $resetToken = Str::random(64);
 
         $user->reset_token = $resetToken;
+        $user->reset_token_created_at = now();
         $user->save();
 
         // Send reset email
-        $this->sendResetEmail($user);
+        try {
+            $this->sendResetEmail($user);
 
-        return response()->json([
-            'msg' => 'Password reset link has been sent to your email.',
-        ], 200);
+            return response()->json([
+                'msg' => 'Password reset link has been sent to your email.',
+            ], 200);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'msg' => 'Unable to send the password reset email. Please try again later.',
+            ], 503);
+        }
     }
 
     /**
@@ -440,13 +447,24 @@ class AuthController extends Controller
             $body = "
                 <h2>Reset Your Password</h2>
                 <p>Hello {$fullname},</p>
-                <p>You requested a password reset.</p>
-                <p>Please click the link below to reset your password:</p>
+                <p>You requested a password reset for your Hanz-Go account.</p>
+
+                <p>Please click the link below to create a new password:</p>
+
                 <p>
                     <a href='{$resetUrl}'>Reset Password</a>
                 </p>
+
+                <p><strong>Important:</strong> This password reset link
+                will expire after 60 minutes.</p>
+
+                <p>If the link expires, you can request a new one
+                through the Forgot Password page.</p>
+
                 <br>
-                <p>If you did not request this, you can ignore this email.</p>
+
+                <p>If you did not request this password reset,
+                you can safely ignore this email.</p>
                 <br>
                 <p>Thanks,<br>Hanz-Go Team</p>
             ";
@@ -457,6 +475,8 @@ class AuthController extends Controller
             });
         } catch (\Throwable $e) {
             \Log::error('Reset email could not be sent: ' . $e->getMessage());
+
+            throw $e;
         }
     }
 
@@ -484,6 +504,8 @@ class AuthController extends Controller
         $result = DB::transaction(function () use ($token, $validated) {
 
             $user = User::where('reset_token', $token)
+                ->whereNotNull('reset_token_created_at')
+                ->where('reset_token_created_at', '>', now()->subMinutes(60))
                 ->lockForUpdate()
                 ->first();
 
@@ -504,7 +526,8 @@ class AuthController extends Controller
                 ->where('user_id', $user->user_id)
                 ->where('reset_token', $token)
                 ->update([
-                    'reset_token' => null
+                    'reset_token' => null,
+                    'reset_token_created_at' => null
                 ]);
 
             if ($cleared !== 1) {
