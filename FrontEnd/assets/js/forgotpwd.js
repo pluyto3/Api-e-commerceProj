@@ -33,6 +33,9 @@ $(document).ready(function () {
       $("#emailError").text("");
     }
 
+    // Show Hanz-Go skeleton while sending the reset email.
+    showOverlaySkeleton();
+
     $.ajax({
       type: "POST",
       url: ip + "/api/forgot-password",
@@ -43,6 +46,7 @@ $(document).ready(function () {
       data: JSON.stringify({ email: email }),
 
       success: function (res) {
+        hideOverlaySkeleton();
         Swal.fire({
           title: "Reset Link Sent",
           text: "A password reset link has been sent to your email.",
@@ -54,6 +58,7 @@ $(document).ready(function () {
       },
 
       error: function (xhr) {
+        hideOverlaySkeleton();
         let title = "Error";
         let msg = "Something went wrong.";
 
@@ -94,6 +99,9 @@ $(document).ready(function () {
           icon: "error",
           confirmButtonText: "OK",
         });
+      },
+      complete: function () {
+        hideOverlaySkeleton();
       },
     });
   });

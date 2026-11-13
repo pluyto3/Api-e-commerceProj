@@ -408,6 +408,41 @@
                             id="emailError"></small>
                         </div>
                       </div>
+
+                      <!-- Current Password -->
+                      <div class="col-md-6">
+                        <div class="form-group">
+                          <label
+                            for="current_password"
+                            class="font-weight-bold">
+                            Current Password
+                          </label>
+
+                          <div class="input-group">
+                            <input
+                              type="password"
+                              class="form-control"
+                              id="current_password"
+                              name="current_password"
+                              placeholder="Required when changing password"
+                              autocomplete="current-password" />
+
+                            <div class="input-group-append">
+                              <span
+                                class="input-group-text togglePassword"
+                                data-target="#current_password"
+                                style="cursor: pointer">
+                                <i class="fa fa-eye"></i>
+                              </span>
+                            </div>
+                          </div>
+
+                          <small
+                            class="text-danger error-message"
+                            id="current_passwordError"></small>
+                        </div>
+                      </div>
+
                       <!-- Password -->
                       <div class="col-md-6">
                         <div class="form-group">

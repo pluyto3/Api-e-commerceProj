@@ -700,6 +700,7 @@ $(document).ready(function () {
     const fullname = $("#fullname").val().trim();
     const password = $("#password").val();
     const passwordConfirmation = $("#password_confirmation").val();
+    const currentPassword = $("#current_password").val();
 
     // Clear old error messages
     $(".error-message").text("");
@@ -715,6 +716,11 @@ $(document).ready(function () {
 
     // If either password field is used, both must match
     if (password || passwordConfirmation) {
+      if (!currentPassword) {
+        $("#current_passwordError").text("Please enter your current password.");
+        return;
+      }
+
       if (password.length < 8) {
         $("#passwordError").text("Password must be at least 8 characters.");
         return;
@@ -734,6 +740,7 @@ $(document).ready(function () {
 
     // Only send password when user actually entered a new one
     if (password) {
+      data.current_password = currentPassword;
       data.password = password;
       data.password_confirmation = passwordConfirmation;
     }
@@ -793,6 +800,10 @@ $(document).ready(function () {
 
           if (errors.password) {
             $("#passwordError").text(errors.password[0]);
+          }
+
+          if (errors.current_password) {
+            $("#current_passwordError").text(errors.current_password[0]);
           }
 
           return;

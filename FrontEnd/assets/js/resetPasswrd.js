@@ -22,7 +22,6 @@ function getToken() {
 
 $(document).ready(function () {
   const token = getToken();
-  console.log("Reset token:", token);
 
   if (!token || token === "resetPassword.html") {
     Swal.fire({
@@ -69,6 +68,9 @@ $(document).ready(function () {
 
     $("#passwordError").text("");
 
+    // Show the Hanz-Go skeleton while updating the password.
+    showOverlaySkeleton();
+
     $.ajax({
       type: "POST",
       url: ip + "/api/reset-password/" + encodeURIComponent(token),
@@ -81,6 +83,8 @@ $(document).ready(function () {
         password_confirmation: confirmPassword,
       }),
       success: function (res) {
+        hideOverlaySkeleton();
+
         Swal.fire({
           title: "Password Reset",
           text: "Your password has been reset successfully.",
@@ -90,6 +94,8 @@ $(document).ready(function () {
         });
       },
       error: function (xhr) {
+        hideOverlaySkeleton();
+
         let msg = "Something went wrong.";
         if (xhr.responseJSON && xhr.responseJSON.msg) {
           msg = xhr.responseJSON.msg;
@@ -99,6 +105,9 @@ $(document).ready(function () {
           text: msg,
           icon: "error",
         });
+      },
+      complete: function () {
+        hideOverlaySkeleton();
       },
     });
   });

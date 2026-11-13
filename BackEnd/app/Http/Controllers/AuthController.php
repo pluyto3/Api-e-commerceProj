@@ -463,21 +463,13 @@ class AuthController extends Controller
     /**
      * PHP Mailer for sending reset email
      */
-
     public function resetPassword(Request $request, $token)
     {
-        $user = User::where('reset_token', $token)->first();
-
-        if (!$user) {
-            return response()->json([
-                'msg' => 'Invalid or expired reset token.'
-            ], 400);
-        }
-
         $validator = Validator::make($request->all(), [
             'password' => 'required|string|min:8|confirmed',
         ], [
-            'password.confirmed' => 'Password confirmation does not match.',
+            'password.confirmed' =>
+            'Password confirmation does not match.',
         ]);
 
         if ($validator->fails()) {
@@ -488,13 +480,56 @@ class AuthController extends Controller
 
         $validated = $validator->validated();
 
-        // Update the user's password
-        $user->password = Hash::make($validated['password']);
-        $user->reset_token = null; // Clear the reset token
-        $user->save();
+        // Lock and recheck the reset token before changing the password.
+        $result = DB::transaction(function () use ($token, $validated) {
+
+            $user = User::where('reset_token', $token)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$user) {
+                return 'invalid';
+            }
+
+            // Update password and record its history.
+            if (!$this->changePasswordWithHistory(
+                $user,
+                $validated['password']
+            )) {
+                return 'reused';
+            }
+
+            // Invalidate the reset token in the same transaction.
+            $cleared = DB::table('users')
+                ->where('user_id', $user->user_id)
+                ->where('reset_token', $token)
+                ->update([
+                    'reset_token' => null
+                ]);
+
+            if ($cleared !== 1) {
+                throw new \RuntimeException(
+                    'Unable to invalidate the reset token.'
+                );
+            }
+
+            return 'success';
+        });
+
+        if ($result === 'invalid') {
+            return response()->json([
+                'msg' => 'Invalid or expired reset token.'
+            ], 400);
+        }
+
+        if ($result === 'reused') {
+            return response()->json([
+                'msg' => 'You cannot reuse your current or any of your previous five passwords.'
+            ], 422);
+        }
 
         return response()->json([
-            'msg' => 'Password has been reset successfully. You can now log in with your new password.',
+            'msg' => 'Password has been reset successfully. You can now log in with your new password.'
         ], 200);
     }
 
@@ -745,6 +780,11 @@ class AuthController extends Controller
                 'min:8',
                 'confirmed',
             ],
+
+            'current_password' => [
+                'required_with:password',
+                'string',
+            ],
         ], [
             'username.unique' =>
             'This username is already taken.',
@@ -764,15 +804,49 @@ class AuthController extends Controller
 
         $validated = $validator->validated();
 
+        // Verify current password before allowing a password change.
+        if (!empty($validated['password'])) {
+
+            if (!Hash::check(
+                $validated['current_password'],
+                $user->password
+            )) {
+                return response()->json([
+                    'msg' => 'Incorrect current password.',
+                    'errors' => [
+                        'current_password' => [
+                            'The current password you entered is incorrect.'
+                        ]
+                    ]
+                ], 422);
+            }
+        }
+
         $user->username = $validated['username'];
         $user->phone_number = $validated['phone_number'];
         $user->fullname = $validated['fullname'];
 
-        // Only change the password if a new password was entered
+
+        // Only change the password if a new password was entered.
         if (!empty($validated['password'])) {
-            $user->password = Hash::make($validated['password']);
+
+            // Prevent reuse of the current or previous five passwords.
+            if (!$this->changePasswordWithHistory(
+                $user,
+                $validated['password']
+            )) {
+                return response()->json([
+                    'msg' => 'You cannot reuse your current or any of your previous five passwords.',
+                    'errors' => [
+                        'password' => [
+                            'You cannot reuse your current or any of your previous five passwords.'
+                        ]
+                    ]
+                ], 422);
+            }
         }
 
+        // Save the remaining profile changes.
         $user->save();
 
         return response()->json([
@@ -1808,5 +1882,72 @@ class AuthController extends Controller
                 'status' => $ticket->status,
             ],
         ], 201);
+    }
+
+
+    /**
+     * Change a password while preventing reuse of
+     * the current and previous five passwords.
+     *
+     */
+    private function changePasswordWithHistory(
+        User $user,
+        string $newPassword
+    ): bool {
+        return DB::transaction(function () use ($user, $newPassword) {
+
+            // Lock this account during the password change.
+            $account = User::whereKey($user->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            // Reject the current password.
+            if (Hash::check($newPassword, $account->password)) {
+                return false;
+            }
+
+            // Retrieve the five most recent previous hashes.
+            $previousHashes = DB::table('password_histories')
+                ->where('user_id', $account->user_id)
+                ->orderByDesc('id')
+                ->limit(5)
+                ->pluck('password_hash');
+
+            // Reject a previously used password.
+            foreach ($previousHashes as $previousHash) {
+                if (Hash::check($newPassword, $previousHash)) {
+                    return false;
+                }
+            }
+
+            // Preserve the old password hash.
+            $oldHash = $account->password;
+
+            // Set the new password.
+            $account->password = Hash::make($newPassword);
+            $account->save();
+
+            // Record the previous password.
+            DB::table('password_histories')->insert([
+                'user_id' => $account->user_id,
+                'password_hash' => $oldHash,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            // Keep only the five latest history records.
+            $keepIds = DB::table('password_histories')
+                ->where('user_id', $account->user_id)
+                ->orderByDesc('id')
+                ->limit(5)
+                ->pluck('id');
+
+            DB::table('password_histories')
+                ->where('user_id', $account->user_id)
+                ->whereNotIn('id', $keepIds->all())
+                ->delete();
+
+            return true;
+        });
     }
 }
