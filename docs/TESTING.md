@@ -1,6 +1,6 @@
 # Hanz-Go testing and evidence
 
-**Status:** Baseline; no application tests were run by ChatGPT while preparing this file (2026-11-02).
+**Status:** Historical baseline (2026-11-02), plus owner-reported manual authentication evidence (2026-11-16). Codex has not independently reproduced the manual tests; no automated tests were executed for these documentation tasks.
 
 ## Source-level observations
 - The repository has PHPUnit test scaffolding, with `BackEnd/tests/Unit/ExampleTest.php` and `BackEnd/tests/Feature/ExampleTest.php` only in the inspected test folders.
@@ -65,11 +65,37 @@ These date-scoped IDs do not overlap existing IDs found in `docs/`. All observed
 
 **Verified in code at `bec8f9a`:** `BackEnd/app/Http/Controllers/AuthController.php`, `register()`, still returns 201 with an account-created/email-failure message when sending throws. `FrontEnd/assets/js/registration.js`, AJAX success callback, ignores that message and always displays fixed success/check-email text. No approved fix was established. No code was changed and the failure path was not rerun. Expected behavior: accurately communicate account creation and delivery failure with the resend action.
 
-### Remaining authentication tests — not verified
+## Manual registration-validation testing — Home PC, 2026-11-16
 
-- Required-field and invalid-format registration validation.
-- Duplicate username, email and phone number.
-- Password confirmation mismatch and minimum-length rules.
+**Provenance — reported manual evidence / reported by a prior audit:** The owner reports executing all seven cases below on the Home PC and reviewing browser screenshots with ChatGPT. Codex transcribed the supplied results, inspected relevant source, and did not rerun the cases or inspect the original screenshots. Every PASS below is an owner-reported manual result, not a Codex-executed or automated pass.
+
+**Environment — owner-reported, not verified:** Home PC, Windows/XAMPP, local Laravel API and local MySQL database `ecommerce`; repository `pluyto3/Api-e-commerceProj`. The database was reported to be disposable, but isolation and active runtime configuration have not been independently verified. Database persistence was not independently inspected.
+
+**Application revision tested — owner-reported:** `feature/auth-ui-improvements` at `bec8f9a` (`bec8f9ad0ead14358e8ba837b1d2705a237f422c`). Codex verified that local branch/HEAD at the start of documentation work, but not the revision active during each browser test. **Verified in Git/GitHub:** prior authentication documentation [PR #4](https://github.com/pluyto3/Api-e-commerceProj/pull/4) is merged into `main` at `59203f811727cf2b5a27800d3c1c6612e956bbe2`, the freshly fetched documentation baseline. The tested application revision is not an ancestor of that baseline; this update does not merge application changes.
+
+| Test ID | Scenario | Expected result | Reported observed result |
+|---|---|---|---|
+| AUTH-REG-01 | Empty required fields | Browser blocks incomplete submission | PASS — browser blocked submission and focused Username |
+| AUTH-REG-02 | Invalid email format | Browser displays an email-format warning | PASS — browser displayed email-format warning |
+| AUTH-REG-03 | Password shorter than 8 characters | API rejects with HTTP 422 and minimum-length error | PASS — HTTP 422 and minimum-length message |
+| AUTH-REG-04 | Password confirmation mismatch | API rejects with HTTP 422 and confirmation error | PASS — HTTP 422 and confirmation error |
+| AUTH-REG-05 | Duplicate username | API rejects with HTTP 422 and username uniqueness error | PASS — HTTP 422 and username uniqueness error; isolated retest completed |
+| AUTH-REG-06 | Duplicate email | API rejects with HTTP 422 and email uniqueness error | PASS — HTTP 422 and email uniqueness error |
+| AUTH-REG-07 | Duplicate phone number | API rejects with HTTP 422 and phone-number uniqueness error | PASS — HTTP 422 and phone-number uniqueness error |
+
+**Evidence boundaries:** AUTH-REG-01 and AUTH-REG-02 confirmed browser-side validation without a visible registration request; they do not establish backend required-field or email-format rejection. AUTH-REG-03 through AUTH-REG-07 showed backend HTTP 422 validation responses and relevant frontend messages according to the supplied report. The isolated username retest refers to that scenario only and does not verify database isolation. No automated tests were executed, no persistence check was independently performed, and full registration or authentication security coverage is not claimed. Screenshots and sensitive account values are excluded from this record.
+
+**Verified in code at `bec8f9a` (source inspection only):**
+
+- `FrontEnd/register.html` declares required form inputs and `type="email"` for the email input.
+- `BackEnd/app/Http/Controllers/AuthController.php`, `register()`, declares required fields, email format, uniqueness for username/email/phone number, and `min:8|confirmed` for passwords; the validation-failure branch returns an `errors` object with HTTP 422.
+- `FrontEnd/assets/js/registration.js` submits to `/api/register` and displays field errors for HTTP 422, including routing password-confirmation errors to the confirmation field. These source findings support the reported outcomes but do not independently verify runtime behavior or persistence.
+
+**Proposed copy improvement — not a functional validation failure:** The duplicate-phone message contains a grammatical error, also verified in the registration source at `bec8f9a`: "This phone number is already been registered." Proposed wording: "This phone number is already registered." No copy or application fix is included; AUTH-REG-07 remains a reported PASS. BUG-AUTH-001 remains open and unchanged.
+
+## Remaining authentication tests — not verified
+
+- Backend required-field and email-format validation with browser checks bypassed; formats and boundaries beyond the seven reported cases. The reported browser checks do not close these server-side tests.
 - Unverified account login rejection and invalid credentials.
 - Resend verification negative cases.
 - Server-side logout token invalidation.
@@ -78,6 +104,6 @@ These date-scoped IDs do not overlap existing IDs found in `docs/`. All observed
 - Authorization and account ownership tests.
 - Automated regression coverage.
 
-**Next recommended bounded task (approval pending):** Manual registration validation only: required fields, formats, duplicates, confirmation mismatch and minimum length. Use synthetic accounts after confirming an explicitly disposable local environment; record sanitized expected/actual UI outcomes and HTTP statuses. Do not use the reported `ecommerce` database until its isolation and suitability are confirmed. This documentation request authorizes no runtime tests or fixes.
+**Next agent task after this documentation is merged:** Customer Profile and Account Management testing. Prepare a bounded scope and confirm an explicitly isolated disposable local environment with synthetic records before runtime tests. Record sanitized expected/actual UI outcomes and HTTP statuses. Do not use the reported `ecommerce` database until its isolation and suitability are confirmed. This documentation request authorizes no runtime tests or fixes. Existing authorization work (including SYS-001), BUG-AUTH-001 and the remaining authentication-security tests stay open.
 
 **Limits:** No PHPUnit, automated browser testing, full authentication security coverage or production verification is claimed. Codex executed no application tests, migrations, seeders or database-dependent tests for this handoff. The historical baseline above remains unchanged.
