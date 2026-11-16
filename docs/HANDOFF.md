@@ -4,6 +4,52 @@
 
 **Current owner:** Human repository owner (manual execution and acceptance); ChatGPT (screenshot review reported by owner); Codex (documentation/source inspection only).
 
+**Current documentation branch — verified in Git:** `docs/registration-validation-20261116`, created from `origin/main` at `59203f811727cf2b5a27800d3c1c6612e956bbe2`; a fresh fetch for GitHub-review preparation confirmed the same baseline. Documentation commit: `bc60107101b226ee7a76a7cef51466576f9300a0`.
+
+**Status as of November 16, 2026:** [Draft PR #5](https://github.com/pluyto3/Api-e-commerceProj/pull/5) is open targeting `main` (verified in GitHub); independent ChatGPT review is underway (owner-reported), and human merge approval is pending. The documentation commit was pushed and the Draft PR opened; these steps are complete.
+
+**Current approved scope:** Correct only the current registration-validation handoff status in `docs/HANDOFF.md`, then commit and push the correction to the existing PR #5 branch. No new PR, merge, deployment, application edit or runtime test is authorized.
+
+## Registration-validation documentation handoff — Home PC, 2026-11-16
+
+**Previous documentation merge — verified in Git/GitHub:** [PR #4](https://github.com/pluyto3/Api-e-commerceProj/pull/4), "docs: record November 16 manual authentication testing", is closed and merged into `main`; merge commit `59203f811727cf2b5a27800d3c1c6612e956bbe2` equals the fetched `origin/main` baseline. Prior Office PC results and BUG-AUTH-001 are preserved.
+
+**Application revision tested — owner-reported:** `feature/auth-ui-improvements` at `bec8f9a` (`bec8f9ad0ead14358e8ba837b1d2705a237f422c`). Codex verified the initial local feature branch/HEAD and inspected its registration code, but did not verify the revision active during each manual test. That application revision is not an ancestor of the documentation baseline; this work does not merge it.
+
+**Environment — owner-reported, not verified:** Home PC, Windows/XAMPP, local Laravel API and MySQL database `ecommerce`. The database was reported to be disposable; isolation, active configuration and persistence have not been independently inspected. `.env` was not read or modified.
+
+**Manual results — reported by a prior audit / reported manual evidence:** All seven owner-executed registration-validation cases were reported PASS and reviewed by ChatGPT using browser screenshots. AUTH-REG-01 (empty required fields) blocked submission and focused Username; AUTH-REG-02 (invalid email) displayed a browser format warning. Both are browser-side validation only; neither showed a visible registration request. AUTH-REG-03 through AUTH-REG-07 (short password, confirmation mismatch, duplicate username, duplicate email and duplicate phone) showed backend HTTP 422 validation responses and relevant frontend errors. The duplicate-username scenario included an isolated retest; this does not establish database isolation. See the seven-case table in `docs/TESTING.md`. Codex did not inspect the original screenshots or reproduce the tests. No automated tests were executed; full registration security coverage is not claimed.
+
+**Verified in code at `bec8f9a`:** The registration form declares required fields and an email input type; `register()` declares required/email/uniqueness/password validation and HTTP 422 errors; the frontend displays those field errors. This is source evidence, separate from the reported runtime passes. The duplicate-phone message's grammatical error is recorded as a proposed copy improvement, not a functional validation failure. No fix is included. BUG-AUTH-001 remains open, confirmed from prior manual evidence and not fixed.
+
+**Changed paths:** `docs/TESTING.md` adds the seven cases, source findings, provenance and limits, and updates remaining coverage/next task. `docs/HANDOFF.md` records this task, branch, prior merge, checks, risks and next action. Application code, `.env`, databases and hosting were not changed. No screenshots or sensitive account values are included.
+
+### Current task verification
+
+The preparation entries below record checks before PR #5 was opened; the current review status is recorded above.
+
+- Local environment: Windows PowerShell in `C:\xampp\htdocs\Api-e-commerceProj`. `git status --short --branch` initially showed a clean `feature/auth-ui-improvements`; `git branch --show-current`, `git log -1 --format="%h %s"` and `git rev-parse bec8f9a` confirmed the local branch/revision.
+- Read `AGENTS.md`, context index, both target documents, architecture, testing, deployment and backlog; inspected actual backend/frontend registration source at the application revision and documentation baseline. An overly broad source search was truncated; targeted reads supplied the source evidence. One quoted `rg` expression failed to parse; it supplied no evidence.
+- `git fetch origin main` succeeded after a sandbox permission retry. GitHub `fetch_pr` for PR #4 returned `merged: true`, base `main` and the merge SHA above. `git merge-base --is-ancestor 59203f811727cf2b5a27800d3c1c6612e956bbe2 origin/main` returned 0; the same command with `bec8f9a` returned 1 (not merged).
+- `git switch --create docs/registration-validation-20261116 origin/main` succeeded; `git rev-parse HEAD` matched the fetched baseline and the working tree was clean before document edits.
+- `git diff --check` passed (exit 0, no output). Exact `git diff -- docs/TESTING.md docs/HANDOFF.md` reviewed; `git diff --stat`, `git diff --name-only` and `git status --short --branch` showed only the two approved documents changed. `git diff --cached --name-only` was empty. `git diff --name-only origin/main -- BackEnd FrontEnd` was empty.
+- PowerShell text comparisons against `git show origin/main:docs/TESTING.md` and `git show origin/main:docs/HANDOFF.md` passed: the Office PC test table, BUG-AUTH-001 text and historical handoff content are preserved verbatim. A corrected targeted `rg` search confirmed required fields and the email input type in the documentation baseline.
+- Same-session second-pass review completed: all seven IDs/outcomes match the owner's report; source findings and reported manual evidence are distinguished; database/security limits and open work are retained; the diff contains no screenshots, sensitive values or application changes. No independent QA was performed; ChatGPT and human review remain pending.
+- GitHub-review preparation (owner-authorized follow-up): re-read project guidance and relevant source; repeated `git fetch origin main`, PR #4 lookup and ancestry checks, confirming the same baseline and unmerged application revision. `git diff --check` and `git diff --check origin/main` passed; exact `git diff origin/main -- docs/TESTING.md docs/HANDOFF.md` reviewed. File allowlist, verbatim Office PC/BUG-AUTH-001/historical handoff comparisons and the outstanding security-list comparison passed. Diff pattern screening and exact-content review found no credentials, account email addresses, phone-number values, password values or reset-token values; `.env` and application files are absent from the changed paths. AUTH-REG-01/02 are explicitly browser-side; AUTH-REG-03 through 07 are reported backend HTTP 422 validation. Independent ChatGPT review remains pending.
+- Application test commands executed by Codex: **NONE**; no PHPUnit, browser tests, migrations, seeders or database operations. Owner-reported manual results are recorded above, not independently rerun.
+
+**Risks / remaining work:** Database isolation and persistence remain unverified. Browser-only cases do not establish server-side required-field/email validation. Unverified login/invalid credentials, resend negative cases, logout token invalidation, reset expiration and invalid/replaced tokens, five-password history boundary, authorization/account ownership and automated regression coverage remain open. SYS-001 remains a separate high-priority proposed task; this documentation does not close or approve it. Historical Laravel/deployment risks remain open.
+
+**Handoff correction verification — 2026-11-16:** Codex confirmed a clean working tree on `docs/registration-validation-20261116` at `bc60107101b226ee7a76a7cef51466576f9300a0` before this correction; GitHub confirmed PR #5 open, draft, unmerged and targeting `main` at that revision. In local Windows PowerShell, `git diff --check` passed and the exact `git diff -- docs/HANDOFF.md` was reviewed. `git diff --name-only HEAD` showed only `docs/HANDOFF.md`; text comparisons confirmed historical documentation and current test evidence unchanged. Same-session second-pass review completed; application tests and database operations: **NONE**. The owner authorized committing and pushing this correction to the existing PR; independent review remains underway and human merge approval is pending.
+
+**Next action:** Complete independent ChatGPT review of Draft PR #5 and await human merge approval; leave the PR unmerged. After merge, continue with Customer Profile and Account Management testing as a bounded next task, confirming an isolated disposable environment with synthetic data before runtime tests. The same-session review is not independent QA.
+
+## Historical authentication documentation task — Office PC, 2026-11-16
+
+The metadata and verification below describe the earlier documentation task, now merged through PR #4. Its former next registration-testing recommendation is superseded by the seven reported cases above; only those cases have reported results. All other unresolved work remains open.
+
+**Current owner:** Human repository owner (manual execution and acceptance); ChatGPT (screenshot review reported by owner); Codex (documentation/source inspection only).
+
 **Documentation branch — verified:** `docs/auth-testing-handoff-20261116`, created from freshly fetched `origin/main` at `e7a9010ac9c24312f3ba847be078715979123acc`. Review destination: Draft PR targeting `main`; no merge or deployment authorized.
 
 **Application revision manually tested — owner-reported:** `feature/auth-ui-improvements` at `bec8f9a` (`bec8f9ad0ead14358e8ba837b1d2705a237f422c`). Codex verified the local feature branch/HEAD before transfer, but did not reproduce the browser tests. Git ancestry check confirms this application revision is not merged into the fetched `origin/main` above. The documentation PR does not include or merge application changes.
