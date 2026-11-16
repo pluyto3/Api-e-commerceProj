@@ -4,9 +4,11 @@
 
 **Current owner:** Human repository owner (manual execution and acceptance); ChatGPT (screenshot review reported by owner); Codex (documentation/source inspection only).
 
-**Current documentation branch — verified in Git:** `docs/registration-validation-20261116`, created from `origin/main` at `59203f811727cf2b5a27800d3c1c6612e956bbe2`; a fresh fetch for GitHub-review preparation confirmed the same baseline. Review destination: Draft PR targeting `main`. The resulting documentation commit SHA and Draft PR URL will be reported in the delivery.
+**Current documentation branch — verified in Git:** `docs/registration-validation-20261116`, created from `origin/main` at `59203f811727cf2b5a27800d3c1c6612e956bbe2`; a fresh fetch for GitHub-review preparation confirmed the same baseline. Documentation commit: `bc60107101b226ee7a76a7cef51466576f9300a0`.
 
-**Current approved scope:** Update only `docs/TESTING.md` and `docs/HANDOFF.md` to record the seven registration-validation results supplied by the owner. The owner subsequently authorized committing and pushing this documentation branch and opening a Draft PR targeting `main` after verification. No merge, deployment, application edit or runtime test is authorized. Independent ChatGPT review and human acceptance remain pending.
+**Status as of November 16, 2026:** [Draft PR #5](https://github.com/pluyto3/Api-e-commerceProj/pull/5) is open targeting `main` (verified in GitHub); independent ChatGPT review is underway (owner-reported), and human merge approval is pending. The documentation commit was pushed and the Draft PR opened; these steps are complete.
+
+**Current approved scope:** Correct only the current registration-validation handoff status in `docs/HANDOFF.md`, then commit and push the correction to the existing PR #5 branch. No new PR, merge, deployment, application edit or runtime test is authorized.
 
 ## Registration-validation documentation handoff — Home PC, 2026-11-16
 
@@ -24,6 +26,8 @@
 
 ### Current task verification
 
+The preparation entries below record checks before PR #5 was opened; the current review status is recorded above.
+
 - Local environment: Windows PowerShell in `C:\xampp\htdocs\Api-e-commerceProj`. `git status --short --branch` initially showed a clean `feature/auth-ui-improvements`; `git branch --show-current`, `git log -1 --format="%h %s"` and `git rev-parse bec8f9a` confirmed the local branch/revision.
 - Read `AGENTS.md`, context index, both target documents, architecture, testing, deployment and backlog; inspected actual backend/frontend registration source at the application revision and documentation baseline. An overly broad source search was truncated; targeted reads supplied the source evidence. One quoted `rg` expression failed to parse; it supplied no evidence.
 - `git fetch origin main` succeeded after a sandbox permission retry. GitHub `fetch_pr` for PR #4 returned `merged: true`, base `main` and the merge SHA above. `git merge-base --is-ancestor 59203f811727cf2b5a27800d3c1c6612e956bbe2 origin/main` returned 0; the same command with `bec8f9a` returned 1 (not merged).
@@ -36,7 +40,9 @@
 
 **Risks / remaining work:** Database isolation and persistence remain unverified. Browser-only cases do not establish server-side required-field/email validation. Unverified login/invalid credentials, resend negative cases, logout token invalidation, reset expiration and invalid/replaced tokens, five-password history boundary, authorization/account ownership and automated regression coverage remain open. SYS-001 remains a separate high-priority proposed task; this documentation does not close or approve it. Historical Laravel/deployment risks remain open.
 
-**Next action:** Commit and push the verified documentation-only branch and open a Draft PR targeting `main`, as authorized by the owner; leave it unmerged for independent ChatGPT review and human acceptance. After this documentation is merged, continue with Customer Profile and Account Management testing as a bounded next task, confirming an isolated disposable environment with synthetic data before runtime tests. The same-session review is not independent QA.
+**Handoff correction verification — 2026-11-16:** Codex confirmed a clean working tree on `docs/registration-validation-20261116` at `bc60107101b226ee7a76a7cef51466576f9300a0` before this correction; GitHub confirmed PR #5 open, draft, unmerged and targeting `main` at that revision. In local Windows PowerShell, `git diff --check` passed and the exact `git diff -- docs/HANDOFF.md` was reviewed. `git diff --name-only HEAD` showed only `docs/HANDOFF.md`; text comparisons confirmed historical documentation and current test evidence unchanged. Same-session second-pass review completed; application tests and database operations: **NONE**. The owner authorized committing and pushing this correction to the existing PR; independent review remains underway and human merge approval is pending.
+
+**Next action:** Complete independent ChatGPT review of Draft PR #5 and await human merge approval; leave the PR unmerged. After merge, continue with Customer Profile and Account Management testing as a bounded next task, confirming an isolated disposable environment with synthetic data before runtime tests. The same-session review is not independent QA.
 
 ## Historical authentication documentation task — Office PC, 2026-11-16
 
