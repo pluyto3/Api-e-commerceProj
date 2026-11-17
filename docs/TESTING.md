@@ -1,6 +1,6 @@
 # Hanz-Go testing and evidence
 
-**Status:** Historical baseline (2026-11-02), plus owner-reported manual authentication evidence (2026-11-16). Codex has not independently reproduced the manual tests; no automated tests were executed for these documentation tasks.
+**Status:** Historical baseline (2026-11-02), plus owner-reported manual authentication/registration evidence (2026-11-16) and Customer Profile and Account Management evidence (2026-11-17). Codex has not independently reproduced the manual tests; no automated tests were executed for these documentation tasks.
 
 ## Source-level observations
 - The repository has PHPUnit test scaffolding, with `BackEnd/tests/Unit/ExampleTest.php` and `BackEnd/tests/Feature/ExampleTest.php` only in the inspected test folders.
@@ -104,6 +104,48 @@ These date-scoped IDs do not overlap existing IDs found in `docs/`. All observed
 - Authorization and account ownership tests.
 - Automated regression coverage.
 
-**Next agent task after this documentation is merged:** Customer Profile and Account Management testing. Prepare a bounded scope and confirm an explicitly isolated disposable local environment with synthetic records before runtime tests. Record sanitized expected/actual UI outcomes and HTTP statuses. Do not use the reported `ecommerce` database until its isolation and suitability are confirmed. This documentation request authorizes no runtime tests or fixes. Existing authorization work (including SYS-001), BUG-AUTH-001 and the remaining authentication-security tests stay open.
+**Next agent task after this documentation is merged:** Plan the remaining profile negative/security tests, then proceed to address-management testing, subject to approved requirements and test-environment safeguards. Confirm an explicitly isolated disposable local environment with synthetic records before runtime tests. Record sanitized expected/actual UI outcomes and HTTP statuses. Do not use the reported `ecommerce` database until its isolation and suitability are confirmed. This documentation request authorizes no runtime tests or fixes. Existing authorization work (including SYS-001), BUG-AUTH-001 and the remaining authentication-security tests stay open.
 
 **Limits:** No PHPUnit, automated browser testing, full authentication security coverage or production verification is claimed. Codex executed no application tests, migrations, seeders or database-dependent tests for this handoff. The historical baseline above remains unchanged.
+
+## Manual Customer Profile and Account Management testing — 2026-11-17
+
+**Provenance — reported manual evidence / reported by a prior audit:** Owner-executed local browser tests reviewed by ChatGPT through screenshots, transcribed from the supplied handoff. Codex did not execute these tests or inspect the original screenshots. Every PASS below is a reported manual result, not an automated or Codex-executed pass.
+
+**Environment — owner-reported, not verified:** Office PC, Windows/XAMPP, local Laravel API, local MySQL `ecommerce`; repository `pluyto3/Api-e-commerceProj`. Isolation and active runtime configuration were not independently verified. **Application revision tested — owner-reported:** `feature/auth-ui-improvements` at `bec8f9a` (`bec8f9ad0ead14358e8ba837b1d2705a237f422c`); the revision active during each browser test was not independently verified.
+
+**Documentation baseline — verified in Git/GitHub:** [PR #5](https://github.com/pluyto3/Api-e-commerceProj/pull/5) is merged into `main` at `155c67a3b5b9f3f01d4b7ab986a7acc609e8ffd9`, matching freshly fetched `origin/main`. This update transfers evidence only and does not merge the tested application branch.
+
+| Test ID | Scenario | Reported observed result |
+|---|---|---|
+| PROFILE-01 | Display customer profile | PASS — authenticated account-information request returned HTTP 200; account fields displayed |
+| PROFILE-02 | Update full name | PASS — update HTTP 200; updated full name persisted after reload |
+| PROFILE-03 | Duplicate username | PASS — HTTP 422 and correct field error; original username restored after reload |
+| PROFILE-04 | Duplicate phone number | PASS — HTTP 422 and correct field error; original phone number restored after reload |
+| PROFILE-05A | Incorrect current password | PASS — HTTP 422 and incorrect-current-password message |
+| PROFILE-05B | Existing password after failed change | PASS — login HTTP 200 |
+| PROFILE-05C | Successful password change | PASS — profile update HTTP 200 and success message |
+| PROFILE-05D | Login using new password | PASS — login HTTP 200 |
+| PROFILE-05E | Login using previous password | PASS — login HTTP 401 with "Wrong password." |
+| PROFILE-06A | Upload JPG profile picture | PASS — "Profile Saved" message; image appeared and persisted after reload; navbar avatar updated |
+
+**Evidence limitations:** The profile-picture upload HTTP status was not individually verified in the screenshots; none is assigned to PROFILE-06A. Database persistence is **inferred** from successful subsequent profile retrieval, not independently examined in MySQL. Reload observations do not constitute a direct database check. No screenshots, uploaded pictures, personal contact details, passwords, authentication tokens or secrets are included. Codex executed no manual application tests, PHPUnit, automated browser tests, migrations, seeders or database operations.
+
+### Profile source-level observations — separate from manual results
+
+**Verified in code at `bec8f9a` (source inspection only):**
+
+- `FrontEnd/assets/js/account.js` loads account information, submits profile edits to `/api/account/profile`, displays HTTP 422 field errors, and reloads after successful updates. Its image-upload callback displays "Profile Saved"; this source branch does not establish the observed upload HTTP status.
+- `BackEnd/app/Http/Controllers/AuthController.php`, `updateOwnAccount()`, validates username/phone uniqueness, checks the current password for password changes, and returns HTTP 422 for validation or incorrect-current-password errors. These source findings do not independently reproduce the manual results.
+- **PROPOSED compatibility investigation — potential discrepancy:** `FrontEnd/account.html` advertises JPG, PNG and WEBP, while `updateImageAccount()` lists JPEG/JPG, PNG and GIF in backend image validation. A separate WEBP test is required; no WEBP failure was manually demonstrated.
+- **PROPOSED authorization investigation:** Preserve the previously identified potential profile-read ownership concern in `getAccount_username()`. Ownership enforcement needs a separately approved review and isolated negative tests; this is not a confirmed exploit. No reproduction details or authorization fix are included.
+
+### Remaining profile behavior — not verified
+
+- WEBP compatibility and other image formats, invalid/oversized uploads and upload failure handling.
+- Required fields, length/format boundaries and successful username/phone changes beyond the reported cases.
+- Missing current password, password confirmation/minimum-length boundaries, password-history limits and session/token behavior after password changes.
+- Missing/invalid authentication and account ownership across profile reads, edits and image uploads.
+- Automated regression coverage and production behavior.
+
+These are proposed coverage areas, not approved runtime tests or fixes. After documentation merge, plan the remaining profile negative/security cases and then address-management testing under approved requirements and disposable-environment safeguards. SYS-001, BUG-AUTH-001 and all outstanding authentication/security work remain open.
