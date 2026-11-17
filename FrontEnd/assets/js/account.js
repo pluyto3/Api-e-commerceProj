@@ -10,6 +10,30 @@ let profileImage = null;
 let accountInfoRequest = null;
 let accountInfoLoaded = false;
 
+// Browser checks improve feedback; the API still validates file content.
+function getProfileImageError(file) {
+  if (!file) return "Please select a file.";
+
+  const mimeTypes = {
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    png: "image/png",
+    gif: "image/gif",
+    webp: "image/webp",
+  };
+  const extension = file.name.match(/\.(jpe?g|png|gif|webp)$/i)?.[1].toLowerCase();
+  const expectedType = mimeTypes[extension];
+
+  if (!expectedType || (file.type && file.type.toLowerCase() !== expectedType)) {
+    return "Please select a JPG, JPEG, PNG, GIF, or WEBP image.";
+  }
+  if (file.size === 0) return "The selected file is empty. Please select an image.";
+  if (file.size > 10 * 1024 * 1024) {
+    return "The profile picture must not exceed 10 MB.";
+  }
+  return "";
+}
+
 // ==========================
 // Load User Session and Update UI
 // ==========================
@@ -401,22 +425,25 @@ $(document).ready(function () {
     .ajaxStart(() => $("#wait").show())
     .ajaxComplete(() => $("#wait").hide());
 
-  // --- Profile Image Preview ---
-  $("#image").on("change", function (e) {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = function (event) {
-        $("#profileImg").attr("src", event.target.result).show();
-        $("#defaultIcon").hide();
-      };
-      reader.readAsDataURL(file);
-    }
+  // Keep displaying the saved picture until the API accepts a new upload.
+  $("#image").on("change", function () {
+    const error = getProfileImageError(this.files[0]);
+    this.setCustomValidity(error);
+    $("#imageError").text(error);
   });
 
   // --- Upload Profile Image ---
   $("#account-form").on("submit", function (e) {
     e.preventDefault();
+
+    const input = $("#image")[0];
+    const error = getProfileImageError(input.files[0]);
+    input.setCustomValidity(error);
+    $("#imageError").text(error);
+    if (error) {
+      input.reportValidity();
+      return;
+    }
 
     const fd = new FormData(this);
     const $button = $("#editProfilePic");
@@ -448,10 +475,13 @@ $(document).ready(function () {
       },
 
       error: function (xhr) {
+        const imageError = xhr.responseJSON?.errors?.image?.[0];
+        $("#imageError").text(imageError || "");
         Swal.fire({
           icon: "error",
           title: "Error Uploading Profile Picture",
           text:
+            imageError ||
             xhr.responseJSON?.msg ||
             xhr.responseJSON?.message ||
             "Unable to upload your profile picture.",

@@ -577,8 +577,11 @@
                       class="form-control mx-auto w-auto"
                       id="image"
                       name="image"
+                      accept=".jpg,.jpeg,.png,.gif,.webp,image/jpeg,image/png,image/gif,image/webp"
+                      aria-describedby="imageHelp imageError"
                       placeholder="Enter Image "
                       required />
+                    <small id="imageError" class="text-danger" role="alert"></small>
                   </div>
                   <button
                     type="submit"
@@ -586,8 +589,8 @@
                     id="editProfilePic">
                     Upload Profile Picture
                   </button>
-                  <small class="text-muted d-block mt-2">
-                    Use JPG, PNG, or WEBP image.
+                  <small id="imageHelp" class="text-muted d-block mt-2">
+                    Use JPG, JPEG, PNG, GIF, or WEBP. Maximum size: 10 MB.
                   </small>
                 </form>
               </div>
