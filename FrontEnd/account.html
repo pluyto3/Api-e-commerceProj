@@ -352,7 +352,7 @@
                 <hr class="mx-auto" />
                 <div class="account-info">
                   <form id="signupForm" enctype="multipart/form-data">
-                    <div class="row">
+                    <div class="row account-info-fields">
                       <!-- Username -->
                       <div class="col-md-6">
                         <div class="form-group">
@@ -391,7 +391,7 @@
                         </div>
                       </div>
                       <!-- Email -->
-                      <div class="col-md-6">
+                      <div class="col-12 account-info-wide">
                         <div class="form-group email-field">
                           <label for="email" class="font-weight-bold"
                             >Email</label
@@ -410,7 +410,7 @@
                       </div>
 
                       <!-- Current Password -->
-                      <div class="col-md-6">
+                      <div class="col-12 account-info-wide">
                         <div class="form-group">
                           <label
                             for="current_password"
@@ -424,7 +424,8 @@
                               class="form-control"
                               id="current_password"
                               name="current_password"
-                              placeholder="Required when changing password"
+                              placeholder="Current password"
+                              aria-describedby="current_passwordHelp current_passwordError"
                               autocomplete="current-password" />
 
                             <div class="input-group-append">
@@ -437,6 +438,9 @@
                             </div>
                           </div>
 
+                          <small id="current_passwordHelp" class="form-text text-muted">
+                            Required only when changing your password.
+                          </small>
                           <small
                             class="text-danger error-message"
                             id="current_passwordError"></small>
@@ -444,7 +448,7 @@
                       </div>
 
                       <!-- Password -->
-                      <div class="col-md-6">
+                      <div class="col-12 account-info-wide">
                         <div class="form-group">
                           <label for="password" class="font-weight-bold"
                             >Password</label
@@ -455,7 +459,8 @@
                               class="form-control"
                               id="password"
                               name="password"
-                              placeholder="New password (optional)"
+                              placeholder="New password"
+                              aria-describedby="passwordHelp passwordError"
                               minlength="8" />
                             <div class="input-group-append">
                               <span
@@ -466,13 +471,16 @@
                               </span>
                             </div>
                           </div>
+                          <small id="passwordHelp" class="form-text text-muted">
+                            Optional. Minimum 8 characters.
+                          </small>
                           <small
                             class="text-danger error-message"
                             id="passwordError"></small>
                         </div>
                       </div>
                       <!-- Confirm Password -->
-                      <div class="col-md-6">
+                      <div class="col-12 account-info-wide">
                         <div class="form-group">
                           <label
                             for="password_confirmation"
@@ -485,7 +493,7 @@
                               class="form-control"
                               id="password_confirmation"
                               name="password_confirmation"
-                              placeholder="Confirm new password"
+                              placeholder="Confirm password"
                               minlength="8" />
                             <div class="input-group-append">
                               <span
@@ -537,7 +545,7 @@
                       </div>
                       <!-- Account Button -->
                       <div
-                        class="modal-footer col-md-12 d-flex justify-content-start">
+                        class="modal-footer col-12 account-info-wide d-flex justify-content-start">
                         <button
                           type="submit"
                           class="btn btn-md updateAccountInfo"
