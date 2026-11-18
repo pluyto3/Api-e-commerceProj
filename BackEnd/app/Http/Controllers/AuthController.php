@@ -674,6 +674,8 @@ class AuthController extends Controller
                 'max:255',
             ],
 
+            'current_password' => ['nullable', 'required_with:password', 'string'],
+
             'password' => [
                 'nullable',
                 'string',
@@ -687,6 +689,9 @@ class AuthController extends Controller
             'phone_number.unique' =>
                 'This phone number is already registered.',
 
+            'current_password.required_with' =>
+                'Please enter your current password.',
+
             'password.confirmed' =>
                 'Password confirmation does not match.',
         ]);
@@ -698,6 +703,16 @@ class AuthController extends Controller
         }
 
         $validated = $validator->validated();
+
+        // Reject the entire update before assigning any account fields.
+        if (!empty($validated['password']) &&
+            !Hash::check($validated['current_password'], $user->password)) {
+            return response()->json([
+                'errors' => [
+                    'current_password' => ['The current password is incorrect.'],
+                ],
+            ], 422);
+        }
 
         $user->username = $validated['username'];
         $user->phone_number = $validated['phone_number'];
@@ -755,11 +770,16 @@ class AuthController extends Controller
             $account = $user;
 
             $request->validate([
-                'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:10240',
+                'image' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:10240|dimensions:min_width=1,min_height=1',
+            ], [
+                'image.image' => 'Please select a valid JPG, JPEG, PNG, GIF, or WEBP image.',
+                'image.mimes' => 'Please select a JPG, JPEG, PNG, GIF, or WEBP image.',
+                'image.max' => 'The profile picture must not exceed 10 MB.',
+                'image.dimensions' => 'The selected image could not be read. Please choose a valid image.',
             ]);
 
             $image = $request->file('image');
-            $imageName = time() . '.' . $image->getClientOriginalExtension();
+            $imageName = Str::uuid() . '.' . $image->extension();
             $destinationPath = public_path('FrontEnd/assets/img/user');
 
             if (!File::exists($destinationPath)) {
@@ -775,10 +795,14 @@ class AuthController extends Controller
                 'user' => $account->only(['user_id', 'username', 'email', 'fullname', 'role', 'image']),
                 'status' => 200,
             ], 200);
-
-        } catch (\Exception $e) {
+        } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
-                'msg' => 'Server Error: ' . $e->getMessage(),
+                'msg' => 'Please check the selected profile picture.',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'msg' => 'Unable to update your profile picture. Please try again.',
             ], 500);
         }
     }
