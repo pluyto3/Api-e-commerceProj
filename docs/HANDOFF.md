@@ -1,8 +1,21 @@
 # Hanz-Go AI workflow handoff
 
+## November 18 authentication UI draft preparation
+
+**Owner:** Human repository owner for acceptance and merge; Codex for this approved UI preparation; independent ChatGPT review pending.
+
+**Branch and baseline - verified in Git:** fix/auth-ui-main-20261118 in the separate hanzgo-auth-ui-pr worktree, based on 868e880cb7a080274c9f8e40db268d834fca035c. Remote main matched that baseline when checked. See Git history for the task commit revision.
+
+**Changed paths:** FrontEnd/login.html and FrontEnd/register.html transfer the redesigned pages; FrontEnd/assets/css/auth.css supplies their layout; FrontEnd/assets/js/password-toggle.js supplies password visibility. This handoff records the work. The baseline authentication handlers and API configuration remain unchanged. Registration displays Customer with value user; required fields, eight-character password constraints, error targets and the existing loading indicator are retained. The source branch skeleton loader is not required. The source branch Remember me checkbox was omitted because it had no working behavior.
+
+**Verification - Codex, local Windows:** Node REPL vm.Script parsed the baseline login and registration scripts and the new password-toggle script successfully. Node REPL checked all local HTML src and href references for file existence, form fields and navigation, password minimum lengths and responsive CSS rules. Synthetic Node VM tests passed for login and registration request paths and JSON fields, Customer value, registration HTTP 422 field feedback and password-toggle state. These tests sent no network requests. git diff --check passed; git diff --exit-code origin/main -- FrontEnd/assets/js/login.js FrontEnd/assets/js/registration.js BackEnd confirmed those paths unchanged. A same-session second-pass review covered the complete diff, assets, selectors, role contract and scope; it is not independent QA. Browser rendering, mobile sizing, browser console, real login/registration, email delivery and production behavior were not tested. No database operations were run.
+
+**Known risk / next action:** BUG-AUTH-001 remains a pre-existing, unfixed issue and was not tested in this task; see docs/TESTING.md. A successful account-creation response can report a verification-email delivery failure, while the unchanged frontend displays its fixed success message. The owner approved continuing this UI-only draft without fixing that issue. Review the draft independently with ChatGPT, perform owner-approved browser and isolated integration checks, and obtain human acceptance before merge or deployment.
+
+
 **Updated:** 2026-11-18
 
-**Current handoff:** See [November 18 profile testing documentation](#november-18-profile-testing-documentation---awaiting-draft-pr-review). The November 17 handoff below is historical; its scope and status statements describe that earlier task.
+**Current handoff:** See [November 18 authentication UI draft preparation](#november-18-authentication-ui-draft-preparation). Prior handoffs below are historical and describe their respective tasks.
 
 ## Historical profile documentation handoff — 2026-11-17
 
