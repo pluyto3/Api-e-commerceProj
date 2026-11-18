@@ -157,3 +157,23 @@ The metadata and entries below describe the earlier pilot, not the current branc
 
 ## Next agent must read
 `AGENTS.md`, `docs/CONTEXT_INDEX.md`, `docs/BACKLOG.md`, `docs/TESTING.md`, `docs/DEPLOYMENT.md`, this handoff, and the relevant current application code.
+
+## November 18 profile testing documentation - awaiting Draft PR review
+
+**Date/owner:** 2026-11-18; human owner (manual execution/evidence and acceptance), ChatGPT (reported screenshot review), Codex (documentation and same-session source/diff review only).
+
+**Approved scope:** Documentation-only update to docs/TESTING.md and docs/HANDOFF.md. No application changes or runtime/database tests. Preserve historical results, BUG-AUTH-001 and outstanding security work.
+
+**Branch/baseline - verified in Git:** docs/profile-testing-20261118 created in a separate worktree directly from freshly fetched origin/main at 47a16f78df40566007b1f2a8bcacb6dd48a35ccf. Documentation revision is the commit carrying this entry. The original fix/profile-image-validation checkout remains at application commit 45a5d60464a6004b8076993fcdfd48cf863c2fa8; its existing uncommitted docs/HANDOFF.md is preserved, not copied into this branch. No unrelated authentication commits are included.
+
+**Changed paths:** docs/TESTING.md appends November 18 profile-picture retests, responsive-layout cases LAYOUT-01 through LAYOUT-10, provenance and evidence limits. docs/HANDOFF.md appends this handoff; earlier handoff entries remain historical records.
+
+**Reported manual evidence / reported by a prior audit:** Frontend TXT/empty-selection blocks; invalid PNG HTTP 422 with previous picture retained after refresh; WEBP/JPG retest HTTP 200 and persistence; small PNG HTTP 200; oversized-PNG frontend 10 MB warning. Initial 2.06 MB PNG HTTP 422 upload error followed by a successful similar-file retry has an unresolved cause. PHP CLI limits reported as 40M do not establish effective server limits. Desktop, docked DevTools and 375/320px visible layout, readable placeholders/helpers, compact picture card, visibility controls, account-update persistence, duplicate-field HTTP 422 rejection and incorrect-current-password HTTP 422 followed by existing-password login HTTP 200 were reported. Mismatch request absence and LAYOUT-10 exact upload status were not conclusively verified. See TESTING.md for case-specific outcomes.
+
+**Not verified / inferred:** Codex did not inspect original screenshots or reproduce the tests. Database persistence is inferred from refresh behavior, not direct DB inspection. Runtime revision, active server limits, backend size enforcement and full security coverage are not independently established. Earlier Codex TXT API retest stopped before HTTP; the owner's invalid-PNG PROFILE-07C-R1 is separate evidence.
+
+**Documentation checks - completed in isolated Windows/PowerShell worktree:** Read instructions/context/testing/handoff from the latest fetched main; exact documentation diff reviewed; git diff --check passed. Inline Node comparisons against origin/main confirmed both historical documents remain unchanged as prefixes, the changed-path allowlist contains exactly the two approved documents, and all supplied test IDs are present. Same-session second-pass review completed for outcomes, status caveats, provenance, sensitive-value exclusion and scope; this is not independent QA. No automated or manual application tests, API requests or database operations were executed.
+
+**Risks / next action:** Review the documentation Draft PR targeting main; human merge approval remains required. BUG-AUTH-001, SYS-001, missing/invalid authentication and ownership tests, outstanding security tests, backend size enforcement and the unexplained upload failure remain open. No merge or deployment is authorized.
+
+**Proposed application isolation - not executed:** In a new worktree from latest origin/main, inspect feature-branch commits and identify only the approved profile-upload and layout changes plus necessary dependencies. Cherry-pick narrowly scoped commits where clean; for mixed commits, reconstruct only reviewed profile hunks rather than importing whole files or authentication commits. Read-only Git history identifies 788d899 (image validation/WEBP) followed by 45a5d60464a6004b8076993fcdfd48cf863c2fa8 (layout) as candidates, after prerequisite and exact-hunk review. Older authentication commits must remain excluded; the layout commit alone does not include the upload improvements. Review the full diff against main, perform approved isolated regression checks and obtain owner approval before opening an application PR. This documentation task does not execute isolation or open that PR.

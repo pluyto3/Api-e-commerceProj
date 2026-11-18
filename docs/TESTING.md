@@ -149,3 +149,47 @@ These date-scoped IDs do not overlap existing IDs found in `docs/`. All observed
 - Automated regression coverage and production behavior.
 
 These are proposed coverage areas, not approved runtime tests or fixes. After documentation merge, plan the remaining profile negative/security cases and then address-management testing under approved requirements and disposable-environment safeguards. SYS-001, BUG-AUTH-001 and all outstanding authentication/security work remain open.
+
+## November 18 profile-picture retests and responsive-layout regression - 2026-11-18
+
+**Provenance - owner-observed manual evidence / reported by a prior audit:** The owner supplied local browser outcomes and screenshot-based observations reviewed by ChatGPT. Codex transcribed the supplied report; it did not inspect the original screenshots or rerun these tests. Every PASS in this section is a reported manual result, not an automated test result.
+
+**Environment/revision - owner-reported, not verified:** Windows/XAMPP local Laravel API and dummy MySQL database named ecommerce. Application reference: fix/profile-image-validation at 45a5d60464a6004b8076993fcdfd48cf863c2fa8, containing IMP-PROFILE-002, IMP-PROFILE-003 and the mobile-width correction. The exact runtime revision for each case, effective server configuration and database target/isolation were not independently verified during this documentation phase. This documentation branch is based on origin/main at 47a16f78df40566007b1f2a8bcacb6dd48a35ccf; it does not bring the application changes or unrelated authentication commits into main.
+
+### Profile-picture retests - reported manual outcomes
+
+| Test ID | Scenario | Reported observed result and limits |
+|---|---|---|
+| PROFILE-07A-R1 | Unsupported TXT | PASS - blocked by frontend; no backend rejection is established by this case |
+| PROFILE-07B-R1 | Empty file selection | PASS - empty selection blocked; does not establish rejection of a zero-byte uploaded file |
+| PROFILE-07C-R1 | Invalid PNG content | PASS - HTTP 422; previous picture remained after refresh |
+| PROFILE-07D-R1 | WEBP upload | PASS - HTTP 200; picture persisted |
+| PROFILE-06A-R1 | JPG upload | PASS - HTTP 200; picture persisted |
+| PROFILE-07E | Oversized PNG | PASS for frontend warning/blocking - 10 MB warning displayed; exact file size and backend size-limit enforcement not independently confirmed |
+| No supplied ID | Small PNG upload | PASS - HTTP 200 |
+| No supplied ID | 2.06 MB PNG upload and later similar-file retry | Initial HTTP 422 with an upload-error message; later similar-file retry succeeded. Original cause unresolved; exact later status not supplied |
+
+**Upload limits and unresolved failure:** PHP CLI limits were reported as 40M; the effective API server limits were not independently verified. Do not attribute the initial 2.06 MB PNG failure to PHP limits, file corruption or another cause without evidence. A later successful similar-file retry does not explain the initial failure. Backend enforcement of the 10 MB size boundary remains unverified.
+
+**Retest identity:** PROFILE-07C-R1 above concerns the owner's invalid-PNG manual test. The earlier Codex-proposed authenticated TXT API test was blocked at runtime-environment verification and sent zero HTTP requests; it supplies no HTTP 422 evidence. Do not conflate it with PROFILE-07A-R1 frontend blocking or the owner's invalid-PNG result.
+
+### Responsive-layout regression - reported manual outcomes
+
+| Test ID | Scenario | Reported observed result and limits |
+|---|---|---|
+| LAYOUT-01 | Desktop | PASS - visible layout |
+| LAYOUT-02 | Narrow browser / docked DevTools | PASS - visible layout |
+| LAYOUT-03 | Mobile 375px and 320px | PASS - visible layout |
+| LAYOUT-04 | Password visibility controls | PASS - controls worked |
+| LAYOUT-05 | Account update | PASS - update succeeded; full name persisted after refresh; no exact HTTP status assigned |
+| LAYOUT-06 | Duplicate username | PASS - HTTP 422; original username persisted |
+| LAYOUT-07 | Duplicate phone | PASS - HTTP 422; original phone persisted |
+| LAYOUT-08 | Password confirmation mismatch | PASS for displayed mismatch error; absence of an API request not conclusively verified |
+| LAYOUT-09 | Incorrect current password | PASS - HTTP 422; existing password subsequently authenticated successfully with HTTP 200 |
+| LAYOUT-10 | JPG profile-picture upload | PASS - UI success; picture and navbar avatar persisted after refresh; exact upload HTTP status not independently visible |
+
+Password placeholders and helper instructions were readable in the inspected views; the Profile Picture card was compact on desktop rather than stretched to match the Account Information form. These are screenshot-based visual observations, not automated viewport/overflow measurements or universal device coverage.
+
+**Evidence boundaries:** Persistence is inferred from owner-observed refresh/retrieval behavior, not independently verified in the database. HTTP statuses are recorded only where supplied. PROFILE-06A-R1's HTTP 200 does not establish LAYOUT-10's upload status or retroactively assign a status to the November 17 PROFILE-06A case. No screenshots, account values, passwords, tokens or confidential responses are included. Codex executed no application tests, API requests, automated browser tests, PHPUnit, migrations, seeders or database operations in this documentation phase.
+
+**Outstanding work:** Historical results and issues above remain unchanged. The WEBP and invalid-upload observations narrow earlier coverage gaps only for these local reported cases. Missing/invalid authentication, cross-account ownership on reads/edits/uploads, SYS-001, BUG-AUTH-001, outstanding authentication/security tests, backend size-boundary enforcement, the unresolved upload error, broader file/validation boundaries and automated regression coverage remain open. These reports do not establish production behavior or full security coverage. Further runtime work requires separately approved scope and verified disposable-environment safeguards.
