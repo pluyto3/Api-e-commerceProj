@@ -1,8 +1,10 @@
 # Hanz-Go AI workflow handoff
 
-**Updated:** 2026-11-17
+**Updated:** 2026-11-18
 
-## Current profile documentation handoff — 2026-11-17
+**Current handoff:** See [November 18 profile testing documentation](#november-18-profile-testing-documentation---awaiting-draft-pr-review). The November 17 handoff below is historical; its scope and status statements describe that earlier task.
+
+## Historical profile documentation handoff — 2026-11-17
 
 **Owner:** Human repository owner (manual execution and acceptance); ChatGPT (screenshot review reported by owner); Codex (documentation and source inspection only).
 
