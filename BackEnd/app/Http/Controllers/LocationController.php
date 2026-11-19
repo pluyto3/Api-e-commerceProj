@@ -74,7 +74,7 @@ class LocationController extends Controller
         if($token){
             $user = User::where('token', $token)->first();
             if($user){
-                $location = Location::find($id);
+                $location = Location::where('user_id', $user->user_id)->find($id);
                 if($location){
                     return response()->json($location, 200);
                 } else {
@@ -137,6 +137,12 @@ class LocationController extends Controller
         if ($token) {
             $user = User::where('token', $token)->first();
             if ($user) {
+                $location = Location::where('user_id', $user->user_id)->find($id);
+
+                if (!$location) {
+                    return response()->json(['msg' => 'Location not found.'], 404);
+                }
+
                 $request->validate([
                     'editPurok' => 'required|string',
                     'editBarangay' => 'required|string',
@@ -144,12 +150,6 @@ class LocationController extends Controller
                     'editProvince' => 'required|string',
                     'editZipcode' => 'nullable|string|max:10',
                 ]);
-
-                $location = Location::find($id);
-
-                if (!$location) {
-                    return response()->json(['msg' => 'Location not found.'], 404);
-                }
 
                 $location->purok = $request->editPurok;
                 $location->barangay = $request->editBarangay;
@@ -159,7 +159,11 @@ class LocationController extends Controller
                 $location->save();
                 
                 return response()->json(['message' => 'Location updated successfully', 'location' => $location, 'status' => 200]);
+            } else {
+                return response()->json(['msg' => 'Invalid Token.'], 400);
             }
+        } else {
+            return response()->json(['msg' => 'No Token Provided.'], 400);
         }
     }
 
@@ -174,7 +178,11 @@ class LocationController extends Controller
                 // Find the location by location_id and ensure it belongs to the authenticated user
                 $location = Location::where('location_id', $id)
                     ->where('user_id', $user->user_id)
-                    ->firstOrFail();
+                    ->first();
+
+                if (!$location) {
+                    return response()->json(['msg' => 'Location not found.'], 404);
+                }
 
                 // Set all user's locations to not default
                 Location::where('user_id', $user->user_id)->update(['is_default' => false]);
@@ -199,7 +207,7 @@ class LocationController extends Controller
         if ($token) {
             $user = User::where('token', $token)->first();
             if ($user) {
-                $location = Location::find($id);
+                $location = Location::where('user_id', $user->user_id)->find($id);
                 if ($location) {
                     $location->delete();
                     return response()->json('Location Successfully Deleted!', 200);

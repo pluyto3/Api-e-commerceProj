@@ -1,8 +1,41 @@
 # Hanz-Go AI workflow handoff
 
-**Updated:** 2026-11-18
+## Approved commit and push follow-up - 2026-11-19
 
-**Current handoff:** See [November 18 profile testing documentation](#november-18-profile-testing-documentation---awaiting-draft-pr-review). The November 17 handoff below is historical; its scope and status statements describe that earlier task.
+**Owner authorization:** The owner approved committing exactly the six SYS-001/controller/test/address-label/documentation files and pushing to origin fix/auth-ui-main-20261118 with message `fix(address): enforce ownership and improve address labels`. This supersedes the earlier no-commit/no-push restriction below; merge, deployment and database operations remain unauthorized. Baseline: 8406f6d5499c49cb9f7b65feb12fed62404f9dd5; the resulting revision is the commit containing this entry.
+
+**Evidence boundary:** PHPUnit has not been run, and cross-account authorization testing is not complete. The owner-reported observed 404 is not conclusively attributable to a verified foreign-owned address. It is not proof of a passing cross-account test. Source-level findings and earlier owner-reported manual results remain distinct.
+
+**Verification / next action:** Final six-file diff and test safety guards reviewed; controller and test PHP syntax checks and git diff --check passed again before staging. Only the six approved paths are to be staged. Preserve .worktrees/, stashes and unrelated changes. Owner acceptance of runtime behavior and isolated authorization regression execution remain pending; do not merge or deploy. Push outcome and exact commit SHA will be reported after execution.
+
+## November 19 approved SYS-001 local integration - current handoff
+
+**Owner:** Human repository owner for acceptance; Codex for approved implementation and same-session second-pass review; ChatGPT review pending. Explicit user approval supersedes the earlier PROPOSED state for this bounded task. No commit or push authorized.
+
+**Branch/revision - verified in Git:** Existing C:/xampp/htdocs/e-commerce folder and fix/auth-ui-main-20261118 branch, HEAD 8406f6d5499c49cb9f7b65feb12fed62404f9dd5. No branch/worktree created. GitHub verified PR #3 open, draft and unmerged at f8358988e7aa45267a5e9125994c816e807dca17. Used that locally available Git object, not the older local feature branch.
+
+**Changed paths:** BackEnd/app/Http/Controllers/LocationController.php adds token-owner filtering to ID read/update/delete, authorizes updates before validation, returns explicit HTTP 400 JSON for missing/invalid update tokens and explicit JSON 404 for missing/denied default targets. Existing success responses, edit fields and POST/PUT routes remain unchanged (verified in code). BackEnd/tests/Feature/LocationAuthorizationTest.php imports PR #3 unchanged with isolation guards. docs/TESTING.md, docs/BACKLOG.md and this handoff record evidence, approval and review status. Pre-existing FrontEnd/address.html changes remain exactly Add an Address and Edit an Address; Codex made no frontend edits. .worktrees/ and all three stash entries were left untouched.
+
+**Executed checks:** PHP 8.4.8 lint for controller/test passed; Node.js 24.15.0 source-contract assertions passed; git diff --check passed. Commands, scope and corrected preparation failures are recorded in docs/TESTING.md. A separate same-session second-pass review covered the exact controller diff, route/model/frontend contracts, regression coverage, guard preservation and changed-file scope. This is not independent third-party QA. No PHPUnit, API/browser test, Laravel bootstrap, database operation, migration, seeder, reset, dependency install or production/configuration change. Existing manual evidence remains owner-reported.
+
+**Risks / next action:** Runtime behavior and isolation are not verified. The existing ecommerce database does not satisfy this suite's naming guard. Owner-approved isolated setup and schema are prerequisites for later execution; no setup is authorized here. Default-address writes retain their existing nontransactional concurrency behavior. Broader authentication and application security concerns remain outside scope. Stop for ChatGPT and owner review before committing; no push, merge or deployment. Earlier handoffs below describe historical tasks.
+
+## November 18 authentication UI draft preparation
+
+**Owner:** Human repository owner for acceptance and merge; Codex for this approved UI preparation; independent ChatGPT review pending.
+
+**Branch and baseline - verified in Git:** fix/auth-ui-main-20261118 in the separate hanzgo-auth-ui-pr worktree, based on 868e880cb7a080274c9f8e40db268d834fca035c. Remote main matched that baseline when checked. See Git history for the task commit revision.
+
+**Changed paths:** FrontEnd/login.html and FrontEnd/register.html transfer the redesigned pages; FrontEnd/assets/css/auth.css supplies their layout; FrontEnd/assets/js/password-toggle.js supplies password visibility. This handoff records the work. The baseline authentication handlers and API configuration remain unchanged. Registration displays Customer with value user; required fields, eight-character password constraints, error targets and the existing loading indicator are retained. The source branch skeleton loader is not required. The source branch Remember me checkbox was omitted because it had no working behavior.
+
+**Verification - Codex, local Windows:** Node REPL vm.Script parsed the baseline login and registration scripts and the new password-toggle script successfully. Node REPL checked all local HTML src and href references for file existence, form fields and navigation, password minimum lengths and responsive CSS rules. Synthetic Node VM tests passed for login and registration request paths and JSON fields, Customer value, registration HTTP 422 field feedback and password-toggle state. These tests sent no network requests. git diff --check passed; git diff --exit-code origin/main -- FrontEnd/assets/js/login.js FrontEnd/assets/js/registration.js BackEnd confirmed those paths unchanged. A same-session second-pass review covered the complete diff, assets, selectors, role contract and scope; it is not independent QA. Browser rendering, mobile sizing, browser console, real login/registration, email delivery and production behavior were not tested. No database operations were run.
+
+**Known risk / next action:** BUG-AUTH-001 remains a pre-existing, unfixed issue and was not tested in this task; see docs/TESTING.md. A successful account-creation response can report a verification-email delivery failure, while the unchanged frontend displays its fixed success message. The owner approved continuing this UI-only draft without fixing that issue. Review the draft independently with ChatGPT, perform owner-approved browser and isolated integration checks, and obtain human acceptance before merge or deployment.
+
+
+**Updated:** 2026-11-19
+
+**Current handoff:** See [November 19 approved SYS-001 local integration](#november-19-approved-sys-001-local-integration---current-handoff). Prior handoffs below are historical and describe their respective tasks.
 
 ## Historical profile documentation handoff — 2026-11-17
 
