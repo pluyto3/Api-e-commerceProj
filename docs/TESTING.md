@@ -2,7 +2,28 @@
 
 **Status:** Historical baseline (2026-11-02), plus owner-reported manual authentication/registration evidence (2026-11-16), Customer Profile and Account Management evidence (2026-11-17), and profile-picture retests and responsive-layout manual regression results (2026-11-18). Codex has not independently reproduced the manual tests; no automated tests were executed for these documentation tasks.
 
-## Source-level observations
+## SYS-001 local integration - 2026-11-19
+
+**Commit/push follow-up:** Owner authorized the six-file commit and push on the existing development branch. PHP syntax checks for controller/test and git diff --check were rerun successfully before staging. PHPUnit remains NOT RUN; cross-account authorization testing is incomplete. The owner-reported observed 404 is not conclusively attributable to a verified foreign-owned address and does not establish a passing ownership-denial test. No database operations were performed.
+
+**Verified in Git/code:** Existing branch fix/auth-ui-main-20261118 at baseline 8406f6d5499c49cb9f7b65feb12fed62404f9dd5. Controller and new LocationAuthorizationTest.php match Draft PR #3 head f8358988e7aa45267a5e9125994c816e807dca17, normalizing line endings. Tests define owner success, foreign/missing ID denial, missing/invalid tokens, unchanged data on denial, validation, default isolation and POST/PUT coverage; these are not executed runtime passes.
+
+**Newly executed by Codex:** Windows PowerShell; PHP CLI 8.4.8 at D:/php/php.exe. Commands from repository root:
+
+- `php -l BackEnd/app/Http/Controllers/LocationController.php`: PASS, No syntax errors detected.
+- `php -l BackEnd/tests/Feature/LocationAuthorizationTest.php`: PASS, No syntax errors detected.
+- PowerShell here-string source assertion script piped to `node` (Node.js 24.15.0): PASS. Checks owner filters on read/update/delete, denial before update validation/default writes, explicit HTTP 400 update authentication responses, unchanged success response expressions and edit fields, both POST/PUT routes, exact PR test preservation and pre-bootstrap/pre-write guard ordering, and frontend diff limited to the two existing modal titles. Reads only source and Git objects; no application bootstrap or database access.
+- `git diff --check`: PASS, no whitespace errors; Git printed a CRLF normalization warning for the controller.
+
+An initial transfer assertion compared against the wrong PR parent and stopped before writing; initial test-file lint consequently reported Could not open input file. The corrected bounded transfer matched the reviewed PR head; both subsequent lints and source assertions passed. A documentation-edit script had a syntax error before writing and was replaced with a direct patch.
+
+**Database-backed PHPUnit NOT RUN:** vendor/autoload.php exists, but an approved isolated connection has not been established or verified. Do not run this suite against the existing ecommerce database. No .env read/edit, Laravel bootstrap, API/browser test, database connection, migration, seeder or reset was performed. Earlier manual results below remain owner-reported and were not rerun.
+
+**Preserved guard prerequisites:** Uncached configuration, this application path, testing environment, mysql default connection, explicit SYS001_TEST_DATABASE matching hanzgo_sys001_test_[a-z0-9_]+ and configured database, loopback IP host, username beginning hanzgo_sys001_test, no URL/socket/read-write overrides or prefix, array cache/session/mail and sync queue. These are checked before provider registration. Before fixture writes, the suite verifies the actual selected database, InnoDB users/locations tables and empty users/locations, then uses transaction rollback/disconnect. No automatic migrations or seeders. Owner-approved schema, external isolation verification and a restricted database account remain prerequisites; matching names alone do not establish isolation.
+
+**Not verified:** Database execution, browser compatibility and live security behavior. Compatibility is inferred from preserved source contracts. Same-session second-pass review is not independent QA; ChatGPT review and human acceptance are pending.
+
+## Historical source-level observations before SYS-001 integration
 - The repository has PHPUnit test scaffolding, with `BackEnd/tests/Unit/ExampleTest.php` and `BackEnd/tests/Feature/ExampleTest.php` only in the inspected test folders.
 - The example feature test expects `GET /` to return 200, while `BackEnd/routes/web.php` aborts with 404. This is an apparent mismatch **not an executed failure**.
 - `BackEnd/phpunit.xml` has database test overrides commented out. **Do not run DB-dependent tests until isolation is proved.**
