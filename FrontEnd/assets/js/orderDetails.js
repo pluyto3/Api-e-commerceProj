@@ -867,6 +867,10 @@ function populateOrderDetails(order, itemsOverride, viewOptions = {}) {
   );
   $("#summaryDate").text(formatDate(order.created_at || order.updated_at));
   $("#summaryItems").text(items.length);
+  $("#summaryQuantity").text(sumItemsQuantity(items));
+  $("#orderTotalLabel").text(
+    shippingStatus === "cancelled" ? "Original Order Amount" : "Total Amount",
+  );
   $("#orderStatusTimeline").html(renderOrderTimeline(shippingStatus));
 
   const user = order.user || currentUserProfile || {};

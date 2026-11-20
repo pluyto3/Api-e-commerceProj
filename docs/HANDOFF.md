@@ -1,5 +1,35 @@
 # Hanz-Go AI workflow handoff
 
+## Final UI commit/push authorization and evidence - 2026-11-20
+
+**Current owner / authorization:** Human owner approved the single seven-file commit with message `fix(ui): improve cart, checkout, and order display labels` and normal push to origin fix/auth-ui-main-20261118. This supersedes earlier no-commit/no-push instructions below for this bounded UI task. No merge, production promotion or backend deployment authorized; a push may trigger a Vercel preview automatically.
+
+**Verified in Git / scope:** Existing C:/xampp/htdocs/e-commerce checkout and branch fix/auth-ui-main-20261118; fetched remote baseline 96beea6bcff0488044fe0aa622d947180bcca5b1 matches local HEAD before commit. Revision is the commit containing this entry; exact SHA and push/synchronization outcome will be reported after execution. Only FrontEnd/assets/js/cart.js, FrontEnd/orderDetails.html, FrontEnd/assets/js/orderDetails.js, FrontEnd/checkout.html, FrontEnd/orderConfirmation.html, docs/TESTING.md and docs/HANDOFF.md are approved for staging. Final UI uses Product Types and Total Quantity. No new branch/folder/worktree; existing .worktrees/ and three stashes preserved.
+
+**Owner-reported evidence:** Office PC localhost browser PASS for singular cart wording, Order #22 count/quantity, cancelled original amount/status and refreshed Product Types label; GCash VISUAL PASS only. Confirmation wording was source-reviewed, not browser-retested. docs/TESTING.md records supplied details and limitations. Codex has not independently reproduced these manual results or verified runtime/database isolation. Earlier customer functional tests are not new UI regression results.
+
+**Verification / remaining work:** Final syntax, source assertions, full diff and staged allowlist/whitespace checks precede commit; separate same-session second-pass review, not independent QA. No new Codex browser/API/database test. Browser plural wording, mobile layout, complete checkout, disabled-GCash interaction, confirmation browser retest and actual email delivery remain untested. BUG-AUTH-001 remains separate. After push, review the committed diff and remaining limitations; no merge or production deployment. Earlier local-only handoffs below are historical.
+
+## UI-ORDER-004 - local review, 2026-11-20
+
+**Owner / approval:** Human owner approved renaming only the order-summary label Line Items to Product Types. Codex implemented on existing fix/auth-ui-main-20261118 at baseline 96beea6bcff0488044fe0aa622d947180bcca5b1; changes remain uncommitted alongside the five previously approved UI improvements.
+
+**Verified in code / changed paths:** FrontEnd/orderDetails.html changes the label to Product Types; summaryItems, Total Quantity and JavaScript calculations are unchanged by this follow-up. This required docs/HANDOFF.md entry records the task. All earlier local edits and untracked .worktrees/ are preserved.
+
+**Verification / next action:** Local PowerShell source assertions and git diff --check passed; same-session second-pass review confirmed the label change and preserved count/quantity markup. Browser rendering was not tested; no API or database operations. ChatGPT and owner review/acceptance pending. No branch/folder created; no commit, push, merge or deployment performed or authorized.
+
+## Five customer UI improvements - local review, 2026-11-20
+
+**Owner / approval:** Human owner explicitly approved all five bounded UI changes; Codex implemented and performed a separate same-session second-pass review. ChatGPT diff review and human acceptance remain pending. No commit, push, merge or deployment authorized.
+
+**Verified in Git:** Existing C:/xampp/htdocs/e-commerce folder, fix/auth-ui-main-20261118 branch, baseline 96beea6bcff0488044fe0aa622d947180bcca5b1. Changes are local and uncommitted. No new branch, clone, folder or worktree created; pre-existing untracked .worktrees/ preserved.
+
+**Changed paths / verified in code:** FrontEnd/assets/js/cart.js selects product/products using the existing distinct-entry count. FrontEnd/orderDetails.html and FrontEnd/assets/js/orderDetails.js label the existing count Line Items, add Total Quantity using the existing sumItemsQuantity helper over the same displayed items, and switch Total Amount to Original Order Amount when the displayed shipping status is cancelled. Existing cancelled badge, seller/item selection and amount calculations are retained. FrontEnd/checkout.html labels disabled GCash as GCash (Coming Soon). FrontEnd/orderConfirmation.html replaces the email-delivery claim with neutral order confirmation and My Orders guidance, retaining the dynamic order ID. docs/TESTING.md and this handoff record approval, evidence and limits. No backend, API contract, authentication, payment logic or configuration changes.
+
+**Checks executed:** Windows PowerShell / Node.js v24.15.0; inline source-only Node VM checks, syntax parsing, source assertions, git diff review and git diff --check. Final checks PASS for singular/plural cart expression, seven synthetic modal cases against baseline rendered fields, disabled GCash/selected COD, confirmation wording/ID and unique modal targets. Two preliminary VM harness errors were corrected; see docs/TESTING.md for exact command forms, outcomes and limitations. No API/browser/database tests executed. Same-session second-pass review is not independent QA.
+
+**Remaining concerns / next action:** Browser rendering/mobile layout and actual cart, checkout, order listing and cancellation integration are not verified. No known isolated local runtime was established. ChatGPT reviews the diff, then owner tests using existing synthetic data in a confirmed disposable environment and accepts locally. An explicitly approved later commit/push may synchronize Office/Home PCs; GitHub has not been updated by this task. No unresolved scope conflict; BUG-AUTH-001 remains separate.
+
 ## Approved commit and push follow-up - 2026-11-19
 
 **Owner authorization:** The owner approved committing exactly the six SYS-001/controller/test/address-label/documentation files and pushing to origin fix/auth-ui-main-20261118 with message `fix(address): enforce ownership and improve address labels`. This supersedes the earlier no-commit/no-push restriction below; merge, deployment and database operations remain unauthorized. Baseline: 8406f6d5499c49cb9f7b65feb12fed62404f9dd5; the resulting revision is the commit containing this entry.

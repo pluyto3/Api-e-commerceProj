@@ -318,7 +318,7 @@ function loadCartItems() {
       });
 
       $("#item-count-footer").text(
-        `You have ${cartItems.length} products in your cart.`,
+        `You have ${cartItems.length} ${cartItems.length === 1 ? "product" : "products"} in your cart.`,
       );
 
       $("#cart-stock-alert").remove();

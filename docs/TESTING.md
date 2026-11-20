@@ -1,5 +1,38 @@
 # Hanz-Go testing and evidence
 
+## Owner-reported UI checks and final commit preparation - 2026-11-20
+
+**Provenance / owner-reported, not independently reproduced:** Office PC manual checks at http://localhost/e-commerce/FrontEnd/. Runtime revision, database target and isolation were not independently verified by Codex. Earlier customer functional tests are separate historical evidence, not newly executed regression tests for this task.
+
+| Task | Owner-reported result | Evidence and limits |
+|---|---|---|
+| CART-UI-001 | PASS | cart.html showed You have 1 product in your cart.; one product entry, quantity 1, total PHP 650.00. Multiple-entry plural wording not browser-tested; earlier synthetic checks passed. |
+| UI-ORDER-001 | PASS | Cancelled Order #22 showed Product Types 1, Total Quantity 3, product quantity 3 and unit price PHP 650.00. |
+| UI-ORDER-003 | PASS | Order #22 showed Original Order Amount PHP 1,950.00, Order Status Cancelled and Payment Status Cancelled; amount matched 3 times PHP 650.00. |
+| UI-CHECKOUT-001 | VISUAL PASS | GCash (Coming Soon) appeared greyed out/unselected; Cash on Delivery selected/available. No attempt to select GCash and no order placed. Disabled attribute confirmed separately in source by Codex. |
+| UI-ORDER-002 | SOURCE-LEVEL PASS; BROWSER NOT RETESTED | Owner reviewed neutral confirmation wording and retained dynamic order ID markup. No new order placed; actual email delivery not verified. |
+| UI-ORDER-004 | PASS | After refresh/reopening Order #22, Product Types replaced Line Items; count 1, quantity 3 and original amount PHP 1,950.00 retained. |
+
+**Remaining untested:** Browser plural cart case, mobile/responsive layout, complete checkout flow after these changes, direct disabled-GCash interaction, updated confirmation page in browser and actual confirmation-email delivery. No comprehensive integration/regression pass is claimed.
+
+**Final Codex checks:** `git fetch origin fix/auth-ui-main-20261118` succeeded; local baseline and remote matched 96beea6bcff0488044fe0aa622d947180bcca5b1 (no divergence). `node --check FrontEnd/assets/js/cart.js`, `node --check FrontEnd/assets/js/orderDetails.js` and `node --check FrontEnd/assets/js/orderConfirmation.js` passed during commit preparation and were repeated for final verification. Final source assertions, seven-file staged allowlist, staged syntax checks, full staged-diff review and `git diff --cached --check` passed before the authorized commit. No new browser/API/database tests by Codex. Same-session second-pass review is not independent QA. Initial unprivileged fetch in the previous preparation turn failed to write .git/FETCH_HEAD; authorized elevated retry succeeded.
+
+## Five customer UI improvements - 2026-11-20
+
+**Approval / verified in Git:** Owner explicitly approved local implementation of CART-UI-001, UI-ORDER-001, UI-ORDER-003, UI-CHECKOUT-001 and UI-ORDER-002. Existing branch fix/auth-ui-main-20261118, baseline 96beea6bcff0488044fe0aa622d947180bcca5b1. No commit/push/merge/deployment authorized. Pre-existing untracked .worktrees/ preserved.
+
+**Executed locally:** Windows PowerShell, Node.js v24.15.0. `git status --short`, `git branch --show-current`, source inspection and `git diff -- FrontEnd` verified scope. PowerShell here-string JavaScript piped to `node` used only source files, Git objects and synthetic in-memory records:
+
+- `vm.Script` syntax parsing: PASS for cart.js, orderDetails.js and unchanged orderConfirmation.js.
+- Evaluated the actual cart message expression for 1, 2 and 5 entries: PASS. Empty-cart branch unchanged by diff review; empty-cart runtime not exercised.
+- Executed populateOrderDetails from HEAD and the working copy in separate Node VM contexts with mocked jQuery and forbidden AJAX. Seven cases PASS: one line/three units, two sellers including a cancelled line, cancelled order, empty items, string quantity, cancelled seller-status override, and active order after cancelled. Checked line count, summed quantity, conditional amount label, cancelled badge, and equality of all previously rendered fields (including totals, status and product rows) to HEAD. HTML escape functions were replaced with String in both contexts because this harness has no DOM; escaping behavior was not tested. Multi-seller case exercises supplied items, not end-to-end seller selection or role filtering.
+- Source assertions: PASS for disabled GCash, selected Cash on Delivery, Coming Soon label, neutral confirmation wording, preserved dynamic order ID target, and unique modal count/amount targets.
+- `git diff --check`: PASS after frontend implementation; repeated after documentation. Separate same-session second-pass diff review checks scope, unchanged calculations/API handlers, status-based label reset, and preserved order ID. This is not independent QA.
+
+**Preparation failures:** First VM run stopped because the mock did not implement DOM-based HTML escaping; second run stopped because its badge assertion expected title case while the existing badge uses uppercase CANCELLED. Corrected harness stubs and case-insensitive assertion; final seven-case run passed. These were harness errors, not demonstrated application failures.
+
+**Not verified:** Browser rendering, mobile layout, console, local API integration and existing dummy-data UI workflows were not exercised. No known isolated runtime/database was established; no API requests, application bootstrap, database operations, dependency installation or external-service changes were performed. Cart/checkout/order listing/cancellation integration still requires owner acceptance. Existing BUG-AUTH-001 remains separate and unchanged.
+
 **Status:** Historical baseline (2026-11-02), plus owner-reported manual authentication/registration evidence (2026-11-16), Customer Profile and Account Management evidence (2026-11-17), and profile-picture retests and responsive-layout manual regression results (2026-11-18). Codex has not independently reproduced the manual tests; no automated tests were executed for these documentation tasks.
 
 ## SYS-001 local integration - 2026-11-19
